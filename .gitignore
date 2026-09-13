@@ -1,0 +1,3 @@
+node_modules/
+# enthaelt lokalen dateipfad, wird beim build erzeugt
+dist/ytx.dev.user.js

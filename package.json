@@ -1,6 +1,6 @@
 {
   "name": "ytx",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "YouTube anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features",
   "private": true,
   "type": "module",

@@ -34,7 +34,6 @@ const tidyDisplay = {
   'player.paidPromo': H,
   'player.watermark': H,
   'player.btn.cast': H,
-  'thumb.image': D,
   'thumb.hoverPreview': H,
   'search.shorts': H,
   'search.peopleAlsoSearch': H,

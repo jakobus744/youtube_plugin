@@ -55,6 +55,29 @@ function freshData() {
   return { schema: SCHEMA, active: DEFAULT_ACTIVE, profiles, settings: { hotkeys: {}, panelButton: true, panelTab: 'display' } }
 }
 
+// einmalige anpassungen gespeicherter profile wenn sich vorlagen aendern
+const MIGRATIONS = [
+  [
+    'thumbs-color-default',
+    (d) => {
+      const p = d.profiles.aufgeraeumt
+      if (p?.template === 'aufgeraeumt' && p.config?.display?.['thumb.image'] === 'dim') delete p.config.display['thumb.image']
+    }
+  ]
+]
+
+function migrate() {
+  data.migrations ||= []
+  let changed = false
+  for (const [id, fn] of MIGRATIONS) {
+    if (data.migrations.includes(id)) continue
+    try { fn(data) } catch (e) { log.warn(`migration ${id}`, e) }
+    data.migrations.push(id)
+    changed = true
+  }
+  if (changed) writeRaw(KEY, data)
+}
+
 let featureManifests = []
 let data = null
 let config = null
@@ -95,6 +118,7 @@ export const store = {
       if (!data.profiles[t.id] && !data.deletedTemplates?.includes(t.id)) data.profiles[t.id] = { name: t.name, template: t.id, config: t.config() }
     }
     if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0]
+    migrate()
     recompute()
     // entprelltes speichern vor dem verlassen der seite nachholen
     const flush = () => {

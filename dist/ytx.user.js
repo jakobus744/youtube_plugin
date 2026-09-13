@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.1.0
+// @version      0.1.1
 // @description  YouTube anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features
 // @match        https://www.youtube.com/*
 // @run-at       document-start
@@ -22,7 +22,7 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.1.0",
+    version: "0.1.1",
     description: "YouTube anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features",
     private: true,
     type: "module",
@@ -1556,7 +1556,6 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
 
   // src/profiles/index.js
   var H = "hide";
-  var D = "dim";
   var C = "collapse";
   var tidyDisplay = {
     "guide.shorts": H,
@@ -1587,7 +1586,6 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     "player.paidPromo": H,
     "player.watermark": H,
     "player.btn.cast": H,
-    "thumb.image": D,
     "thumb.hoverPreview": H,
     "search.shorts": H,
     "search.peopleAlsoSearch": H,
@@ -1697,6 +1695,30 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     for (const t of templates) profiles[t.id] = { name: t.name, template: t.id, config: t.config() };
     return { schema: SCHEMA, active: DEFAULT_ACTIVE, profiles, settings: { hotkeys: {}, panelButton: true, panelTab: "display" } };
   }
+  var MIGRATIONS = [
+    [
+      "thumbs-color-default",
+      (d) => {
+        const p = d.profiles.aufgeraeumt;
+        if (p?.template === "aufgeraeumt" && p.config?.display?.["thumb.image"] === "dim") delete p.config.display["thumb.image"];
+      }
+    ]
+  ];
+  function migrate() {
+    data.migrations ||= [];
+    let changed = false;
+    for (const [id, fn] of MIGRATIONS) {
+      if (data.migrations.includes(id)) continue;
+      try {
+        fn(data);
+      } catch (e) {
+        log.warn(`migration ${id}`, e);
+      }
+      data.migrations.push(id);
+      changed = true;
+    }
+    if (changed) writeRaw(KEY, data);
+  }
   var featureManifests = [];
   var data = null;
   var config = null;
@@ -1735,6 +1757,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
         if (!data.profiles[t.id] && !data.deletedTemplates?.includes(t.id)) data.profiles[t.id] = { name: t.name, template: t.id, config: t.config() };
       }
       if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0];
+      migrate();
       recompute();
       const flush = () => {
         saveSoon.flush();

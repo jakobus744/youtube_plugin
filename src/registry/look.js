@@ -22,6 +22,30 @@ export const colorControls = [
   }
 ]
 
+// die suchleiste (yt-searchbox) und ihr vorschlags-menue nutzen keine der
+// --yt-spec-*/--yt-sys-color-baseline--* variablen sondern feste rgb() werte
+// fuer den dunklen modus (.ytSearchboxComponentInputBoxDark etc), deshalb
+// hier direkt ueberschrieben statt ueber tokens
+export function searchboxCss(colors) {
+  const surface = colors.raised || colors.bg
+  if (!surface) return ''
+  const border = colors.outline || surface
+  const menu = colors.menu || surface
+  const text = colors.text
+  const text2 = colors.textSecondary || text
+  const accent = colors.accent || border
+  const out = [
+    `.ytSearchboxComponentInputBox, .ytSearchboxComponentInputBoxDark { background-color: ${surface} !important; border-color: ${border} !important; }`,
+    `.ytSearchboxComponentInputBoxDark.ytSearchboxComponentInputBoxHasFocus, .ytSearchboxComponentInputBoxHasFocus { border-color: ${accent} !important; }`,
+    `.ytSearchboxComponentSearchButton, .ytSearchboxComponentSearchButtonDark { background-color: ${surface} !important; border-color: ${border} !important; }`,
+    `.ytSearchboxComponentSearchButton:hover, .ytSearchboxComponentSearchButtonDark:hover { background-color: ${border} !important; }`,
+    `.ytSearchboxComponentSuggestionsContainer, .ytSearchboxComponentSuggestionsContainerDark, .ytSearchboxComponentSuggestionsContainerUnified, .ytSearchboxComponentSuggestionsContainerShowMoreButtonContainer, .ytSearchboxComponentInputContainerIsFocused { background-color: ${menu} !important; }`
+  ]
+  if (text) out.push(`.ytSearchboxComponentHostDark, .ytSearchboxComponentHost, .ytSearchboxComponentInput { color: ${text} !important; }`)
+  if (text2) out.push(`.ytSearchboxComponentSuggestionsHeader, .ytSearchboxComponentReportButton { color: ${text2} !important; }`)
+  return out.join('\n')
+}
+
 export const themes = [
   { id: '', label: 'YouTube (unverändert)', values: {} },
   { id: 'oled', label: 'OLED Schwarz', values: { bg: '#000000', raised: '#0e0e0e', menu: '#161616', text: '#ededed', textSecondary: '#9a9a9a', accent: '#5aa9ff', outline: '#262626', progress: '#e53935' } },

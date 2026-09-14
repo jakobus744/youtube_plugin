@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.1.1
+// @version      0.1.2
 // @description  YouTube anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features
 // @match        https://www.youtube.com/*
 // @run-at       document-start
@@ -22,7 +22,7 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.1.1",
+    version: "0.1.2",
     description: "YouTube anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features",
     private: true,
     type: "module",
@@ -683,6 +683,25 @@
       extra: (v) => `#movie_player .ytp-play-progress, #movie_player .ytp-swatch-background-color, ytd-thumbnail-overlay-resume-playback-renderer #progress, [class*="ProgressBarSegment"] { background: ${v} !important; } #movie_player .ytp-scrubber-button { background: ${v} !important; }`
     }
   ];
+  function searchboxCss(colors) {
+    const surface = colors.raised || colors.bg;
+    if (!surface) return "";
+    const border = colors.outline || surface;
+    const menu = colors.menu || surface;
+    const text = colors.text;
+    const text2 = colors.textSecondary || text;
+    const accent = colors.accent || border;
+    const out = [
+      `.ytSearchboxComponentInputBox, .ytSearchboxComponentInputBoxDark { background-color: ${surface} !important; border-color: ${border} !important; }`,
+      `.ytSearchboxComponentInputBoxDark.ytSearchboxComponentInputBoxHasFocus, .ytSearchboxComponentInputBoxHasFocus { border-color: ${accent} !important; }`,
+      `.ytSearchboxComponentSearchButton, .ytSearchboxComponentSearchButtonDark { background-color: ${surface} !important; border-color: ${border} !important; }`,
+      `.ytSearchboxComponentSearchButton:hover, .ytSearchboxComponentSearchButtonDark:hover { background-color: ${border} !important; }`,
+      `.ytSearchboxComponentSuggestionsContainer, .ytSearchboxComponentSuggestionsContainerDark, .ytSearchboxComponentSuggestionsContainerUnified, .ytSearchboxComponentSuggestionsContainerShowMoreButtonContainer, .ytSearchboxComponentInputContainerIsFocused { background-color: ${menu} !important; }`
+    ];
+    if (text) out.push(`.ytSearchboxComponentHostDark, .ytSearchboxComponentHost, .ytSearchboxComponentInput { color: ${text} !important; }`);
+    if (text2) out.push(`.ytSearchboxComponentSuggestionsHeader, .ytSearchboxComponentReportButton { color: ${text2} !important; }`);
+    return out.join("\n");
+  }
   var themes = [
     { id: "", label: "YouTube (unverändert)", values: {} },
     { id: "oled", label: "OLED Schwarz", values: { bg: "#000000", raised: "#0e0e0e", menu: "#161616", text: "#ededed", textSecondary: "#9a9a9a", accent: "#5aa9ff", outline: "#262626", progress: "#e53935" } },
@@ -2419,6 +2438,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       if (c.extra) out.push(c.extra(v));
     }
     if (decl.length) out.unshift(`${TOKEN_SCOPE} { ${decl.join(" ")} }`);
+    const search = searchboxCss(colors);
+    if (search) out.push(search);
     for (const c of controls) {
       const v = vars[c.id];
       if (v === void 0 || v === null || v === "") continue;

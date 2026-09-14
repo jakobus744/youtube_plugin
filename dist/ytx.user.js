@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.1.2
+// @version      0.1.3
 // @description  YouTube anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features
 // @match        https://www.youtube.com/*
 // @run-at       document-start
@@ -22,7 +22,7 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.1.2",
+    version: "0.1.3",
     description: "YouTube anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features",
     private: true,
     type: "module",
@@ -700,6 +700,17 @@
     ];
     if (text) out.push(`.ytSearchboxComponentHostDark, .ytSearchboxComponentHost, .ytSearchboxComponentInput { color: ${text} !important; }`);
     if (text2) out.push(`.ytSearchboxComponentSuggestionsHeader, .ytSearchboxComponentReportButton { color: ${text2} !important; }`);
+    return out.join("\n");
+  }
+  function cardTextCss(colors) {
+    const text = colors.text;
+    const text2 = colors.textSecondary || text;
+    const out = [];
+    if (text) out.push(`.ytLockupMetadataViewModelTitle, .ytLockupMetadataViewModelTitle * { color: ${text} !important; }`);
+    if (text2)
+      out.push(
+        `.ytContentMetadataViewModelMetadataText, .ytContentMetadataViewModelMetadataText *, .ytAvatarStackViewModelAvatarStackText, .ytAvatarStackViewModelAvatarStackText *, a.ytAttributedStringLink { color: ${text2} !important; }`
+      );
     return out.join("\n");
   }
   var themes = [
@@ -2440,6 +2451,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     if (decl.length) out.unshift(`${TOKEN_SCOPE} { ${decl.join(" ")} }`);
     const search = searchboxCss(colors);
     if (search) out.push(search);
+    const cardText = cardTextCss(colors);
+    if (cardText) out.push(cardText);
     for (const c of controls) {
       const v = vars[c.id];
       if (v === void 0 || v === null || v === "") continue;

@@ -1,4 +1,4 @@
-import { controls, colorControls, themes, searchboxCss } from '../registry/look.js'
+import { controls, colorControls, themes, searchboxCss, cardTextCss } from '../registry/look.js'
 import { setCss } from '../core/css.js'
 
 // farben ueberschreiben youtubes eigene tokens
@@ -21,6 +21,8 @@ export function buildVarsCss(vars) {
   if (decl.length) out.unshift(`${TOKEN_SCOPE} { ${decl.join(' ')} }`)
   const search = searchboxCss(colors)
   if (search) out.push(search)
+  const cardText = cardTextCss(colors)
+  if (cardText) out.push(cardText)
 
   for (const c of controls) {
     const v = vars[c.id]

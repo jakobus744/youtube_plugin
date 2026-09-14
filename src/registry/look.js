@@ -46,6 +46,24 @@ export function searchboxCss(colors) {
   return out.join('\n')
 }
 
+// videotitel, kanalname, aufrufe/datum und beschreibungs-schnipsel auf jeder
+// kachel (start, suche, abos, kanal, empfehlungen, playlist) sind die neuen
+// "view model" bausteine (yt-lockup-view-model, yt-content-metadata-view-model)
+// und tragen ihre farbe wie die suchleiste fest einprogrammiert statt ueber
+// die --yt-spec-*/--yt-sys-color-baseline--* variablen, die den rest der
+// seite einfaerben. deshalb aendert "text" sonst so gut wie nichts sichtbares.
+export function cardTextCss(colors) {
+  const text = colors.text
+  const text2 = colors.textSecondary || text
+  const out = []
+  if (text) out.push(`.ytLockupMetadataViewModelTitle, .ytLockupMetadataViewModelTitle * { color: ${text} !important; }`)
+  if (text2)
+    out.push(
+      `.ytContentMetadataViewModelMetadataText, .ytContentMetadataViewModelMetadataText *, .ytAvatarStackViewModelAvatarStackText, .ytAvatarStackViewModelAvatarStackText *, a.ytAttributedStringLink { color: ${text2} !important; }`
+    )
+  return out.join('\n')
+}
+
 export const themes = [
   { id: '', label: 'YouTube (unverändert)', values: {} },
   { id: 'oled', label: 'OLED Schwarz', values: { bg: '#000000', raised: '#0e0e0e', menu: '#161616', text: '#ededed', textSecondary: '#9a9a9a', accent: '#5aa9ff', outline: '#262626', progress: '#e53935' } },

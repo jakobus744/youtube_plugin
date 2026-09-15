@@ -1,12 +1,13 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { compileRules, evaluate, REASONS } from '../src/appliers/filterLogic.js'
-import { normalize, defaultFilters } from '../src/core/config.js'
+import { normalize, normalizeProfile, splitLegacy, defaultFilters } from '../src/core/config.js'
 import { parseDuration, formatDuration, parseAgeDays, firstInt, clock } from '../src/core/format.js'
-import { summarize } from '../src/features/playlist/common.js'
-import { targets } from '../src/registry/targets.js'
+import { summarize } from '../src/features/youtube/playlist/common.js'
 import { templates } from '../src/profiles/index.js'
-import { featureManifests } from '../src/features/index.js'
+import { sites } from '../src/sites/index.js'
+
+const yt = sites.youtube
 
 const video = (o = {}) => ({ kind: 'video', videoId: 'x', title: 'Normal title', channel: 'Some Channel', channelUrl: '/@somechannel', channelId: 'UCabcdefghijklmnopqrstuv', durationSec: 600, isShort: false, live: false, percent: null, ageDays: 10, ...o })
 const rules = (patch) => {
@@ -65,7 +66,7 @@ test('normalize wirft unbekanntes raus und prueft modi', () => {
       filters: { enabled: true, mode: 'boom', title: { regex: ['a', '', ' b '] } },
       features: { 'transcript.copy': { enabled: true, format: 'pdf', pauseMs: 99999 } }
     },
-    featureManifests
+    yt
   )
   assert.deepEqual(cfg.display, { 'watch.comments': 'collapse' })
   assert.equal(cfg.vars.theme, 'nord')
@@ -86,20 +87,28 @@ test('normalize wirft unbekanntes raus und prueft modi', () => {
 test('profile vorlagen sind gueltig', () => {
   for (const t of templates) {
     const raw = t.config()
-    const cfg = normalize(raw, featureManifests)
-    assert.equal(Object.keys(cfg.display).length, Object.keys(raw.display || {}).length, `${t.id}: display eintraege verloren`)
+    for (const key of ['youtube', 'music']) {
+      const cfg = normalize(raw[key], sites[key])
+      assert.equal(Object.keys(cfg.display).length, Object.keys(raw[key].display || {}).length, `${t.id}/${key}: display eintraege verloren`)
+      for (const [id, f] of Object.entries(raw[key].features || {})) assert.equal(cfg.features[id]?.enabled, f.enabled, `${t.id}/${key}: feature ${id} unbekannt`)
+    }
   }
 })
 
 test('registry ids eindeutig und modi gueltig', () => {
   const ids = new Set()
-  for (const t of targets) {
-    assert.ok(!ids.has(t.id), `doppelte id ${t.id}`)
-    ids.add(t.id)
-    assert.ok(t.modes.includes('show'))
-    assert.ok(t.sel.length > 0)
+  const fids = []
+  for (const site of Object.values(sites)) {
+    for (const t of site.targets) {
+      assert.ok(!ids.has(t.id), `doppelte id ${t.id}`)
+      ids.add(t.id)
+      assert.ok(t.modes.includes('show'))
+      assert.ok(t.sel.length > 0)
+      assert.ok(site.GROUPS.includes(t.group), `${t.id}: gruppe ${t.group} fehlt`)
+    }
+    fids.push(...site.features.map((m) => m.id))
+    for (const tab of site.panelTabs) assert.ok(typeof tab === 'string')
   }
-  const fids = featureManifests.map((m) => m.id)
   assert.equal(new Set(fids).size, fids.length)
 })
 
@@ -119,4 +128,25 @@ test('playlist summe mit schwelle und ohne dauer', () => {
   assert.equal(s.remaining, 300)
   assert.equal(s.unavailable, 1)
   assert.equal(s.live, 1)
+})
+
+test('alte flache config wandert in den youtube abschnitt', () => {
+  const legacy = { display: { 'watch.comments': 'hide' }, features: { 'transcript.copy': { enabled: true } } }
+  assert.deepEqual(Object.keys(splitLegacy(legacy)), ['youtube'])
+  const p = normalizeProfile(legacy, sites)
+  assert.equal(p.schema, 3)
+  assert.equal(p.youtube.display['watch.comments'], 'hide')
+  assert.equal(p.youtube.features['transcript.copy'].enabled, true)
+  assert.deepEqual(p.music.display, {})
+  assert.equal(p.music.filters, undefined)
+  assert.equal(p.music.features['m.history'].enabled, false)
+})
+
+test('music normalize kennt eigene registry', () => {
+  const cfg = normalize({ display: { 'm.guide.samples': 'hide', 'watch.comments': 'hide', 'm.home.podcasts': 'collapse' }, vars: { theme: 'vinyl', playerBar: '#112233' }, layout: { presets: { watch: 'lyricsFocus', home: 'theater' } }, behavior: { 'm.stillThere': 1 } }, sites.music)
+  assert.deepEqual(cfg.display, { 'm.guide.samples': 'hide', 'm.home.podcasts': 'collapse' })
+  assert.equal(cfg.vars.theme, 'vinyl')
+  assert.equal(cfg.vars.playerBar, '#112233')
+  assert.deepEqual(cfg.layout.presets, { watch: 'lyricsFocus' })
+  assert.equal(cfg.behavior['m.stillThere'], true)
 })

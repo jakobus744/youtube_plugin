@@ -1,4 +1,6 @@
-import { layoutPresets, presetById, orderGroups, topbarCss } from '../registry/presets.js'
+import { site } from '../sites/index.js'
+
+const P = () => site.presets
 import { setCss } from '../core/css.js'
 import { listen, onDispose } from '../core/lifecycle.js'
 import { registerCheck } from '../core/diagnose.js'
@@ -9,7 +11,7 @@ const presetAttr = (page) => `data-ytx-l-${page}`
 
 export function buildPresetCss() {
   const out = []
-  for (const p of layoutPresets) {
+  for (const p of P().layoutPresets) {
     for (const page of p.pages) out.push(p.css(`html[data-ytx-page="${page}"][${presetAttr(page)}="${p.id}"]`))
   }
   return out.join('\n')
@@ -20,7 +22,7 @@ let scrollOff = null
 
 export function applyLayout(cfg) {
   const root = document.documentElement
-  const pages = new Set(layoutPresets.flatMap((p) => p.pages))
+  const pages = new Set(P().layoutPresets.flatMap((p) => p.pages))
   let needResize = false
   for (const page of pages) {
     const id = cfg.layout.presets[page]
@@ -28,22 +30,23 @@ export function applyLayout(cfg) {
     if (id) {
       if (root.getAttribute(name) !== id) {
         root.setAttribute(name, id)
-        needResize ||= !!presetById[id]?.resize
+        needResize ||= !!P().presetById[id]?.resize
       }
     } else if (root.hasAttribute(name)) {
-      needResize ||= !!presetById[root.getAttribute(name)]?.resize
+      needResize ||= !!P().presetById[root.getAttribute(name)]?.resize
       root.removeAttribute(name)
     }
   }
 
   const dyn = []
   for (const [gid, list] of Object.entries(cfg.layout.order)) {
-    const g = orderGroups[gid]
+    const g = P().orderGroups[gid]
     if (!g || !list.length) continue
     dyn.push(g.container)
     list.forEach((id, i) => dyn.push(g.item(id, i + 1)))
   }
-  if (cfg.layout.topbar && topbarCss[cfg.layout.topbar]) dyn.push(topbarCss[cfg.layout.topbar])
+  const tb = P().topbarCss || {}
+  if (cfg.layout.topbar && tb[cfg.layout.topbar]) dyn.push(tb[cfg.layout.topbar])
   const text = dyn.join('\n')
   if (text !== last) {
     setCss('layout.dynamic', text)
@@ -78,12 +81,12 @@ export function initLayout(getConfig) {
     const cfg = getConfig()
     const res = []
     const id = cfg.layout.presets[nav.page]
-    res.push({ id: 'layout.preset', label: `Preset auf dieser Seite (${nav.page})`, status: id ? 'ok' : 'skip', detail: id ? presetById[id]?.label : 'keins' })
+    res.push({ id: 'layout.preset', label: `Preset auf dieser Seite (${nav.page})`, status: id ? 'ok' : 'skip', detail: id ? P().presetById[id]?.label : 'keins' })
     if (cfg.layout.order['watch.actions'] && nav.page === 'watch') {
       const ok = !!qs('ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn]')
       res.push({ id: 'layout.order', label: 'Reihenfolge Aktionsleiste', status: ok ? 'ok' : 'warn', detail: ok ? 'Buttons getaggt, Reihenfolge aktiv' : 'Keine getaggten Buttons gefunden' })
     }
-    if (nav.page === 'watch' && id && presetById[id]?.resize) {
+    if (nav.page === 'watch' && id && P().presetById[id]?.resize) {
       const video = qs('#movie_player video')
       const primary = qs('ytd-watch-flexy #primary')
       if (video && primary) {

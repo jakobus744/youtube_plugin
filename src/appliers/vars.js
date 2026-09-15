@@ -1,30 +1,25 @@
-import { controls, colorControls, themes, searchboxCss, cardTextCss } from '../registry/look.js'
+import { site } from '../sites/index.js'
 import { setCss } from '../core/css.js'
 
-// farben ueberschreiben youtubes eigene tokens
-// [dark] und [light] definieren tokens auch auf inneren elementen neu
-const TOKEN_SCOPE = 'html:root:root, html:root:root [dark], html:root:root [light]'
-
-export function buildVarsCss(vars) {
-  const theme = themes.find((t) => t.id === vars.theme) || themes[0]
+// farben ueber die tokens der jeweiligen seite, rest ueber extraCss der registry
+export function buildVarsCss(vars, look = site.look) {
+  const theme = look.themes.find((t) => t.id === vars.theme) || look.themes[0]
   const colors = { ...theme.values }
-  for (const c of colorControls) if (vars[c.id]) colors[c.id] = vars[c.id]
+  for (const c of look.colorControls) if (vars[c.id]) colors[c.id] = vars[c.id]
 
   const out = []
   const decl = []
-  for (const c of colorControls) {
+  for (const c of look.colorControls) {
     const v = colors[c.id]
     if (!v) continue
     for (const token of c.tokens) decl.push(`${token}: ${v} !important;`)
     if (c.extra) out.push(c.extra(v))
   }
-  if (decl.length) out.unshift(`${TOKEN_SCOPE} { ${decl.join(' ')} }`)
-  const search = searchboxCss(colors)
-  if (search) out.push(search)
-  const cardText = cardTextCss(colors)
-  if (cardText) out.push(cardText)
+  if (decl.length) out.unshift(`${look.tokenScope} { ${decl.join(' ')} }`)
+  const extra = look.extraCss?.(colors)
+  if (extra) out.push(extra)
 
-  for (const c of controls) {
+  for (const c of look.controls) {
     const v = vars[c.id]
     if (v === undefined || v === null || v === '') continue
     out.push(c.css(v))

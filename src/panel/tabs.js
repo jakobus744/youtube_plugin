@@ -1,9 +1,6 @@
 import { h } from '../core/dom.js'
-import { targets, GROUPS, MODE_LABELS } from '../registry/targets.js'
-import { controls, colorControls, themes, LOOK_GROUPS } from '../registry/look.js'
-import { layoutPresets, LAYOUT_PAGES, orderGroups, topbarModes } from '../registry/presets.js'
-import { behaviors } from '../behaviors/index.js'
-import { FILTER_PAGES } from '../core/config.js'
+import { MODE_LABELS } from '../registry/shared.js'
+import { site } from '../sites/index.js'
 import { templateById } from '../profiles/index.js'
 import { countMatches } from '../appliers/display.js'
 import { filterStats } from '../appliers/filters.js'
@@ -17,7 +14,7 @@ import { cssStats } from '../core/css.js'
 import { log } from '../core/log.js'
 import { row, badge, segmented, toggle, select, range, color, number, lines, textarea, chips, btn, settingControl } from './controls.js'
 
-const PAGE_LABEL = { home: 'Startseite', watch: 'Videoseite', search: 'Suche', playlist: 'Playlist', subscriptions: 'Abos', channel: 'Kanal', shorts: 'Shorts', history: 'Verlauf', you: 'Mein YouTube', feed: 'Feed', other: 'Sonstige' }
+const PAGE_LABEL = site.PAGE_LABELS
 
 // ---------- anzeige ----------
 
@@ -43,8 +40,8 @@ export function displayTab(app) {
   function render() {
     list.replaceChildren()
     const q = search.value.trim().toLowerCase()
-    for (const group of GROUPS) {
-      const items = targets.filter((t) => t.group === group).filter((t) => !q || `${t.label} ${t.id} ${t.note || ''}`.toLowerCase().includes(q)).filter((t) => !app.ui.displayOnlyPage || !t.pages || t.pages.includes(app.nav.page))
+    for (const group of site.GROUPS) {
+      const items = site.targets.filter((t) => t.group === group).filter((t) => !q || `${t.label} ${t.id} ${t.note || ''}`.toLowerCase().includes(q)).filter((t) => !app.ui.displayOnlyPage || !t.pages || t.pages.includes(app.nav.page))
       if (!items.length) continue
       const active = items.filter((t) => cfg.display[t.id]).length
       const det = h('details', { open: q || app.ui.openGroups?.has(group) }, h('summary', null, group, h('span', { class: 'count', text: active ? `${active} aktiv` : '' })))
@@ -85,6 +82,7 @@ export function lookTab(app) {
   const cfg = app.store.config
   const root = h('div')
   const update = (fn) => app.store.update(fn, 'panel')
+  const { themes, colorControls, controls, LOOK_GROUPS } = site.look
   const theme = themes.find((t) => t.id === cfg.vars.theme) || themes[0]
 
   root.append(h('h3', { text: 'Theme' }))
@@ -92,7 +90,7 @@ export function lookTab(app) {
     row('Farbschema', select(themes.map((t) => [t.id, t.label]), cfg.vars.theme, (v) => {
       update((c) => (c.vars.theme = v))
       app.rerender()
-    }), { note: 'Einzelne Farben unten überschreiben das Schema. Gedacht für YouTubes dunklen Modus' })
+    }), { note: `Einzelne Farben unten überschreiben das Schema. Gedacht für den dunklen Modus von ${site.label}` })
   )
   const colorsBody = h('div')
   for (const c of colorControls) {
@@ -125,6 +123,7 @@ export function layoutTab(app) {
   const cfg = app.store.config
   const root = h('div')
   const update = (fn) => app.store.update(fn, 'panel')
+  const { layoutPresets, LAYOUT_PAGES, orderGroups, topbarModes } = site.presets
 
   root.append(h('h3', { text: 'Presets pro Seite' }))
   for (const [page, label] of LAYOUT_PAGES) {
@@ -172,6 +171,7 @@ export function layoutTab(app) {
     )
   }
 
+  if (site.id !== 'youtube') return root
   root.append(h('h3', { text: 'Freie Zonen' }))
   root.append(h('p', { class: 'hint', text: 'Nicht umgesetzt: Freies Umhängen von Bereichen per display: contents stört YouTubes JavaScript-Playergröße und das automatische Umsortieren bei schmalen Fenstern. Stattdessen gibt es die festen Presets „Kino“ und „Fokus“ für die Videoseite.' }))
   return root
@@ -183,7 +183,7 @@ export function behaviorTab(app) {
   const cfg = app.store.config
   const root = h('div')
   const update = (fn) => app.store.update(fn, 'panel')
-  for (const b of behaviors) {
+  for (const b of site.behaviors) {
     const value = cfg.behavior[b.id] ?? b.default
     const set = (v) => update((c) => (c.behavior[b.id] = v))
     const badges = b.radical ? [badge('radikal', 'radical')] : []
@@ -205,7 +205,7 @@ export function filterTab(app) {
   root.append(
     row('Filter aktiv', toggle(f.enabled, (v) => update((c) => (c.filters.enabled = v)))),
     row('Darstellung', segmented([['dim', 'Dimmen'], ['collapse', 'Einklappen'], ['hide', 'Aus']], f.mode, (v) => update((c) => (c.filters.mode = v))), { note: 'Tipp: neue Regeln erst dimmen, dann ausblenden' }),
-    row('Seiten', chips(FILTER_PAGES, f.pages, (v) => update((c) => (c.filters.pages = v))), { stack: true })
+    row('Seiten', chips(site.filters.pages, f.pages, (v) => update((c) => (c.filters.pages = v))), { stack: true })
   )
   const onPage = f.enabled && f.pages.includes(app.nav.page)
   const reasons = Object.entries(filterStats.reasons).map(([k, v]) => `${k}: ${v}`).join(', ')
@@ -311,7 +311,7 @@ export function profilesTab(app) {
         input.addEventListener('keydown', (e) => e.key === 'Enter' && done())
         input.addEventListener('blur', done)
       }, 'tiny'),
-      t && btn('Zurücksetzen', () => confirmInline(actions, 'Profil auf Vorlage zurücksetzen?', () => st.resetProfile(p.id)), 'tiny'),
+      t && btn('Zurücksetzen', () => confirmInline(actions, `${site.label}-Teil des Profils auf die Vorlage zurücksetzen?`, () => st.resetProfile(p.id)), 'tiny'),
       btn('Löschen', () => confirmInline(actions, `„${p.name}“ löschen?`, () => {
         if (!st.deleteProfile(p.id)) app.flash('Das letzte Profil kann nicht gelöscht werden')
         app.rerender()
@@ -422,7 +422,7 @@ export function diagnoseTab(app) {
       body.append(h('h3', { text: 'Log' }), h('div', { class: 'log', text: errs.slice(-25).map((e) => `${new Date(e.t).toLocaleTimeString('de-DE')} ${e.level} ${e.msg}${e.n > 1 ? ` ×${e.n}` : ''}`).join('\n') }))
     }
   }
-  const meta = () => ({ version: app.version, seite: app.nav.page, url: location.href, profil: app.store.activeId, ...capabilities(), sweeps: `${sweepStats.runs} (${sweepStats.lastMs} ms)`, css: JSON.stringify(cssStats()), events: Array.from(app.nav.eventsSeen).join(',') })
+  const meta = () => ({ version: app.version, site: site.id, seite: app.nav.page, url: location.href, profil: app.store.activeId, ...capabilities(), sweeps: `${sweepStats.runs} (${sweepStats.lastMs} ms)`, css: JSON.stringify(cssStats()), events: Array.from(app.nav.eventsSeen).join(',') })
   root.append(
     h('div', { class: 'btns' },
       btn('Neu prüfen', draw, 'primary'),
@@ -443,7 +443,7 @@ export function registerCoreChecks(registerCheck, app) {
   registerCheck('core', 'Grundlagen', 'Grundlagen', () => {
     const c = capabilities()
     return [
-      { id: 'core.polymer', label: 'Polymer-Daten lesbar (Seitenkontext)', status: c.appFound ? (c.polymerData ? 'ok' : 'fail') : 'skip', detail: c.polymerData ? 'ok' : 'Script läuft vermutlich in isolierter Welt – @sandbox / @inject-into prüfen' },
+      { id: 'core.polymer', label: `Polymer-Daten lesbar (${site.appHost})`, status: c.appFound ? (c.polymerData ? 'ok' : 'fail') : 'skip', detail: c.polymerData ? 'ok' : 'Script läuft vermutlich in isolierter Welt – @sandbox / @inject-into prüfen' },
       { id: 'core.player', label: 'Player-API', status: document.querySelector('#movie_player') ? (c.playerApi ? 'ok' : 'fail') : 'skip', detail: c.playerApi ? 'getPlayerResponse verfügbar' : 'Kein Player auf dieser Seite' },
       { id: 'core.storage', label: 'Speicher', status: 'ok', detail: c.gmStorage ? 'GM_setValue' : 'localStorage (Fallback, pro Browser-Profil)' },
       { id: 'core.nav', label: 'Navigations-Events', status: app.nav.eventsSeen.size ? 'ok' : 'skip', detail: app.nav.eventsSeen.size ? Array.from(app.nav.eventsSeen).join(', ') : 'Noch keine yt-navigate Events gesehen (normal direkt nach dem Laden)' },

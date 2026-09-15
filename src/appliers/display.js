@@ -1,4 +1,5 @@
-import { targets, targetById, attrName, MODE_LABELS } from '../registry/targets.js'
+import { attrName, MODE_LABELS } from '../registry/shared.js'
+import { site } from '../sites/index.js'
 import { setCss } from '../core/css.js'
 import { h, qsa, validSelector } from '../core/dom.js'
 import { onSweep } from '../core/observer.js'
@@ -17,7 +18,7 @@ function scopes(t, mode) {
 // ein kaputter selektor zerstoert so nur sich selbst
 export function buildDisplayCss() {
   const out = []
-  for (const t of targets) {
+  for (const t of site.targets) {
     const good = t.sel.filter((s) => {
       const ok = validSelector(s)
       if (!ok) invalid.set(`${t.id} ${s}`, true)
@@ -59,7 +60,7 @@ let current = {}
 export function applyDisplay(cfg) {
   current = cfg.display
   const root = document.documentElement
-  for (const t of targets) {
+  for (const t of site.targets) {
     const name = attrName(t.id)
     const mode = cfg.display[t.id]
     if (mode && mode !== 'show') {
@@ -80,7 +81,7 @@ function onPage(t) {
 }
 
 function syncCollapse() {
-  for (const t of targets) {
+  for (const t of site.targets) {
     const active = current[t.id] === 'collapse' && onPage(t)
     if (!active) {
       for (const bar of qsa(`.ytx-collapse-bar[data-ytx-bar="${t.id}"]`)) bar.remove()
@@ -132,13 +133,13 @@ export function initDisplay() {
   onDispose(() => {
     for (const bar of qsa('.ytx-collapse-bar')) bar.remove()
     for (const el of qsa('[data-ytx-open]')) el.removeAttribute('data-ytx-open')
-    for (const t of targets) document.documentElement.removeAttribute(attrName(t.id))
+    for (const t of site.targets) document.documentElement.removeAttribute(attrName(t.id))
   })
 
   registerCheck('display', 'Anzeige', 'Targets auf dieser Seite', () => {
     const results = []
     if (invalid.size) results.push({ id: 'display.invalid', label: 'Ungültige Selektoren', status: 'fail', detail: Array.from(invalid.keys()).join(' · ') })
-    for (const t of targets) {
+    for (const t of site.targets) {
       if (t.pages && !t.pages.includes(nav.page)) continue
       const n = t.sel.filter(validSelector).reduce((sum, s) => sum + qsa(s).length, 0)
       const mode = current[t.id] || 'show'
@@ -148,7 +149,7 @@ export function initDisplay() {
         id: `display.${t.id}`,
         label: `${t.group} › ${t.label}`,
         status: n ? 'ok' : t.core && ready ? 'warn' : 'skip',
-        detail: `${n} Treffer · Modus ${MODE_LABELS[mode]}${n ? '' : t.core ? ' · sollte immer vorhanden sein – Selektor in registry/targets.js prüfen' : ' · auf dieser Seite nicht vorhanden'}`
+        detail: `${n} Treffer · Modus ${MODE_LABELS[mode]}${n ? '' : t.core ? ` · sollte immer vorhanden sein – Selektor in registry/${site.id}/targets.js prüfen` : ' · auf dieser Seite nicht vorhanden'}`
       })
     }
     return results
@@ -156,7 +157,7 @@ export function initDisplay() {
 }
 
 export function countMatches(id) {
-  const t = targetById[id]
+  const t = site.targetById[id]
   if (!t) return 0
   return t.sel.filter(validSelector).reduce((sum, s) => sum + qsa(s).length, 0)
 }

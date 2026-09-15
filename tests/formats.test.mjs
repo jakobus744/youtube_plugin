@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { parseJson3, cleanSegments, toParagraphs, render, stats } from '../src/features/transcript/formats.js'
+import { parseJson3, cleanSegments, toParagraphs, render, stats } from '../src/features/youtube/transcript/formats.js'
 
 const manual = {
   events: [

@@ -55,9 +55,10 @@ export function runsText(t) {
 }
 
 export function capabilities() {
-  const app = document.querySelector('ytd-app')
+  const host = document.documentElement.getAttribute('data-ytx-site') === 'music' ? 'ytmusic-app' : 'ytd-app'
+  const app = document.querySelector(host)
   return {
-    polymerData: !!(app && dataOf(app)),
+    polymerData: !!(app && (dataOf(app) || app.polymerController?.store)),
     appFound: !!app,
     playerApi: !!player(),
     gmStorage: typeof GM_getValue === 'function' && typeof GM_setValue === 'function',

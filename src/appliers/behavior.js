@@ -1,4 +1,4 @@
-import { behaviors } from '../behaviors/index.js'
+import { site } from '../sites/index.js'
 import { registerCheck } from '../core/diagnose.js'
 import { onDispose } from '../core/lifecycle.js'
 import { log } from '../core/log.js'
@@ -13,7 +13,7 @@ export function initBehavior(ctx) {
     running.clear()
   })
   registerCheck('behavior', 'Verhalten', 'Verhalten', () =>
-    behaviors
+    site.behaviors
       .filter((b) => running.has(b.id))
       .map((b) => {
         const r = running.get(b.id)
@@ -28,7 +28,7 @@ function safeStop(r) {
 }
 
 export function applyBehavior(cfg) {
-  for (const b of behaviors) {
+  for (const b of site.behaviors) {
     const value = cfg.behavior[b.id] ?? b.default
     const active = b.type === 'toggle' ? !!value : !!value
     const r = running.get(b.id)

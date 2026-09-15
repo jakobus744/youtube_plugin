@@ -1,8 +1,12 @@
-# ytx – YouTube anpassen
+# ytx – YouTube & YouTube Music anpassen
 
-Userscript für Desktop-YouTube. Elemente anzeigen/dimmen/einklappen/ausblenden, eigenes Theme, Layout-Presets, Verhalten (Shorts-Umleitung, Autoplay aus …), Filter und Zusatzfunktionen wie Transkript kopieren und Playlist-Dauer. Alles über ein Panel steuerbar, mehrere Profile, eingebaute Diagnose.
+Ein Userscript für Desktop-YouTube **und** YouTube Music. Elemente anzeigen, dimmen, einklappen oder ausblenden, eigenes Theme, Layout-Presets, Verhalten, Filter und Zusatzfunktionen. Auf YouTube Music kommen dazu ein lokaler Hörverlauf mit Geschmacksprofil, Favoriten, erklärbare Empfehlungen („Für dich“, „Neu von deinen Künstlern“, Genre-Finder, Smart Radio), Smart Queue, Songtext kopieren und eine private Statistik.
 
-Rein clientseitig: kein Server, keine Fremddienste, keine eigenen API-Aufrufe an YouTube.
+Beide Seiten laufen auf demselben ytx-Kern (Panel, Profile, Navigation, Diagnose, Mount, Features). Nur Registry und Features sind pro Seite getrennt.
+
+Rein clientseitig: kein Server. Deine Musikdaten bleiben im Browser (IndexedDB). Externe Dienste (MusicBrainz, Last.fm, Ollama) sind optional und standardmäßig aus.
+
+Mehr Hintergrund: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md) (Entscheidungen, Spike-Ergebnisse, Testanleitung mit Login).
 
 ---
 
@@ -12,77 +16,81 @@ Rein clientseitig: kein Server, keine Fremddienste, keine eigenen API-Aufrufe an
 
 1. [Tampermonkey](https://www.tampermonkey.net/) installieren.
 2. `chrome://extensions` (Brave: `brave://extensions`) → oben rechts **Entwicklermodus** an → bei Tampermonkey **Details** → **„Nutzerskripts zulassen“** an, falls vorhanden.
-3. **[ytx installieren](https://raw.githubusercontent.com/jakobus744/youtube_plugin/main/dist/ytx.user.js)** – Tampermonkey öffnet die Installationsseite → **Installieren**.
-4. YouTube neu laden. Oben rechts erscheint ein **ytx**-Button, alternativ **Alt+Y**.
+3. **[ytx installieren](https://raw.githubusercontent.com/jakobus744/youtube_plugin/main/dist/ytx.user.js)** – Tampermonkey öffnet die Installationsseite → **Installieren** bzw. bei einem Update **Aktualisieren**.
+4. YouTube oder YouTube Music neu laden. Oben rechts erscheint **ytx** (Panel, Alt+Y). Auf Music zusätzlich **Mix** (Alt+M).
 
-Updates holt Tampermonkey automatisch über denselben Link (Dashboard → „Nach Updates suchen“ geht auch sofort).
+Ab Version 0.2.0 fragt Tampermonkey einmal nach der neuen Seite `music.youtube.com` und nach Verbindungen zu `musicbrainz.org`, `ws.audioscrobbler.com` und `localhost`. Die Verbindungen werden nur genutzt, wenn du die jeweilige Metadaten-Quelle im Panel selbst einschaltest.
 
-Startprofil ist **„Aufgeräumt“**. Profil **„YouTube (Original)“** schaltet alles ab (Notausgang).
+Updates holt Tampermonkey automatisch (Dashboard → „Nach Updates suchen“ geht sofort).
 
-### Entwicklungsvariante (Änderungen ohne Neuinstallation)
+Startprofil ist **„Aufgeräumt“**. **„YouTube (Original)“** schaltet auf beiden Seiten alles ab (Notausgang). Bestehende Profile aus 0.1.x werden automatisch übernommen und bekommen den Music-Teil der Vorlage dazu.
 
-1. `npm install && npm run build`, dann `dist/ytx.dev.user.js` installieren (wird lokal erzeugt, nicht im Repo). Es lädt `dist/ytx.user.js` per `@require file:///…`. Die normale Version vorher in Tampermonkey deaktivieren.
+### Entwicklungsvariante
+
+1. `npm install && npm run build`, dann `dist/ytx.dev.user.js` installieren (lokal erzeugt, nicht im Repo). Es lädt `dist/ytx.user.js` per `@require file:///…`. Die normale Version vorher deaktivieren.
 2. `chrome://extensions` → Tampermonkey → Details → **„Zugriff auf Datei-URLs zulassen“**.
-3. `npm run dev` (esbuild watch), speichern, YouTube neu laden.
-
-> Wird das Projekt verschoben, `npm run build` erneut ausführen – der Pfad im Dev-Script wird dabei neu erzeugt.
+3. `npm run dev`, speichern, Seite neu laden.
 
 ### Firefox + Violentmonkey (nicht getestet)
 
-Script wie oben installieren. Das Script braucht Seitenkontext (`@inject-into page`). Falls YouTubes CSP das blockiert, meldet die Diagnose „Polymer-Daten lesbar: Fehler“ – dann funktionieren Anzeige/Look/Layout weiter, Features mit Datenzugriff aber nicht.
+Script wie oben installieren. ytx braucht Seitenkontext (`@inject-into page`). Meldet die Diagnose „Polymer-Daten lesbar: Fehler“, laufen Anzeige/Look/Layout weiter, Features mit Datenzugriff nicht.
 
 ---
 
 ## Bedienung
 
-| Tastenkürzel | Aktion |
-|---|---|
-| Alt+Y | Panel öffnen/schließen |
-| Alt+P | Nächstes Profil |
-| Alt+T | Transkript kopieren (Standardformat) |
-| Alt+Q | Aktuelle Stelle zitieren (Markdown mit Zeitlink) |
-| Alt+L | Link an aktueller Stelle kopieren |
+| Kürzel | Seite | Aktion |
+|---|---|---|
+| Alt+Y | beide | Panel öffnen/schließen |
+| Alt+P | beide | Nächstes Profil |
+| Alt+T / Alt+Q / Alt+L | YouTube | Transkript kopieren / Stelle zitieren / Link an Stelle |
+| Alt+M | Music | Mix-Fenster |
+| Alt+F | Music | Aktuellen Song favorisieren |
+| Alt+L | Music | Songtext kopieren |
 
-Alle Kürzel lassen sich im Panel unter **Profile › Tastenkürzel** ändern.
+Kürzel lassen sich unter **Profile › Tastenkürzel** ändern.
 
-Panel-Tabs: **Anzeige · Look · Layout · Verhalten · Filter · Features · Profile · Diagnose**.
-Jede Änderung wirkt sofort (Live-Vorschau) und wird im aktiven Profil gespeichert.
+Panel-Tabs YouTube: **Anzeige · Look · Layout · Verhalten · Filter · Features · Profile · Diagnose**
+Panel-Tabs Music: **Anzeige · Look · Layout · Verhalten · Features · Musik · Verlauf & Daten · Statistik · Profile · Diagnose**
+
+Profile gelten für beide Seiten (jede Seite hat ihren eigenen Abschnitt). Musik-Vorlieben, Blocklisten, Verlauf und Favoriten sind profilunabhängig: dein Geschmack gehört zu dir, nicht zum Look-Profil.
 
 ---
 
-## Architektur
+## YouTube Music in 60 Sekunden
+
+- **★ in der Playerleiste**: Song, Künstler oder Album favorisieren, „Mehr/Weniger davon“, Song ignorieren, Künstler blockieren. Auf Künstler-, Album- und Playlist-Seiten gibt es einen eigenen ★-Button.
+- **Mix** oben rechts: Für dich · Neu · Genre · Lange nicht gehört · Noch nie gehört · Ähnlich · Mehr von · Smart Radio · Reihenfolge. Regler **Bekannt ⟷ Entdecken**, Session-Preset (Fokus, Gym, Abends, Entdecken, Nur bekannte Musik). Jede Zeile zeigt, warum sie da ist, und hat ⋯ für Feedback. **„▶ Alles abspielen“** spielt den Mix in ytx-eigener Reihenfolge.
+- **Startseite**: Regal „Neu von deinen Künstlern“.
+- **Warteschlange**: Gesamt- und Restdauer, Markierungen für blockierte, oft übersprungene und doppelte Titel, optional Auto-Skip (Tab **Musik**).
+- **Songtext**: Button „Songtext kopieren“ über dem Text.
+- **Verlauf & Daten**: Pausieren, Einträge löschen, Künstler/Songs vom Profil ausschließen, Aufbewahrungsdauer, Export/Import als JSON.
+- **Statistik**: Hörzeit, Top-Songs/-Künstler/-Alben, Skip-Quote, Wochen/Monate, Tageszeit, Wochentag, als Text kopierbar.
+
+---
+
+## Architektur (Kurzfassung)
 
 ```
-Config (pro Profil)
-  display   Target-ID → show | dim | collapse | hide
-  vars      Control-ID → Wert (Theme, Farben, Dichte, Typografie …)
-  layout    Presets pro Seite, Button-Reihenfolge, Kopfzeile
-  behavior  Verhalten-ID → Wert
-  filters   Kanäle, Stichwörter, Regex, Dauer, Alter, Shorts, Live, Gesehen
-  features  Feature-ID → { enabled, …Einstellungen aus dem Manifest }
-
-registry/   einziger Ort für YouTube-Selektoren und Datenpfade
-appliers/   setzen die sechs Config-Blöcke um
-features/   Module mit Manifest (settings, pages, hotkeys) + setup()
-core/       nav, observer, mount, store, diagnose, hotkeys …
-panel/      Oberfläche, vollständig aus Registry + Manifesten generiert
+ytx-Kern     core/ (store, config, nav, observer, mount, diagnose, idb, pageData …)
+             appliers/ (display, vars, layout, behavior, filters, features, tagger)
+             panel/ (aus Registry + Manifesten generiert)
+sites/       youtube.js · music.js   → bündeln alles Seitenspezifische
+registry/    youtube/ · music/       → einzige Orte für Selektoren, Datenpfade, Parser
+behaviors/   youtube.js · music.js
+features/    youtube/ · music/       → Module mit Manifest + setup(ctx)
+profiles/    youtube.js · music.js · index.js (gemeinsame Vorlagen)
 ```
 
-Prinzipien:
+Config pro Profil (Schema 3): `{ schema, youtube: { display, vars, layout, behavior, filters, features }, music: { display, vars, layout, behavior, features } }`. Der Kern kennt keine Selektoren, nur IDs. Nach einem Update von YouTube wird nur die Registry der betroffenen Seite angepasst.
 
-- **Config enthält nie YouTube-Selektoren**, nur IDs. Bricht etwas nach einem YouTube-Update, wird nur `src/registry/` angepasst.
-- **Anzeige über CSS-Attribute am `<html>`**, nicht per JavaScript. Kein Flackern, kaum Laufzeitkosten.
-- **Farben über YouTubes eigene Tokens** (`--yt-sys-color-baseline--*`), keine Selektor-Kriege.
-- **Ein MutationObserver** für alles, entprellt, nur `setTimeout` (kein rAF – Hintergrund-Tabs).
-- **Eigene Elemente** über `mount()`: wartet auf Anker, setzt neu ein wenn YouTube neu rendert, räumt beim Seitenwechsel ab.
-- **Trusted Types**: kein `innerHTML`, alles per `createElement`.
-- Features lassen sich einzeln abschalten; neue Einstellung = eine Zeile im Manifest, das Panel erzeugt das Control selbst.
+Details, Datenfluss, Datenschutz und Spike-Ergebnisse: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md).
 
-### Nach einem YouTube-Update
+### Nach einem Update von YouTube
 
-1. Panel → **Diagnose**. Rot/gelb zeigt, welcher Target, Anker oder welches Feature nicht mehr greift.
+1. Panel → **Diagnose** → „Nur Probleme zeigen“. Rot/gelb zeigt Target, Anker, Datenquelle oder Feature.
 2. „Bericht kopieren“ liefert eine Textzusammenfassung.
-3. Selektor in `src/registry/targets.js` / `anchors.js` / `paths.js` / `tags.js` ergänzen (Arrays = Fallbacks), `npm run build`.
+3. `src/registry/<seite>/…` anpassen (Arrays = Fallbacks). Für Music-Parser: `node tools/music-fixtures.mjs` lädt frische Testdaten, `npm test` zeigt, was bricht.
 
 ---
 
@@ -90,123 +98,127 @@ Prinzipien:
 
 ```
 ytx/
-├── build.mjs                  esbuild → dist/, erzeugt Userscript-Header
-├── package.json               build · dev · test · serve
-├── dist/
-│   ├── ytx.user.js            installierbares Userscript
-│   ├── ytx.min.js             minifiziert, ohne Header
-│   └── ytx.dev.user.js        Dev-Stub mit @require (lokal erzeugt, gitignored)
+├── build.mjs                    esbuild → dist/, Userscript-Header (@match beide Seiten)
+├── package.json                 build · dev · test · serve
+├── dist/ytx.user.js             installierbares Userscript (+ ytx.min.js, ytx.dev.user.js)
+├── docs/ARCHITEKTUR.md          Entscheidungen, Spikes, Testanleitung
 ├── src/
-│   ├── main.js                Start, verdrahtet alles, Debug-API window.__ytx
+│   ├── main.js                  Start, wählt die Site, Debug-API window.__ytx
 │   ├── core/
-│   │   ├── bridge.js          Seitenkontext, Polymer-Daten, Player-API
-│   │   ├── nav.js             Seitentyp, Video-ID, SPA-Events
-│   │   ├── observer.js        ein MutationObserver, entprellte Sweeps
-│   │   ├── mount.js           Einfügen an Ankern mit Neu-Einsetzen
-│   │   ├── store.js           Profile, Speichern (GM_setValue/localStorage)
-│   │   ├── config.js          Schema, Normalisierung gegen Registry
-│   │   ├── css.js · dom.js · format.js · clipboard.js
-│   │   ├── diagnose.js · hotkeys.js · log.js · lifecycle.js · scheduler.js
-│   ├── registry/              YouTube-spezifisch, einziger Wartungsort
-│   │   ├── targets.js         63 Targets mit erlaubten Modi
-│   │   ├── anchors.js         Einfügepunkte
-│   │   ├── paths.js           Datenpfade (Kacheln, Playlists, Videoseite)
-│   │   ├── tags.js            sprachunabhängiges Tagging über Icon-Namen
-│   │   ├── look.js            Theme-Tokens, Themes, Look-Controls
-│   │   └── presets.js         Layout-Presets, Button-Reihenfolge
-│   ├── appliers/              display · vars · layout · behavior · filters · features · tagger
-│   │   └── filterLogic.js     reine Filterlogik ohne DOM (getestet)
-│   ├── behaviors/index.js     Verhalten mit start()/stop
+│   │   ├── site.js              youtube | music aus dem Hostnamen
+│   │   ├── store.js · config.js Profile (Schema 3), Migrationen, Buckets
+│   │   ├── nav.js               Seitentyp und Titel über site, SPA-Events + History-API
+│   │   ├── idb.js               IndexedDB mit versionierten Migrationen
+│   │   ├── pageData.js          gedrosselter Seitenlader mit Cache
+│   │   ├── bridge.js · mount.js · observer.js · diagnose.js · hotkeys.js
+│   │   └── css.js · dom.js · format.js · clipboard.js · log.js · lifecycle.js · scheduler.js
+│   ├── sites/                   index.js · youtube.js · music.js
+│   ├── registry/
+│   │   ├── shared.js            Modi, Attributnamen
+│   │   ├── youtube/             targets (63) · anchors · tags · paths · look · presets · pages
+│   │   └── music/               targets (33) · anchors · tags · look · presets · pages
+│   │                            player.js (Store, Player-API, Queue, Songtext, Navigation)
+│   │                            parse.js · initialData.js (Seitendaten sprachunabhängig)
+│   ├── appliers/                display · vars · layout · behavior · filters · filterLogic · features · tagger
+│   ├── behaviors/               youtube.js · music.js
 │   ├── features/
-│   │   ├── transcript/        source (Token-URL) · panelSource (Fallback) · formats · index
-│   │   ├── playlist/          common · duration · sort · dimWatched
-│   │   ├── watchExtras.js     Endzeit · Datum · Kopieren-Menü
-│   │   ├── cardExtras.js      Fortschritts-Badge · Proxy-Buttons
-│   │   ├── ui.js              Buttons, Menü, Toast, Kopier-Dialog
-│   │   └── index.js           Liste der Feature-Manifeste
-│   ├── profiles/index.js      Vorlagen: YouTube · Aufgeräumt · Fokus
-│   └── panel/                 index · tabs · controls · styles
-├── tests/                     node --test: Formate, Filter, Config, Registry
-└── tools/serve.mjs            Dev-Server + Handoff für Tests im eingebauten Browser
+│   │   ├── ui.js                gemeinsame Buttons, Menü, Toast
+│   │   ├── youtube/             transcript/ · playlist/ · watchExtras · cardExtras · index
+│   │   └── music/
+│   │       ├── index.js         Manifeste
+│   │       ├── runtime.js       gemeinsamer Zustand: Vorlieben, Verlauf, Favoriten, Feedback, Profil
+│   │       ├── engine.js        Mixe und Neuerscheinungs-Check
+│   │       ├── mixes.js · ytxQueue.js · ui.js · diagnose.js
+│   │       ├── history.js · favorites.js · releases.js · hub.js · player.js
+│   │       ├── data/            db (Schema + Migrationen) · prefs · catalog
+│   │       ├── logic/           tracker · taste · recommend · rules · versions · sessions · queue · stats · lyrics
+│   │       └── metadataProviders/  index · local · musicbrainz · lastfm · ollama · http
+│   ├── profiles/                youtube.js · music.js · index.js
+│   └── panel/                   index · tabs · musicTabs · controls · styles
+├── tests/                       47 Tests + fixtures/music (echte Seitendaten)
+└── tools/                       serve.mjs (Test-Handoff) · music-fixtures.mjs
 ```
 
 ## Entwickeln
 
 ```bash
 npm install
-npm run build     # dist/ neu bauen
-npm run dev       # watch
-npm test          # 16 Unit-Tests
+npm run build
+npm run dev
+npm test
 ```
 
-Neue Version veröffentlichen: `version` in `package.json` erhöhen, `npm run build`, `dist/ytx.user.js` mit committen und pushen. Tampermonkey erkennt das Update an der höheren Versionsnummer.
+Neue Version: `version` in `package.json` erhöhen, `npm run build`, `dist/` mit committen.
 
-`window.__ytx` in der Konsole: `diagnose()`, `store`, `nav`, `feature(id)`, `panel`, `log()`, `destroy()`.
+`window.__ytx` in der Konsole: `diagnose()`, `store`, `nav`, `feature(id)`, `panel`, `log()`, `destroy()`. Auf Music zusätzlich `debug` mit `music`, `catalog`, `buildMix`, `checkReleases`, `ytxQueue`.
 
 ---
 
 ## Feature-Status
 
-Getestet im Chromium-Browser **ohne Anmeldung** gegen YouTube (Stand 13.09.2026).
+Getestet im eingebauten Chromium **ohne Anmeldung**, stumm geschaltet, Stand 15.09.2026.
+
+### YouTube
 
 | Bereich | Funktion | Status |
 |---|---|---|
-| Anzeige | 63 Targets, Modi Normal/Dimmen/Einklappen/Aus, Live-Trefferzahl | ✅ getestet (Suche, Video, Kanal, Playlist, Startseite) |
-| Anzeige | Buttons der Aktionsleiste sprachunabhängig (Icon-Daten) | ✅ |
-| Anzeige | Seitenleisten-Abschnitte (Entdecken, Mehr von YouTube, Abos) | ⚠️ Logik da, ohne Login nicht sichtbar |
-| Profile | Wechsel, Kopie, Umbenennen, Zurücksetzen, Löschen, Export/Import | ✅ |
-| Look | Themes (OLED, Nord, Gruvbox, Dracula, Solarized), Einzelfarben | ✅ |
-| Look | Spalten, Abstand, Radius, Schrift, Titelgröße/-zeilen, Zoom Aktionsleiste, Animationen | ✅ |
-| Layout | Kompakt, Liste, Nur Text, Classic, Kino, Fokus, Breite Liste | ✅ Kino/Liste/Kompakt geprüft |
-| Layout | Button-Reihenfolge Aktionsleiste, Kopfzeile mitscrollen/ausblenden | ✅ |
-| Verhalten | Shorts → normales Video | ✅ (SPA-Klick) |
-| Verhalten | Startseite umleiten | ✅ |
-| Verhalten | Autoplay aus (gewinnt gegen YouTubes Zurücksetzen, respektiert Nutzerklick) | ✅ |
-| Verhalten | Qualität, Geschwindigkeit merken, Pause im Hintergrund, Kanal-Trailer | ⚠️ implementiert, ungetestet (Wiedergabe im Test stumm/pausiert) |
-| Verhalten | Experiment-Flags | ✅ werden gesetzt; ob YouTube sie beachtet, ist offen |
-| Filter | Kanal (@handle, UC-ID, Name), Positivliste, Stichwort, Regex, Shorts, Live, Dauer, Alter | ✅ |
-| Filter | Gesehen filtern | ⚠️ braucht Login |
-| Transkript | Plain, Zeitstempel, Markdown mit Zeitlinks, SRT, VTT | ✅ + Unit-Tests |
-| Transkript | Manuelle und automatische Spuren, Spurwahl, Kapitel als Absätze | ✅ |
-| Transkript | Button nur bei vorhandenen Untertiteln | ✅ |
-| Transkript | Aktuelle Stelle zitieren | ✅ Logik, Clipboard siehe unten |
-| Transkript | Fallback über YouTubes Transkript-Panel | ⚠️ ungetestet (Panel war im Testbrowser von YouTube blockiert) |
-| Playlist | Gesamt/übrig, „≥“ bei Teil-Ladung, „Alle laden“ | ✅ 242-Einträge-Playlist, beide Komponenten-Generationen |
-| Playlist | Rest „ab hier“ im Playlist-Panel neben dem Video | ✅ |
-| Playlist | Sortieren (nur Anzeige) | ✅ |
-| Playlist | „Später ansehen“, gesehen/übrig, gesehene dimmen | ⚠️ braucht Login, ungetestet |
-| Video | Endzeit im Player, exaktes Datum, Kapitel/Beschreibung/Link kopieren | ✅ |
-| Video | Proxy-Buttons (Kopfzeile, Player, unter Titel) | ✅ |
-| Thumbnails | Fortschritt als Zahl | ⚠️ braucht Login, ungetestet |
-| Diagnose | Targets, Anker, Tagging, Features, Grundlagen, Log, Bericht | ✅ |
-| SPA | Video→Video, Suche→Video→Playlist→Kanal→Startseite ohne Reload | ✅ |
-| Fensterbreiten | 800 / 1000 / 1400 / 1920 px | ✅ |
+| Anzeige | 63 Targets, Normal/Dimmen/Einklappen/Aus, Trefferzahl | ✅ |
+| Look | 6 Themes, Einzelfarben inkl. Suchleiste und Kacheltext, Dichte, Typografie | ✅ |
+| Layout | Kompakt, Liste, Nur Text, Classic, Kino, Fokus, Breite Liste, Button-Reihenfolge, Kopfzeile | ✅ |
+| Verhalten | Shorts → Video, Startseite umleiten, Autoplay aus, Experiment-Flags | ✅ |
+| Verhalten | Qualität, Geschwindigkeit, Pause im Hintergrund, Kanal-Trailer | ⚠️ ungetestet |
+| Filter | Kanal, Positivliste, Stichwort, Regex, Shorts, Live, Dauer, Alter | ✅ · Gesehen ⚠️ Login |
+| Transkript | 5 Formate, Spurwahl, Kapitel, Zitieren | ✅ · Panel-Fallback ⚠️ |
+| Playlist | Dauer gesamt/übrig, Sortieren | ✅ · Später ansehen, gesehene dimmen ⚠️ Login |
+| Video | Endzeit, Datum, Kopieren-Menü, Proxy-Buttons | ✅ |
+| 0.2.0-Umbau | Start, Anzeige-Regeln, alle 8 Panel-Tabs, Diagnose ohne Fehler | ✅ Regression Startseite; Videoseite nach dem Umbau nicht erneut live geprüft |
+
+### YouTube Music
+
+| Bereich | Funktion | Status |
+|---|---|---|
+| Kern | Site-Erkennung, Seitentypen (auch `/@handle`, Alben unter `/playlist?list=OLAK…`), SPA ohne Reload | ✅ |
+| Anzeige | 33 Targets: Samples, Upgrade, Premium-Hinweise, Podcast-Chip/-Regale, Video-/Playlist-Regale, Player-Tabs, Playerleiste | ✅ Chip, Regale, Tabs · Samples/Upgrade ⚠️ nur mit Login sichtbar |
+| Look | 7 Themes, Einzelfarben über `--ytmusic-*`, Playerleiste, Fortschritt, Kacheln, Songtextgröße | ✅ Regeln · visuell nicht per Screenshot geprüft |
+| Layout | Kompakt, Listen statt Karussells, Songtext groß, Warteschlange breit, Kopfzeile ausblenden | ✅ Panel · visuell ⚠️ |
+| Verhalten | „Noch da?“ bestätigen, Premium-Dialoge schließen, Startseite umleiten | ⚠️ Dialoge im Test nicht aufgetreten |
+| Hörverlauf | Dauer, Prozent, komplett, Skip + Zeitpunkt, Wiederholung, Like, Kontext, Werbung ausgenommen | ✅ echte Wiedergabe + Unit-Tests |
+| Profil | Gewichte, früher Skip stärker, Halbwertszeit, Ausschlüsse | ✅ Unit-Tests |
+| Favoriten | ★ Playerleiste (Song/Künstler/Album), ★ Künstler/Album/Playlist-Seite, Gewicht | ✅ |
+| Neuerscheinungen | gedrosselter Hintergrund-Check, „neu“ vs. „dieses Jahr“, Startseiten-Regal, Badge | ✅ |
+| Mix-Fenster | Für dich, Genre (Deutschrap getestet), Smart Radio, Begründungen, Feedback-Menü | ✅ |
+| Mix-Fenster | Lange nicht gehört, Noch nie gehört, Ähnlich, Mehr von | ✅ Logik · mit echten Langzeitdaten ungetestet |
+| ytx-Reihenfolge | eigener Mix abspielen, Sprung am Songende, pausiert bei manueller Wahl | ✅ |
+| Smart Queue | Markierungen, Auto-Skip (blockierter Künstler getestet), Schutz gegen Sprungketten | ✅ |
+| Warteschlange | Gesamt-/Restdauer, Endzeit | ✅ 50 Titel |
+| Songtext | kopieren (Text, mit Titel, LRC), Tab wird bei Bedarf geöffnet | ✅ · Zeitstempel ⚠️ Web liefert keine |
+| Audio | Audiofassung bevorzugen, Equalizer | ⚠️ experimentell, ungetestet |
+| Daten | IndexedDB v2 mit Migrationen, Reload-Persistenz, Export/Import, Cache | ✅ |
+| Statistik | Rückblick, Tops, Verlauf, Tageszeit, Wochentag, Text-Export | ✅ |
+| Metadaten | Lokal · MusicBrainz/Last.fm/Ollama als optionale Quellen | ✅ lokal · extern ⚠️ ungetestet |
+| Diagnose | Seite, Song, Datenquellen, Anker, Queue, Songtext, IDB, Cache, Künstler-Check, Fehler | ✅ |
 
 ---
 
 ## Bekannte Einschränkungen
 
-**Wegen YouTube technisch nicht zuverlässig möglich**
+**YouTube Music**
 
-- **Transkript direkt abrufen**: Untertitel-URLs liefern ohne Proof-of-Origin-Token leere Antworten, eigene InnerTube-Aufrufe scheitern mit `400 Precondition check failed`. ytx liest deshalb die Token-URL, die der Player selbst anfragt, und nutzt sie für andere Sprachen. Dafür muss der Player das Video geladen haben: **während Pre-Roll-Werbung oder bei nie gestartetem Video** klappt es erst danach (Button zeigt „Warte auf Werbung …“).
-- **Untertitel anstoßen** ändert kurz die CC-Einstellung des Players; ytx stellt Zustand und YouTubes gespeicherte CC-Vorliebe danach wieder her.
-- **Freie Zonen auf der Videoseite** nicht umgesetzt: Umhängen per `display: contents` kollidiert mit YouTubes JavaScript-Playergröße und dem automatischen Spaltenwechsel. Ersatz: feste Presets „Kino“ und „Fokus“.
-- **Sortierung speichern** bei YouTube bewusst nicht vorhanden (Schreibzugriffe, kein Undo) – nur Anzeige.
-- **Alte UI-Versionen** gibt es nicht mehr zum Umschalten. „Classic“-Preset baut den Look nach; Experiment-Flags wirken selten und erst nach Neuladen.
-- **Veröffentlichungsdatum auf Kacheln** steht nur relativ und lokalisiert – Altersfilter versteht Deutsch und Englisch.
-- **Mixe vs. News-Regale** auf der Startseite lassen sich sprachunabhängig nicht trennen → gemeinsames Target „Themen-Regale“.
-- **Buttons, die YouTube bei wenig Platz ins ⋯-Menü schiebt**, können nicht umsortiert oder gespiegelt werden.
-- **Dislike-Zahlen** nicht umgesetzt: nur über Fremddienst möglich (Datenschutz, Schätzwerte).
-- **Größe der Player-Steuerleiste** nicht umgesetzt: YouTube vermisst sie per JavaScript, Skalieren macht die Seek-Leiste ungenau.
+- **Warteschlange lässt sich nicht umbauen.** Ohne interne API gibt es keinen stabilen Weg, Titel einzufügen. ytx überspringt deshalb (Auto-Skip) oder spielt Mixe in einer eigenen Reihenfolge und startet am Ende jedes Songs den nächsten.
+- **Zeitgestempelte Songtexte** liefert die Web-App nicht (nur die Mobil-Apps). Das Format „Mit Zeitstempeln“ ist vorbereitet und greift automatisch, falls es auftaucht.
+- **Genre-Unterseiten** lassen sich nicht per URL laden. Der Genre-Finder nutzt deshalb die normale Suche plus redaktionelle Playlists.
+- **Keine Genre-Angabe pro Künstler** bei YouTube Music. „Genre: …“ bezieht sich auf die Quelle (Suche/Playlist). Genres pro Künstler nur über optionale externe Quellen.
+- **Werbung** (ohne Premium) pausiert die Erfassung. Werbung zählt nicht als gehört.
+- **Neuerscheinungen** kommen von der Künstlerseite (Regal „Alben/Singles“). Nur Jahr, kein exaktes Datum. Beim ersten Check eines Künstlers gilt alles als bekannt, danach Neues als „neu“.
+- **Equalizer** leitet den Ton durch Web Audio. Einmal aktiviert bleibt das Element bis zum Neuladen daran gebunden (beim Ausschalten neutral).
+- **Hintergrund-Seitenabrufe**: höchstens 12 neue pro Mix (einstellbar), 2 s Abstand, Ergebnisse 12 h–7 Tage im Cache.
 
-**Test-Grenzen dieser Version**
+**YouTube**
 
-- Nicht angemeldet getestet: Abo-Feed, „Später ansehen“, Fortschrittsbalken, Seitenleisten-Abschnitte, Clip/Super-Thanks-Buttons ungeprüft.
-- Zwischenablage konnte im Testfenster nicht beschrieben werden (kein Fokus, kein `GM_setClipboard`). In Tampermonkey nutzt ytx `GM_setClipboard`; schlägt Kopieren trotzdem fehl, öffnet sich ein Dialog mit markiertem Text.
-- Firefox/Violentmonkey und Tampermonkey selbst nicht getestet – Script lief per Injektion im Seitenkontext, wie es `@sandbox JavaScript` vorsieht.
-- Visuelle Prüfung nur über Geometrie/Computed Styles, keine Screenshots.
+- Transkript braucht die Token-URL des Players (nach Pre-Roll-Werbung). Freie Zonen, Dislike-Zahlen und Größe der Player-Steuerleiste bewusst nicht umgesetzt. Sortierung nur als Anzeige.
 
-**Sonstiges**
+**Allgemein**
 
-- Nur `www.youtube.com` Desktop. `m.youtube.com`, YouTube Music und Embeds sind nicht abgedeckt.
-- Profile werden pro Browser gespeichert, kein Sync zwischen Geräten (Export/Import nutzen).
+- Nur Desktop. `m.youtube.com`, Apps und Embeds nicht abgedeckt.
+- Speicher pro Browser. Kein Sync (Export/Import nutzen).
+- Mit Login, in Tampermonkey selbst und in Firefox nicht getestet. Testanleitung: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md#test-mit-eingeloggtem-konto).

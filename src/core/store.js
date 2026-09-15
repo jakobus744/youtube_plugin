@@ -1,7 +1,11 @@
-import { normalize, SCHEMA } from './config.js'
+import { normalize, normalizeProfile, splitLegacy, SCHEMA, SITE_KEYS } from './config.js'
 import { templates, templateById, DEFAULT_ACTIVE } from '../profiles/index.js'
+import { sites, site } from '../sites/index.js'
 import { debounce } from './scheduler.js'
 import { log } from './log.js'
+
+// profile gelten fuer beide seiten, jede seite hat ihren eigenen abschnitt
+// buckets sind seitenweite einstellungen ausserhalb der profile
 
 const KEY = 'ytx.store'
 const STATE_KEY = 'ytx.state'
@@ -49,22 +53,46 @@ function slug(name) {
   )
 }
 
+const defaultSettings = () => ({ hotkeys: {}, panelButton: true, panelTab: 'display' })
+
 function freshData() {
   const profiles = {}
   for (const t of templates) profiles[t.id] = { name: t.name, template: t.id, config: t.config() }
-  return { schema: SCHEMA, active: DEFAULT_ACTIVE, profiles, settings: { hotkeys: {}, panelButton: true, panelTab: 'display' } }
+  return { schema: SCHEMA, active: DEFAULT_ACTIVE, profiles, settings: defaultSettings(), buckets: {}, migrations: MIGRATIONS.map(([id]) => id) }
 }
 
-// einmalige anpassungen gespeicherter profile wenn sich vorlagen aendern
+// einmalige anpassungen gespeicherter daten, reihenfolge ist wichtig
 const MIGRATIONS = [
+  [
+    'schema-3-sites',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        const split = splitLegacy(p.config)
+        p.config = { schema: SCHEMA, ...split }
+        const t = templateById[p.template]
+        // music abschnitt fuer bestehende profile aus der vorlage uebernehmen
+        if (!p.config.music && t) p.config.music = t.config().music
+      }
+      d.schema = SCHEMA
+    }
+  ],
   [
     'thumbs-color-default',
     (d) => {
       const p = d.profiles.aufgeraeumt
-      if (p?.template === 'aufgeraeumt' && p.config?.display?.['thumb.image'] === 'dim') delete p.config.display['thumb.image']
+      const disp = p?.config?.youtube?.display
+      if (p?.template === 'aufgeraeumt' && disp?.['thumb.image'] === 'dim') delete disp['thumb.image']
     }
   ]
 ]
+
+let data = null
+let config = null
+const subs = new Set()
+const saveSoon = debounce(() => writeRaw(KEY, data), 250, 1500)
+
+let runtime = readRaw(STATE_KEY) || {}
+const saveState = debounce(() => writeRaw(STATE_KEY, runtime), 500, 3000)
 
 function migrate() {
   data.migrations ||= []
@@ -78,18 +106,12 @@ function migrate() {
   if (changed) writeRaw(KEY, data)
 }
 
-let featureManifests = []
-let data = null
-let config = null
-const subs = new Set()
-const saveSoon = debounce(() => writeRaw(KEY, data), 250, 1500)
-
-let runtime = readRaw(STATE_KEY) || {}
-const saveState = debounce(() => writeRaw(STATE_KEY, runtime), 500, 3000)
+function activeProfile() {
+  return data.profiles[data.active] || data.profiles[Object.keys(data.profiles)[0]]
+}
 
 function recompute() {
-  const p = data.profiles[data.active] || data.profiles[Object.keys(data.profiles)[0]]
-  config = normalize(p?.config, featureManifests)
+  config = normalize(activeProfile()?.config?.[site.id], site)
 }
 
 function emit(reason) {
@@ -105,26 +127,23 @@ function commit(reason) {
 }
 
 export const store = {
-  init(manifests) {
-    featureManifests = manifests
+  init() {
     data = readRaw(KEY)
     if (!data || typeof data !== 'object' || !data.profiles || !Object.keys(data.profiles).length) {
       data = freshData()
       writeRaw(KEY, data)
     }
-    data.settings ||= { hotkeys: {}, panelButton: true, panelTab: 'display' }
+    data.settings ||= defaultSettings()
+    data.buckets ||= {}
+    migrate()
     // neue eingebaute profile nachtragen
     for (const t of templates) {
       if (!data.profiles[t.id] && !data.deletedTemplates?.includes(t.id)) data.profiles[t.id] = { name: t.name, template: t.id, config: t.config() }
     }
     if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0]
-    migrate()
     recompute()
     // entprelltes speichern vor dem verlassen der seite nachholen
-    const flush = () => {
-      saveSoon.flush()
-      saveState.flush()
-    }
+    const flush = () => this.flush()
     window.addEventListener('pagehide', flush)
     document.addEventListener('visibilitychange', () => document.hidden && flush())
   },
@@ -146,6 +165,9 @@ export const store = {
   get activeId() {
     return data.active
   },
+  get siteId() {
+    return site.id
+  },
   profiles() {
     return Object.entries(data.profiles).map(([id, p]) => ({ id, name: p.name, template: p.template, active: id === data.active }))
   },
@@ -155,12 +177,12 @@ export const store = {
     return () => subs.delete(fn)
   },
 
-  // mutator bekommt die rohe config des aktiven profils
+  // mutator bekommt den abschnitt der aktuellen seite
   update(mutator, reason = 'update') {
-    const p = data.profiles[data.active]
-    const draft = normalize(p.config, featureManifests)
+    const p = activeProfile()
+    const draft = normalize(p.config?.[site.id], site)
     mutator(draft)
-    p.config = normalize(draft, featureManifests)
+    p.config = { ...(p.config || {}), schema: SCHEMA, [site.id]: normalize(draft, site) }
     commit(reason)
   },
 
@@ -168,6 +190,21 @@ export const store = {
     mutator(data.settings)
     saveSoon()
     emit('settings')
+  },
+
+  // seitenweite einstellungen, normalisiert vom besitzer des buckets
+  bucket(name, normalizeFn) {
+    const b = normalizeFn ? normalizeFn(data.buckets[name]) : data.buckets[name]
+    return b
+  },
+
+  updateBucket(name, mutator, normalizeFn) {
+    const draft = normalizeFn ? normalizeFn(data.buckets[name]) : structuredClone(data.buckets[name] || {})
+    mutator(draft)
+    data.buckets[name] = normalizeFn ? normalizeFn(draft) : draft
+    saveSoon()
+    emit(`bucket:${name}`)
+    return data.buckets[name]
   },
 
   setActive(id) {
@@ -209,16 +246,19 @@ export const store = {
     return true
   },
 
-  resetProfile(id) {
+  // setzt nur den abschnitt der aktuellen seite zurueck
+  resetProfile(id, allSites = false) {
     const p = data.profiles[id]
     if (!p) return
     const t = templateById[p.template]
-    p.config = t ? t.config() : {}
+    const fresh = t ? t.config() : {}
+    p.config = allSites ? fresh : { ...(p.config || {}), schema: SCHEMA, [site.id]: fresh[site.id] || {} }
     commit('profile')
   },
 
   exportJson(all = false) {
-    const out = all ? data : { schema: SCHEMA, profile: { name: data.profiles[data.active].name, config: normalize(data.profiles[data.active].config, featureManifests) } }
+    const p = activeProfile()
+    const out = all ? { ...data, buckets: undefined } : { schema: SCHEMA, profile: { name: p.name, config: normalizeProfile(p.config, sites) } }
     return JSON.stringify(out, null, 2)
   },
 
@@ -227,7 +267,7 @@ export const store = {
     if (obj.profiles && typeof obj.profiles === 'object') {
       for (const [id, p] of Object.entries(obj.profiles)) {
         if (!p || typeof p !== 'object') continue
-        data.profiles[id] = { name: String(p.name || id), template: p.template ?? null, config: normalize(p.config, featureManifests) }
+        data.profiles[id] = { name: String(p.name || id), template: p.template ?? null, config: normalizeProfile(p.config, sites) }
       }
       if (obj.active && data.profiles[obj.active]) data.active = obj.active
       if (obj.settings) data.settings = { ...data.settings, ...obj.settings }
@@ -237,13 +277,15 @@ export const store = {
     const cfg = obj.profile?.config || obj.config || obj
     const name = obj.profile?.name || 'Importiert'
     const id = this.createProfile(name)
-    data.profiles[id].config = normalize(cfg, featureManifests)
+    data.profiles[id].config = normalizeProfile(cfg, sites)
     commit('import')
     return `Profil „${name}“ importiert`
   },
 
   resetAll() {
+    const buckets = data.buckets
     data = freshData()
+    data.buckets = buckets
     commit('reset')
   },
 
@@ -257,3 +299,5 @@ export const store = {
     }
   }
 }
+
+export { SITE_KEYS }

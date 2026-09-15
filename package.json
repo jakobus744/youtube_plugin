@@ -1,7 +1,7 @@
 {
   "name": "ytx",
-  "version": "0.1.3",
-  "description": "YouTube anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features",
+  "version": "0.2.0",
+  "description": "YouTube und YouTube Music anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features, lokale Musik-Empfehlungen",
   "private": true,
   "type": "module",
   "scripts": {

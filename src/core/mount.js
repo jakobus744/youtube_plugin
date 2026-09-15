@@ -1,4 +1,4 @@
-import { anchors } from '../registry/anchors.js'
+import { site } from '../sites/index.js'
 import { qsa, isVisible } from './dom.js'
 import { onSweep, requestSweep } from './observer.js'
 import { onDispose } from './lifecycle.js'
@@ -8,7 +8,7 @@ const mounts = new Map()
 const anchorStatus = new Map()
 
 export function resolveAnchor(id, root = document) {
-  const a = anchors[id]
+  const a = site.anchors[id]
   if (!a) {
     log.warn(`anker unbekannt ${id}`)
     return null

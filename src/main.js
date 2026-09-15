@@ -18,8 +18,7 @@ import { initBehavior, applyBehavior } from './appliers/behavior.js'
 import { initTagger } from './appliers/tagger.js'
 import { initFilters, applyFilters } from './appliers/filters.js'
 import { initFeatures, applyFeatures, featureInstance } from './appliers/features.js'
-import { featureManifests } from './features/index.js'
-import { initTimedtextCapture } from './features/transcript/source.js'
+import { site } from './sites/index.js'
 import { initUiCss, initMenuDismiss, toast } from './features/ui.js'
 import { createPanel, mastheadButton } from './panel/index.js'
 import { registerCoreChecks } from './panel/tabs.js'
@@ -32,6 +31,8 @@ function boot() {
 
   const api = {
     version: VERSION,
+    site: site.id,
+    debug: site.debug,
     store,
     nav,
     panel: null,
@@ -47,8 +48,8 @@ function boot() {
   pageWindow.__ytx = api
 
   initNav()
-  initTimedtextCapture()
-  store.init(featureManifests)
+  site.boot?.()
+  store.init()
   const cfg = store.config
 
   // alles was flackern koennte zuerst und synchron
@@ -66,10 +67,12 @@ function boot() {
   applyBehavior(cfg)
 
   initTagger()
-  initFilters()
-  applyFilters(cfg)
+  if (site.filters) {
+    initFilters()
+    applyFilters(cfg)
+  }
 
-  initFeatures(featureManifests, (m, settings) => {
+  initFeatures(site.features, (m, settings) => {
     const cleanups = []
     return {
       settings,
@@ -97,7 +100,7 @@ function boot() {
   applyFeatures(cfg)
 
   store.subscribe((c, reason) => {
-    if (reason === 'settings') {
+    if (reason === 'settings' || reason.startsWith('bucket:')) {
       setBindings(store.settings.hotkeys)
       requestSweep()
       return
@@ -106,7 +109,7 @@ function boot() {
     applyVars(c)
     applyLayout(c)
     applyBehavior(c)
-    applyFilters(c)
+    if (site.filters) applyFilters(c)
     applyFeatures(c)
     requestSweep()
   })
@@ -121,7 +124,8 @@ function boot() {
     version: VERSION,
     store,
     nav,
-    features: featureManifests,
+    site,
+    features: site.features,
     ui: {},
     log,
     mount,
@@ -143,7 +147,7 @@ function boot() {
     sweepNow()
   })
 
-  log.info(`ytx ${VERSION} gestartet auf ${nav.page}`)
+  log.info(`ytx ${VERSION} gestartet auf ${site.label} · ${nav.page}`)
 }
 
 try {

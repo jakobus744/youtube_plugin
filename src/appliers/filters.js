@@ -1,4 +1,6 @@
-import { CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots } from '../registry/paths.js'
+import { site } from '../sites/index.js'
+
+const F = () => site.filters
 import { compileRules, evaluate } from './filterLogic.js'
 import { setCss } from '../core/css.js'
 import { h, qsa } from '../core/dom.js'
@@ -29,9 +31,9 @@ const CSS = `
 
 function outermostCards() {
   const out = []
-  for (const root of activePageRoots()) {
-    for (const el of qsa(CARD_SELECTORS.join(', '), root)) {
-      const parent = el.parentElement?.closest(CARD_PARENT)
+  for (const root of F().activePageRoots()) {
+    for (const el of qsa(F().CARD_SELECTORS.join(', '), root)) {
+      const parent = el.parentElement?.closest(F().CARD_PARENT)
       if (parent) continue
       out.push(el)
     }
@@ -63,7 +65,7 @@ function sweep() {
     seen.set(el, sig)
     let meta = null
     try {
-      meta = readCard(el)
+      meta = F().readCard(el)
     } catch (e) {
       log.warn('filter readCard', e)
     }

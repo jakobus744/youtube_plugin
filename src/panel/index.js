@@ -4,17 +4,24 @@ import { PANEL_CSS } from './styles.js'
 import { displayTab, lookTab, layoutTab, behaviorTab, filterTab, featuresTab, profilesTab, diagnoseTab } from './tabs.js'
 import { button } from '../features/ui.js'
 import { summarize, runChecks } from '../core/diagnose.js'
+import { musicTab, musicDataTab, musicStatsTab } from './musicTabs.js'
+import { site } from '../sites/index.js'
 
-const TABS = [
-  ['display', 'Anzeige', displayTab],
-  ['look', 'Look', lookTab],
-  ['layout', 'Layout', layoutTab],
-  ['behavior', 'Verhalten', behaviorTab],
-  ['filters', 'Filter', filterTab],
-  ['features', 'Features', featuresTab],
-  ['profiles', 'Profile', profilesTab],
-  ['diagnose', 'Diagnose', diagnoseTab]
-]
+const ALL_TABS = {
+  display: ['Anzeige', displayTab],
+  look: ['Look', lookTab],
+  layout: ['Layout', layoutTab],
+  behavior: ['Verhalten', behaviorTab],
+  filters: ['Filter', filterTab],
+  features: ['Features', featuresTab],
+  music: ['Musik', musicTab],
+  musicData: ['Verlauf & Daten', musicDataTab],
+  musicStats: ['Statistik', musicStatsTab],
+  profiles: ['Profile', profilesTab],
+  diagnose: ['Diagnose', diagnoseTab]
+}
+
+const TABS = site.panelTabs.map((id) => [id, ...ALL_TABS[id]])
 
 export function createPanel(app) {
   const host = h('ytx-panel', { 'data-ytx-own': '' })
@@ -29,10 +36,11 @@ export function createPanel(app) {
   const main = h('main')
   const status = h('span')
   const footInfo = h('span')
-  const panel = h('div', { class: 'panel', hidden: true }, h('header', null, h('span', { class: 'logo', text: 'ytx' }), profileSelect, closeBtn), nav, main, h('footer', null, status, footInfo))
+  const panel = h('div', { class: 'panel', hidden: true }, h('header', null, h('span', { class: 'logo', text: site.id === 'music' ? 'ytx ♫' : 'ytx' }), profileSelect, closeBtn), nav, main, h('footer', null, status, footInfo))
   shadow.append(panel)
 
-  let tab = app.store.settings.panelTab || 'display'
+  let tab = app.store.settings[`panelTab.${site.id}`] || app.store.settings.panelTab || 'display'
+  if (!TABS.some(([id]) => id === tab)) tab = 'display'
   let content = null
   let flashTimer = null
   let countTimer = null
@@ -54,7 +62,7 @@ export function createPanel(app) {
   function select(id) {
     tab = id
     for (const [k, b] of tabButtons) b.setAttribute('aria-selected', String(k === id))
-    app.store.updateSettings((s) => (s.panelTab = id))
+    app.store.updateSettings((s) => (s[`panelTab.${site.id}`] = id))
     render()
   }
 
@@ -112,7 +120,7 @@ export function createPanel(app) {
       fillProfiles()
       return
     }
-    if (reason !== 'settings') render()
+    if (reason !== 'settings' && !reason.startsWith('bucket:')) render()
   })
 
   listen(shadow, 'keydown', (e) => {

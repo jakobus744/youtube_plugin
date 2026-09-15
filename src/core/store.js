@@ -186,6 +186,17 @@ export const store = {
     commit(reason)
   },
 
+  // look (theme/farben/dichte/typografie) der jeweils anderen seite im selben profil
+  // dient dazu, den style zwischen youtube und music zu uebertragen
+  otherLooks() {
+    const p = activeProfile()
+    return SITE_KEYS.filter((id) => id !== site.id).map((id) => ({
+      id,
+      label: sites[id].label,
+      vars: normalize(p.config?.[id], sites[id]).vars
+    }))
+  },
+
   updateSettings(mutator) {
     mutator(data.settings)
     saveSoon()

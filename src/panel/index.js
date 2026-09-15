@@ -33,6 +33,12 @@ export function createPanel(app) {
   const profileSelect = h('select', { title: 'Aktives Profil' })
   const closeBtn = h('button', { class: 'iconbtn', title: 'Schließen (Alt+Y)', text: '✕' })
   const nav = h('nav', { role: 'tablist' })
+  // normales mausrad soll die tableiste auch seitlich scrollen, nicht nur trackpad/shift
+  listen(nav, 'wheel', (e) => {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
+    nav.scrollLeft += e.deltaY
+    e.preventDefault()
+  }, { passive: false })
   const main = h('main')
   const status = h('span')
   const footInfo = h('span')

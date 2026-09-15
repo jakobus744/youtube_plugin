@@ -85,6 +85,21 @@ export function lookTab(app) {
   const { themes, colorControls, controls, LOOK_GROUPS } = site.look
   const theme = themes.find((t) => t.id === cfg.vars.theme) || themes[0]
 
+  const others = app.store.otherLooks()
+  if (others.length) {
+    root.append(
+      h('div', { class: 'btns' },
+        ...others.map((o) =>
+          btn(`Style von ${o.label} übernehmen`, () => {
+            update((c) => (c.vars = { ...c.vars, ...o.vars }))
+            app.rerender()
+          }, 'tiny')
+        )
+      ),
+      h('p', { class: 'hint', text: 'Übernimmt Theme, Farben und passende Regler (z. B. Ecken-Rundung, Schrift). Nicht jede Einstellung existiert auf beiden Seiten.' })
+    )
+  }
+
   root.append(h('h3', { text: 'Theme' }))
   root.append(
     row('Farbschema', select(themes.map((t) => [t.id, t.label]), cfg.vars.theme, (v) => {

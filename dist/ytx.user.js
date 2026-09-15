@@ -5442,6 +5442,16 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       p.config = { ...p.config || {}, schema: SCHEMA, [site.id]: normalize(draft, site) };
       commit(reason);
     },
+    // look (theme/farben/dichte/typografie) der jeweils anderen seite im selben profil
+    // dient dazu, den style zwischen youtube und music zu uebertragen
+    otherLooks() {
+      const p = activeProfile();
+      return SITE_KEYS.filter((id) => id !== site.id).map((id) => ({
+        id,
+        label: sites[id].label,
+        vars: normalize(p.config?.[id], sites[id]).vars
+      }));
+    },
     updateSettings(mutator) {
       mutator(data.settings);
       saveSoon();
@@ -9613,7 +9623,11 @@ header .logo { font-weight: 700; font-size: 15px; letter-spacing: .02em; }
 header select { flex: 1; min-width: 0; }
 .iconbtn { width: 30px; height: 30px; border: 0; border-radius: 50%; background: none; color: var(--fg2); cursor: pointer; font-size: 16px; }
 .iconbtn:hover { background: var(--hover); color: var(--fg); }
-nav { display: flex; gap: 2px; padding: 6px 8px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+nav { display: flex; gap: 2px; padding: 6px 8px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+nav::-webkit-scrollbar { height: 6px; }
+nav::-webkit-scrollbar-track { background: transparent; }
+nav::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+nav::-webkit-scrollbar-thumb:hover { background: var(--fg2); }
 nav button { flex: none; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--fg2); cursor: pointer; font: 500 12px/1.2 inherit; font-family: inherit; }
 nav button:hover { background: var(--hover); color: var(--fg); }
 nav button[aria-selected="true"] { background: var(--fg); color: var(--bg); }
@@ -9889,6 +9903,22 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const update = (fn) => app.store.update(fn, "panel");
     const { themes: themes3, colorControls: colorControls3, controls: controls3, LOOK_GROUPS: LOOK_GROUPS3 } = site.look;
     const theme = themes3.find((t) => t.id === cfg.vars.theme) || themes3[0];
+    const others = app.store.otherLooks();
+    if (others.length) {
+      root.append(
+        h(
+          "div",
+          { class: "btns" },
+          ...others.map(
+            (o) => btn(`Style von ${o.label} übernehmen`, () => {
+              update((c) => c.vars = { ...c.vars, ...o.vars });
+              app.rerender();
+            }, "tiny")
+          )
+        ),
+        h("p", { class: "hint", text: "Übernimmt Theme, Farben und passende Regler (z. B. Ecken-Rundung, Schrift). Nicht jede Einstellung existiert auf beiden Seiten." })
+      );
+    }
     root.append(h("h3", { text: "Theme" }));
     root.append(
       row("Farbschema", select(themes3.map((t) => [t.id, t.label]), cfg.vars.theme, (v) => {
@@ -10708,6 +10738,11 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const profileSelect = h("select", { title: "Aktives Profil" });
     const closeBtn = h("button", { class: "iconbtn", title: "Schließen (Alt+Y)", text: "✕" });
     const nav2 = h("nav", { role: "tablist" });
+    listen(nav2, "wheel", (e) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+      nav2.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }, { passive: false });
     const main = h("main");
     const status = h("span");
     const footInfo = h("span");

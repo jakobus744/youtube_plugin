@@ -22,7 +22,11 @@ header .logo { font-weight: 700; font-size: 15px; letter-spacing: .02em; }
 header select { flex: 1; min-width: 0; }
 .iconbtn { width: 30px; height: 30px; border: 0; border-radius: 50%; background: none; color: var(--fg2); cursor: pointer; font-size: 16px; }
 .iconbtn:hover { background: var(--hover); color: var(--fg); }
-nav { display: flex; gap: 2px; padding: 6px 8px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: none; }
+nav { display: flex; gap: 2px; padding: 6px 8px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+nav::-webkit-scrollbar { height: 6px; }
+nav::-webkit-scrollbar-track { background: transparent; }
+nav::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+nav::-webkit-scrollbar-thumb:hover { background: var(--fg2); }
 nav button { flex: none; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--fg2); cursor: pointer; font: 500 12px/1.2 inherit; font-family: inherit; }
 nav button:hover { background: var(--hover); color: var(--fg); }
 nav button[aria-selected="true"] { background: var(--fg); color: var(--bg); }

@@ -12,6 +12,7 @@ import { computeStats } from '../features/music/logic/stats.js'
 import { metadata } from '../features/music/metadataProviders/index.js'
 import { defaultPrefs } from '../features/music/data/prefs.js'
 import { navigateEndpoint, endpoints } from '../registry/music/player.js'
+import { showRecap } from '../features/music/weekly.js'
 
 // panel tabs fuer music: einstellungen, verlauf und daten, statistik
 
@@ -346,6 +347,9 @@ export function musicStatsTab(app) {
   app.ui.statsRange ||= '30'
   const body = h('div')
   root.append(
+    h('div', { class: 'btns' }, btn('Wochenrückblick (letzte Woche)', async () => {
+      if (!(await showRecap())) app.flash('Letzte Woche keine Hördaten')
+    }, 'primary')),
     row('Zeitraum', select(ranges, app.ui.statsRange, (v) => {
       app.ui.statsRange = v
       draw()

@@ -49,6 +49,8 @@ const tidyFeatures = {
   'watch.copyInfo': { enabled: true },
   'playlist.duration': { enabled: true },
   'playlist.search': { enabled: true },
+  'subs.groups': { enabled: true },
+  'watch.time': { enabled: true },
   'playlist.dimWatched': { enabled: false },
   'playlist.sort': { enabled: true },
   'player.endsAt': { enabled: true },

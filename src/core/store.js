@@ -95,6 +95,23 @@ const MIGRATIONS = [
         if (!f['playlist.search']) f['playlist.search'] = { enabled: true }
       }
     }
+  ],
+  [
+    'groups-watchtime-weekly-on',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        if (p.template === 'youtube') continue
+        if (p.config?.youtube) {
+          const f = (p.config.youtube.features ||= {})
+          f['subs.groups'] ||= { enabled: true }
+          f['watch.time'] ||= { enabled: true }
+        }
+        if (p.config?.music) {
+          const f = (p.config.music.features ||= {})
+          f['m.weekly'] ||= { enabled: true }
+        }
+      }
+    }
   ]
 ]
 

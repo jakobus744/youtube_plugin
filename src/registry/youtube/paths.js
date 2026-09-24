@@ -296,3 +296,80 @@ export const watch = {
     return /\/api\/timedtext\?/.test(url) && /[?&]pot=/.test(url)
   }
 }
+
+// ---------- abos und kanaele ----------
+
+// kanal schluessel aus einer kachel oder url, id vor handle vor name
+export function channelRefOf(card) {
+  const url = card?.channelUrl || ''
+  const handle = (url.match(/\/(@[^/?#]+)/) || [])[1] || null
+  const idFromUrl = (url.match(/\/channel\/(UC[\w-]{22})/) || [])[1] || null
+  return { id: card?.channelId || idFromUrl || null, handle: handle ? decodeURIComponent(handle).toLowerCase() : null, name: card?.channel || '' }
+}
+
+// abonnierte kanaele aus der seitenleiste, nur mit login vorhanden
+export function subscribedChannels() {
+  const out = new Map()
+  const walk = (o, d = 0) => {
+    if (!o || typeof o !== 'object' || d > 14) return
+    const e = o.guideEntryRenderer
+    const ep = e?.navigationEndpoint?.browseEndpoint
+    if (ep?.browseId?.startsWith('UC')) {
+      const handle = (String(ep.canonicalBaseUrl || '').match(/\/(@[^/?#]+)/) || [])[1]
+      out.set(ep.browseId, { id: ep.browseId, handle: handle ? decodeURIComponent(handle).toLowerCase() : null, name: runsText(e.formattedTitle) || e.formattedTitle?.simpleText || '' })
+      return
+    }
+    for (const k of Object.keys(o)) walk(o[k], d + 1)
+  }
+  for (const el of qsa('ytd-guide-renderer')) walk(dataOf(el)?.items)
+  return [...out.values()]
+}
+
+// aktuelle kanalseite
+export function channelPageInfo() {
+  const d = dataOf(qs('ytd-browse[page-subtype="channels"]'))
+  const m = d?.metadata?.channelMetadataRenderer
+  if (!m?.externalId) return null
+  const handle = (String(m.vanityChannelUrl || '').match(/\/(@[^/?#]+)/) || [])[1]
+  return { id: m.externalId, handle: handle ? decodeURIComponent(handle).toLowerCase() : null, name: m.title || '' }
+}
+
+// ---------- laufende wiedergabe fuer die schauzeit ----------
+
+function mainPlayer() {
+  // vorschau auf kacheln hat einen eigenen player, der zaehlt nicht
+  return qsa('#movie_player').find((p) => typeof p.getPlayerState === 'function' && !p.closest('ytd-video-preview, #inline-preview-player, ytd-thumbnail')) || null
+}
+
+export function activePlayback() {
+  const shorts = qs('#shorts-player')
+  const shortsOn = shorts && typeof shorts.getPlayerState === 'function' && location.pathname.startsWith('/shorts/')
+  const p = shortsOn ? shorts : mainPlayer()
+  if (!p) return null
+  try {
+    const vd = p.getVideoData?.() || {}
+    if (!vd.video_id) return null
+    const pr = p.getPlayerResponse?.()
+    const details = pr?.videoDetails?.videoId === vd.video_id ? pr.videoDetails : null
+    return {
+      videoId: vd.video_id,
+      kind: shortsOn ? 'short' : 'video',
+      title: vd.title || details?.title || '',
+      channel: { id: details?.channelId || null, name: vd.author || details?.author || '' },
+      playing: p.getPlayerState() === 1,
+      ad: p.classList.contains('ad-showing'),
+      pos: p.getCurrentTime?.() || 0,
+      dur: p.getDuration?.() || 0,
+      live: !!vd.isLive
+    }
+  } catch {
+    return null
+  }
+}
+
+export function pauseActive() {
+  try {
+    const p = location.pathname.startsWith('/shorts/') ? qs('#shorts-player') : mainPlayer()
+    p?.pauseVideo?.()
+  } catch {}
+}

@@ -30,7 +30,7 @@ export const youtubeSite = {
   features: featureManifests,
   templates,
   filters: { pages: FILTER_PAGES, CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots },
-  panelTabs: ['display', 'look', 'layout', 'behavior', 'filters', 'features', 'profiles', 'diagnose'],
+  panelTabs: ['display', 'look', 'layout', 'behavior', 'filters', 'features', 'subGroups', 'watchStats', 'profiles', 'diagnose'],
   boot() {
     initTimedtextCapture()
   }

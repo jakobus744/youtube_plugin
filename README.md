@@ -50,7 +50,7 @@ Script wie oben installieren. ytx braucht Seitenkontext (`@inject-into page`). M
 
 Kürzel lassen sich unter **Profile › Tastenkürzel** ändern.
 
-Panel-Tabs YouTube: **Anzeige · Look · Layout · Verhalten · Filter · Features · Profile · Diagnose**
+Panel-Tabs YouTube: **Anzeige · Look · Layout · Verhalten · Filter · Features · Abo-Gruppen · Schauzeit · Profile · Diagnose**
 Panel-Tabs Music: **Anzeige · Look · Layout · Verhalten · Features · Musik · Verlauf & Daten · Statistik · Profile · Diagnose**
 
 Profile gelten für beide Seiten (jede Seite hat ihren eigenen Abschnitt). Sind YouTube und Music gleichzeitig offen, gleichen sich die Tabs live ab. Im **Look**-Tab lässt sich der Style der anderen Seite übernehmen oder dauerhaft koppeln.
@@ -71,6 +71,12 @@ Musik-Vorlieben, Blocklisten, Verlauf und Favoriten sind profilunabhängig: dein
 - **Songtext**: Button „Songtext kopieren“ über dem Text.
 - **Verlauf & Daten**: Pausieren, Einträge löschen, Künstler/Songs vom Profil ausschließen, Aufbewahrungsdauer, Export/Import als JSON.
 - **Statistik**: Hörzeit, Top-Songs/-Künstler/-Alben, Skip-Quote, Wochen/Monate, Tageszeit, Wochentag, als Text kopierbar.
+- **Wochenrückblick**: ab Montag einmal pro Woche eine Karte mit Hörzeit, Top-Künstlern, Top-Songs und neu entdeckten Künstlern der letzten Woche, jederzeit im Tab Statistik.
+
+## YouTube: Abo-Gruppen und Schauzeit
+
+- **Abo-Gruppen**: Gruppen wie „Tech“ oder „Musik“ im Tab **Abo-Gruppen** anlegen und Kanäle zuordnen, oder auf jeder Kanalseite über den Button **Gruppen**. Über dem Abo-Feed filtert eine Chip-Leiste nach Gruppe, dazu „Ohne Gruppe“.
+- **Schauzeit**: misst lokal, wie lange Videos wirklich laufen (Werbung und Pausen zählen nicht). „Heute: …“ oben rechts, Tageslimit mit sanfter Erinnerung (Standard 2 h, nach dem Limit alle 15 min), Pausen-Hinweis nach 60 min am Stück. Nichts wird blockiert, außer du schaltest „Beim Tageslimit Video anhalten“ ein. Statistik im Tab **Schauzeit**.
 
 ---
 
@@ -140,7 +146,7 @@ ytx/
 │   │       └── metadataProviders/  index · local · musicbrainz · lastfm · ollama · http
 │   ├── profiles/                youtube.js · music.js · index.js
 │   └── panel/                   index · tabs · musicTabs · controls · styles
-├── tests/                       52 Tests + fixtures/music (echte Seitendaten)
+├── tests/                       57 Tests + fixtures/music (echte Seitendaten)
 └── tools/                       serve.mjs (Test-Handoff) · music-fixtures.mjs
 ```
 
@@ -176,6 +182,8 @@ Getestet im eingebauten Chromium **ohne Anmeldung**, stumm geschaltet, Stand 15.
 | Transkript | 5 Formate, Spurwahl, Kapitel, Zitieren | ✅ · Panel-Fallback ⚠️ |
 | Playlist | Dauer gesamt/übrig, Sortieren, Suche nach Titel/Kanal (Seite + Panel neben dem Video) | ✅ · Später ansehen, gesehene dimmen ⚠️ Login |
 | Video | Endzeit, Datum, Kopieren-Menü, Proxy-Buttons | ✅ |
+| Abo-Gruppen | Gruppen anlegen, Zuordnen auf der Kanalseite und im Panel | ✅ · Filterleiste im Abo-Feed ⚠️ braucht Login, nur Logik getestet |
+| Schauzeit | Messen, Zwischenspeichern, Heute-Anzeige, Tageslimit-Karte, Statistik-Tab | ✅ mit simuliertem Abspielen (Testfenster spielt nicht wirklich ab) |
 | 0.2.0-Umbau | Start, Anzeige-Regeln, alle 8 Panel-Tabs, Diagnose ohne Fehler | ✅ Regression Startseite; Videoseite nach dem Umbau nicht erneut live geprüft |
 
 ### YouTube Music
@@ -200,6 +208,7 @@ Getestet im eingebauten Chromium **ohne Anmeldung**, stumm geschaltet, Stand 15.
 | Audio | Audiofassung bevorzugen, Equalizer | ⚠️ experimentell, ungetestet |
 | Daten | IndexedDB v2 mit Migrationen, Reload-Persistenz, Export/Import, Cache | ✅ |
 | Statistik | Rückblick, Tops, Verlauf, Tageszeit, Wochentag, Text-Export | ✅ |
+| Wochenrückblick | Karte ab Montag, neu entdeckte Künstler, Button im Statistik-Tab | ✅ mit Testdaten |
 | Metadaten | Lokal · MusicBrainz/Last.fm/Ollama als optionale Quellen | ✅ lokal · extern ⚠️ ungetestet |
 | Diagnose | Seite, Song, Datenquellen, Anker, Queue, Songtext, IDB, Cache, Künstler-Check, Fehler | ✅ |
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.2.1
+// @version      0.2.2
 // @description  YouTube und YouTube Music anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -28,7 +28,7 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.2.1",
+    version: "0.2.2",
     description: "YouTube und YouTube Music anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features, lokale Musik-Empfehlungen",
     private: true,
     type: "module",
@@ -644,6 +644,20 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
     "watch.playlistHeader": {
       label: "Playlist-Panel Kopf",
       sel: ["ytd-watch-flexy ytd-playlist-panel-renderer#playlist #header-description", "ytd-watch-flexy ytd-playlist-panel-renderer#playlist #header-contents"]
+    },
+    "subs.feedTop": {
+      label: "Abo-Feed oben",
+      visibleOnly: true,
+      sel: ['ytd-browse[page-subtype="subscriptions"] ytd-rich-grid-renderer', 'ytd-browse[page-subtype="subscriptions"] ytd-section-list-renderer']
+    },
+    "channel.headerButtons": {
+      label: "Kanal-Kopf Buttons",
+      visibleOnly: true,
+      sel: [
+        'ytd-browse[page-subtype="channels"] yt-page-header-view-model yt-flexible-actions-view-model',
+        'ytd-browse[page-subtype="channels"] ytd-c4-tabbed-header-renderer #buttons',
+        'ytd-browse[page-subtype="channels"] #channel-header #buttons'
+      ]
     }
   };
 
@@ -886,9 +900,9 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
       run() {
         let n = 0;
         for (const b of qsa('badge-shape[class*="Live"], ytd-thumbnail-overlay-time-status-renderer[overlay-style="LIVE"], ytd-badge-supported-renderer .badge-style-type-live-now-alternate')) {
-          const card = b.closest("ytd-rich-item-renderer, yt-lockup-view-model, ytd-video-renderer, ytd-compact-video-renderer");
-          if (card && !card.hasAttribute("data-ytx-live")) {
-            card.setAttribute("data-ytx-live", "");
+          const card2 = b.closest("ytd-rich-item-renderer, yt-lockup-view-model, ytd-video-renderer, ytd-compact-video-renderer");
+          if (card2 && !card2.hasAttribute("data-ytx-live")) {
+            card2.setAttribute("data-ytx-live", "");
             n++;
           }
         }
@@ -1600,8 +1614,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
         });
       });
       const total = d.totalVideos ?? firstInt(runsText(d.totalVideosText));
-      const current2 = d.localCurrentIndex ?? d.currentIndex ?? items.find((i) => i.selected)?.index ?? 0;
-      return { el, items, total, current: current2, infinite: !!d.isInfinite };
+      const current3 = d.localCurrentIndex ?? d.currentIndex ?? items.find((i) => i.selected)?.index ?? 0;
+      return { el, items, total, current: current3, infinite: !!d.isInfinite };
     },
     itemElements() {
       return qsa("ytd-watch-flexy ytd-playlist-panel-renderer#playlist ytd-playlist-panel-video-renderer");
@@ -1669,6 +1683,70 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       return /\/api\/timedtext\?/.test(url) && /[?&]pot=/.test(url);
     }
   };
+  function channelRefOf(card2) {
+    const url = card2?.channelUrl || "";
+    const handle = (url.match(/\/(@[^/?#]+)/) || [])[1] || null;
+    const idFromUrl = (url.match(/\/channel\/(UC[\w-]{22})/) || [])[1] || null;
+    return { id: card2?.channelId || idFromUrl || null, handle: handle ? decodeURIComponent(handle).toLowerCase() : null, name: card2?.channel || "" };
+  }
+  function subscribedChannels() {
+    const out = /* @__PURE__ */ new Map();
+    const walk = (o, d = 0) => {
+      if (!o || typeof o !== "object" || d > 14) return;
+      const e = o.guideEntryRenderer;
+      const ep = e?.navigationEndpoint?.browseEndpoint;
+      if (ep?.browseId?.startsWith("UC")) {
+        const handle = (String(ep.canonicalBaseUrl || "").match(/\/(@[^/?#]+)/) || [])[1];
+        out.set(ep.browseId, { id: ep.browseId, handle: handle ? decodeURIComponent(handle).toLowerCase() : null, name: runsText(e.formattedTitle) || e.formattedTitle?.simpleText || "" });
+        return;
+      }
+      for (const k of Object.keys(o)) walk(o[k], d + 1);
+    };
+    for (const el of qsa("ytd-guide-renderer")) walk(dataOf(el)?.items);
+    return [...out.values()];
+  }
+  function channelPageInfo() {
+    const d = dataOf(qs('ytd-browse[page-subtype="channels"]'));
+    const m = d?.metadata?.channelMetadataRenderer;
+    if (!m?.externalId) return null;
+    const handle = (String(m.vanityChannelUrl || "").match(/\/(@[^/?#]+)/) || [])[1];
+    return { id: m.externalId, handle: handle ? decodeURIComponent(handle).toLowerCase() : null, name: m.title || "" };
+  }
+  function mainPlayer() {
+    return qsa("#movie_player").find((p) => typeof p.getPlayerState === "function" && !p.closest("ytd-video-preview, #inline-preview-player, ytd-thumbnail")) || null;
+  }
+  function activePlayback() {
+    const shorts = qs("#shorts-player");
+    const shortsOn = shorts && typeof shorts.getPlayerState === "function" && location.pathname.startsWith("/shorts/");
+    const p = shortsOn ? shorts : mainPlayer();
+    if (!p) return null;
+    try {
+      const vd = p.getVideoData?.() || {};
+      if (!vd.video_id) return null;
+      const pr = p.getPlayerResponse?.();
+      const details = pr?.videoDetails?.videoId === vd.video_id ? pr.videoDetails : null;
+      return {
+        videoId: vd.video_id,
+        kind: shortsOn ? "short" : "video",
+        title: vd.title || details?.title || "",
+        channel: { id: details?.channelId || null, name: vd.author || details?.author || "" },
+        playing: p.getPlayerState() === 1,
+        ad: p.classList.contains("ad-showing"),
+        pos: p.getCurrentTime?.() || 0,
+        dur: p.getDuration?.() || 0,
+        live: !!vd.isLive
+      };
+    } catch {
+      return null;
+    }
+  }
+  function pauseActive() {
+    try {
+      const p = location.pathname.startsWith("/shorts/") ? qs("#shorts-player") : mainPlayer();
+      p?.pauseVideo?.();
+    } catch {
+    }
+  }
 
   // src/core/scheduler.js
   var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -3353,6 +3431,1377 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
     }
   };
 
+  // src/core/config.js
+  var SCHEMA = 3;
+  var SITE_KEYS = ["youtube", "music"];
+  function defaultFilters() {
+    return {
+      enabled: false,
+      mode: "dim",
+      pages: ["home", "subscriptions", "search", "watch"],
+      shorts: false,
+      live: false,
+      channels: { block: [], allowOnly: [] },
+      title: { keywords: [], regex: [], caseSensitive: false },
+      duration: { minSec: null, maxSec: null },
+      age: { maxDays: null },
+      watched: { hide: false, minPercent: 90 }
+    };
+  }
+  function emptySection(def) {
+    const out = {
+      display: {},
+      vars: { theme: "" },
+      layout: { presets: {}, order: {}, topbar: "", zones: null },
+      behavior: {},
+      features: {}
+    };
+    if (def?.filters) out.filters = defaultFilters();
+    return out;
+  }
+  var isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+  var strList = (x) => Array.isArray(x) ? x.map((s) => String(s).trim()).filter(Boolean) : [];
+  var numOrNull = (x) => x === "" || x === null || x === void 0 || !isFinite(Number(x)) ? null : Number(x);
+  function splitLegacy(raw) {
+    if (!isObj(raw)) return {};
+    if (SITE_KEYS.some((k) => isObj(raw[k]))) return raw;
+    if (["display", "vars", "layout", "behavior", "filters", "features"].some((k) => k in raw)) return { youtube: raw };
+    return {};
+  }
+  function normalize(raw, def) {
+    const src = isObj(raw) ? raw : {};
+    const cfg = emptySection(def);
+    const look = def.look;
+    const presets = def.presets;
+    if (isObj(src.display)) {
+      for (const [id, mode] of Object.entries(src.display)) {
+        const t = def.targetById[id];
+        if (t && t.modes.includes(mode) && mode !== "show") cfg.display[id] = mode;
+      }
+    }
+    if (isObj(src.vars)) {
+      if (look.themes.some((t) => t.id === src.vars.theme)) cfg.vars.theme = src.vars.theme;
+      for (const [id, v] of Object.entries(src.vars)) {
+        if (id === "theme") continue;
+        const c = look.controlById[id];
+        if (!c || v === "" || v === null || v === void 0) continue;
+        if (c.type === "range") {
+          const n = Number(v);
+          if (isFinite(n)) cfg.vars[id] = Math.min(c.max, Math.max(c.min, n));
+        } else if (c.type === "color") {
+          if (/^#[0-9a-f]{3,8}$/i.test(v)) cfg.vars[id] = v;
+        } else if (c.type === "select") {
+          if (c.options.some(([val]) => val === v)) cfg.vars[id] = v;
+        }
+      }
+    }
+    if (isObj(src.layout)) {
+      if (isObj(src.layout.presets)) {
+        for (const [page, id] of Object.entries(src.layout.presets)) {
+          const p = presets.presetById[id];
+          if (p && p.pages.includes(page)) cfg.layout.presets[page] = id;
+        }
+      }
+      if (isObj(src.layout.order)) {
+        for (const [gid, list] of Object.entries(src.layout.order)) {
+          const g = presets.orderGroups[gid];
+          if (!g) continue;
+          const known = new Set(g.items.map(([id]) => id));
+          const clean = strList(list).filter((id) => known.has(id));
+          if (clean.length) cfg.layout.order[gid] = [...new Set(clean)];
+        }
+      }
+      if (presets.topbarModes.some(([v]) => v === src.layout.topbar)) cfg.layout.topbar = src.layout.topbar;
+      if (isObj(src.layout.zones)) cfg.layout.zones = src.layout.zones;
+    }
+    if (isObj(src.behavior)) {
+      for (const [id, v] of Object.entries(src.behavior)) {
+        const b = def.behaviorById[id];
+        if (!b) continue;
+        if (b.type === "toggle") cfg.behavior[id] = !!v;
+        else if (b.type === "select" && b.options.some(([val]) => val === v)) cfg.behavior[id] = v;
+        else if (b.type === "textarea") cfg.behavior[id] = String(v ?? "");
+      }
+    }
+    if (def.filters && isObj(src.filters)) {
+      const f = src.filters;
+      const d = cfg.filters;
+      d.enabled = !!f.enabled;
+      if (["dim", "collapse", "hide"].includes(f.mode)) d.mode = f.mode;
+      if (Array.isArray(f.pages)) d.pages = strList(f.pages);
+      d.shorts = !!f.shorts;
+      d.live = !!f.live;
+      d.channels.block = strList(f.channels?.block);
+      d.channels.allowOnly = strList(f.channels?.allowOnly);
+      d.title.keywords = strList(f.title?.keywords);
+      d.title.regex = strList(f.title?.regex);
+      d.title.caseSensitive = !!f.title?.caseSensitive;
+      d.duration.minSec = numOrNull(f.duration?.minSec);
+      d.duration.maxSec = numOrNull(f.duration?.maxSec);
+      d.age.maxDays = numOrNull(f.age?.maxDays);
+      d.watched.hide = !!f.watched?.hide;
+      d.watched.minPercent = numOrNull(f.watched?.minPercent) ?? 90;
+    }
+    const srcFeatures = isObj(src.features) ? src.features : {};
+    for (const m of def.features) {
+      const s = isObj(srcFeatures[m.id]) ? srcFeatures[m.id] : {};
+      const out = { enabled: !!s.enabled };
+      for (const [key, sd] of Object.entries(m.settings || {})) out[key] = normalizeSetting(sd, s[key]);
+      cfg.features[m.id] = out;
+    }
+    return cfg;
+  }
+  function normalizeProfile(raw, sites2) {
+    const split = splitLegacy(raw);
+    const out = { schema: SCHEMA };
+    for (const key of SITE_KEYS) out[key] = normalize(split[key], sites2[key]);
+    return out;
+  }
+  function normalizeSetting(def, v) {
+    switch (def.type) {
+      case "toggle":
+        return v === void 0 ? !!def.default : !!v;
+      case "select":
+        return def.options.some(([val]) => val === v) ? v : def.default;
+      case "multi": {
+        const allowed = new Set(def.options.map(([val]) => val));
+        return Array.isArray(v) ? v.filter((x) => allowed.has(x)) : def.default.slice();
+      }
+      case "range": {
+        const n = Number(v);
+        return isFinite(n) && v !== null && v !== "" ? Math.min(def.max, Math.max(def.min, n)) : def.default;
+      }
+      case "text":
+        return typeof v === "string" ? v : def.default;
+      default:
+        return v ?? def.default;
+    }
+  }
+
+  // src/profiles/youtube.js
+  var H = "hide";
+  var C = "collapse";
+  var tidyDisplay = {
+    "guide.shorts": H,
+    "guide.explore": H,
+    "guide.moreYT": H,
+    "guide.footer": H,
+    "top.create": H,
+    "top.voice": H,
+    "home.shortsShelf": H,
+    "home.chips": H,
+    "home.shelves": H,
+    "home.banner": H,
+    "watch.sidebar": C,
+    "watch.comments": C,
+    "watch.shortsShelf": H,
+    "watch.merch": H,
+    "watch.ads": H,
+    "watch.ambient": H,
+    "watch.infoCards": H,
+    "watch.btn.download": H,
+    "watch.btn.clip": H,
+    "watch.btn.thanks": H,
+    "watch.btn.ask": H,
+    "watch.btn.join": H,
+    "player.endscreen": H,
+    "player.cards": H,
+    "player.pauseOverlay": H,
+    "player.paidPromo": H,
+    "player.watermark": H,
+    "player.btn.cast": H,
+    "thumb.hoverPreview": H,
+    "search.shorts": H,
+    "search.peopleAlsoSearch": H,
+    "search.shelves": H,
+    "search.ads": H,
+    "channel.shortsTab": H,
+    "channel.shortsShelf": H,
+    "subs.shorts": H
+  };
+  var tidyFeatures = {
+    "transcript.copy": { enabled: true },
+    "watch.copyInfo": { enabled: true },
+    "playlist.duration": { enabled: true },
+    "playlist.search": { enabled: true },
+    "subs.groups": { enabled: true },
+    "watch.time": { enabled: true },
+    "playlist.dimWatched": { enabled: false },
+    "playlist.sort": { enabled: true },
+    "player.endsAt": { enabled: true },
+    "watch.publishDate": { enabled: true },
+    "thumb.progressBadge": { enabled: true },
+    "ui.proxyButtons": { enabled: false }
+  };
+  var templates = [
+    {
+      id: "youtube",
+      name: "YouTube (Original)",
+      description: "Nichts verändert. Zum Vergleichen und als Notausgang",
+      config: () => ({})
+    },
+    {
+      id: "aufgeraeumt",
+      name: "Aufgeräumt",
+      description: "Shorts und Ablenkungen weg, nützliche Features an",
+      config: () => ({
+        display: { ...tidyDisplay },
+        behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true },
+        filters: { enabled: true, mode: "dim", shorts: true, pages: ["home", "subscriptions", "search", "watch"] },
+        features: structuredClone(tidyFeatures)
+      })
+    },
+    {
+      id: "fokus",
+      name: "Fokus",
+      description: "Radikal: keine Startseite, keine Empfehlungen, keine Thumbnails",
+      config: () => ({
+        display: {
+          ...tidyDisplay,
+          "guide.subs": C,
+          "top.notifications": H,
+          "home.feedAll": H,
+          "watch.sidebar": H,
+          "watch.comments": H,
+          "watch.chat": C,
+          "watch.btn.likeCount": H,
+          "player.btn.autoplay": H,
+          "thumb.image": H
+        },
+        layout: { presets: { watch: "focus", subscriptions: "list" } },
+        behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, homeRedirect: "/feed/subscriptions" },
+        filters: { enabled: true, mode: "hide", shorts: true, pages: ["home", "subscriptions", "search", "watch", "channel"] },
+        features: structuredClone(tidyFeatures)
+      })
+    }
+  ];
+  var templateById = Object.fromEntries(templates.map((t) => [t.id, t]));
+  var DEFAULT_ACTIVE = "aufgeraeumt";
+
+  // src/profiles/music.js
+  var H2 = "hide";
+  var C2 = "collapse";
+  var tidyDisplay2 = {
+    "m.guide.samples": H2,
+    "m.guide.upgrade": H2,
+    "m.guide.signin": H2,
+    "m.promo.mealbar": H2,
+    "m.promo.background": H2,
+    "m.promo.upsell": H2,
+    "m.home.podcastChip": H2,
+    "m.home.podcasts": H2,
+    "m.home.samplesShelf": H2,
+    "m.explore.podcasts": H2,
+    "m.search.podcasts": C2,
+    "m.search.profiles": H2
+  };
+  var tidyFeatures2 = {
+    "m.history": { enabled: true },
+    "m.favorites": { enabled: true },
+    "m.hub": { enabled: true },
+    "m.releases": { enabled: true },
+    "m.weekly": { enabled: true },
+    "m.smartQueue": { enabled: true },
+    "m.queueInfo": { enabled: true },
+    "m.lyrics": { enabled: true },
+    "m.audio": { enabled: false }
+  };
+  var musicTemplates = {
+    youtube: () => ({}),
+    aufgeraeumt: () => ({
+      display: { ...tidyDisplay2 },
+      behavior: { "m.stillThere": true },
+      features: structuredClone(tidyFeatures2)
+    }),
+    fokus: () => ({
+      display: {
+        ...tidyDisplay2,
+        "m.guide.explore": H2,
+        "m.home.chips": H2,
+        "m.home.videos": H2,
+        "m.home.playlists": C2,
+        "m.home.background": H2,
+        "m.player.comments": H2,
+        "m.player.related": H2,
+        "m.search.videos": C2
+      },
+      behavior: { "m.stillThere": true, "m.closePromoDialogs": true },
+      features: { ...structuredClone(tidyFeatures2), "m.audio": { enabled: true, preferAudio: true } }
+    })
+  };
+
+  // src/profiles/index.js
+  var templates2 = templates.map((t) => ({
+    ...t,
+    config: () => ({ schema: SCHEMA, youtube: t.config(), music: musicTemplates[t.id]?.() || {} })
+  }));
+  var templateById2 = Object.fromEntries(templates2.map((t) => [t.id, t]));
+
+  // src/core/merge.js
+  var isObj2 = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
+  var same = (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b);
+  function merge3(base2, ours, theirs) {
+    if (same(ours, base2)) return theirs;
+    if (same(theirs, base2)) return ours;
+    if (isObj2(ours) && isObj2(theirs)) {
+      const b = isObj2(base2) ? base2 : {};
+      const out = {};
+      for (const k of /* @__PURE__ */ new Set([...Object.keys(ours), ...Object.keys(theirs)])) {
+        const v = merge3(b[k], ours[k], theirs[k]);
+        if (v !== void 0) out[k] = v;
+      }
+      return out;
+    }
+    return ours;
+  }
+
+  // src/core/store.js
+  var KEY = "ytx.store";
+  var STATE_KEY = "ytx.state";
+  var hasGM = () => typeof GM_getValue === "function" && typeof GM_setValue === "function";
+  function readRaw(key) {
+    try {
+      if (hasGM()) {
+        const v = GM_getValue(key, null);
+        if (v != null) return typeof v === "string" ? JSON.parse(v) : v;
+      }
+    } catch (e) {
+      log.warn("GM_getValue", e);
+    }
+    try {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : null;
+    } catch {
+      return null;
+    }
+  }
+  function writeRaw(key, value) {
+    const json = JSON.stringify(value);
+    try {
+      if (hasGM()) {
+        GM_setValue(key, json);
+        return;
+      }
+    } catch (e) {
+      log.warn("GM_setValue", e);
+    }
+    try {
+      localStorage.setItem(key, json);
+    } catch (e) {
+      log.warn("localStorage", e);
+    }
+  }
+  function slug(name) {
+    return String(name).toLowerCase().replace(/[äöü]/g, (c) => ({ ä: "ae", ö: "oe", ü: "ue" })[c]).replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "profil";
+  }
+  var defaultSettings = () => ({ hotkeys: {}, panelButton: true, panelTab: "display" });
+  function freshData() {
+    const profiles = {};
+    for (const t of templates2) profiles[t.id] = { name: t.name, template: t.id, config: t.config() };
+    return { schema: SCHEMA, active: DEFAULT_ACTIVE, profiles, settings: defaultSettings(), buckets: {}, migrations: MIGRATIONS.map(([id]) => id) };
+  }
+  var MIGRATIONS = [
+    [
+      "schema-3-sites",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const split = splitLegacy(p.config);
+          p.config = { schema: SCHEMA, ...split };
+          const t = templateById2[p.template];
+          if (!p.config.music && t) p.config.music = t.config().music;
+        }
+        d.schema = SCHEMA;
+      }
+    ],
+    [
+      "thumbs-color-default",
+      (d) => {
+        const p = d.profiles.aufgeraeumt;
+        const disp = p?.config?.youtube?.display;
+        if (p?.template === "aufgeraeumt" && disp?.["thumb.image"] === "dim") delete disp["thumb.image"];
+      }
+    ],
+    [
+      // neue features in bestehenden profilen einschalten, ausser im original profil
+      "playlist-search-on",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          if (p.template === "youtube" || !p.config?.youtube) continue;
+          const f = p.config.youtube.features ||= {};
+          if (!f["playlist.search"]) f["playlist.search"] = { enabled: true };
+        }
+      }
+    ],
+    [
+      "groups-watchtime-weekly-on",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          if (p.template === "youtube") continue;
+          if (p.config?.youtube) {
+            const f = p.config.youtube.features ||= {};
+            f["subs.groups"] ||= { enabled: true };
+            f["watch.time"] ||= { enabled: true };
+          }
+          if (p.config?.music) {
+            const f = p.config.music.features ||= {};
+            f["m.weekly"] ||= { enabled: true };
+          }
+        }
+      }
+    ]
+  ];
+  var data = null;
+  var syncMode = "none";
+  var config = null;
+  var subs = /* @__PURE__ */ new Set();
+  var base = null;
+  var pending = false;
+  function persist() {
+    pending = false;
+    const stored = readRaw(KEY);
+    if (stored && base && JSON.stringify(stored) !== base) {
+      const merged = structuredClone(merge3(JSON.parse(base), data, stored));
+      const changed = !same(merged, data);
+      data = merged;
+      if (changed) {
+        recompute();
+        emit("sync");
+      }
+    }
+    writeRaw(KEY, data);
+    base = JSON.stringify(data);
+  }
+  var saveSoon = debounce(persist, 250, 1500);
+  var markDirty = () => {
+    pending = true;
+    saveSoon();
+  };
+  function onRemote(raw) {
+    let remote;
+    try {
+      remote = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      return;
+    }
+    if (!remote?.profiles || !Object.keys(remote.profiles).length) return;
+    const json = JSON.stringify(remote);
+    if (json === base) return;
+    data = structuredClone(pending ? merge3(JSON.parse(base), data, remote) : remote);
+    base = json;
+    data.settings ||= defaultSettings();
+    data.buckets ||= {};
+    if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0];
+    recompute();
+    emit("sync");
+  }
+  function watchRemote() {
+    try {
+      if (typeof GM_addValueChangeListener === "function") {
+        GM_addValueChangeListener(KEY, (name, oldValue, newValue, remote) => remote && onRemote(newValue));
+        return "gm";
+      }
+    } catch (e) {
+      log.warn("GM_addValueChangeListener", e);
+    }
+    window.addEventListener("storage", (e) => e.key === KEY && e.newValue && onRemote(e.newValue));
+    return "storage";
+  }
+  var runtime = readRaw(STATE_KEY) || {};
+  var saveState = debounce(() => writeRaw(STATE_KEY, runtime), 500, 3e3);
+  function migrate() {
+    data.migrations ||= [];
+    let changed = false;
+    for (const [id, fn] of MIGRATIONS) {
+      if (data.migrations.includes(id)) continue;
+      try {
+        fn(data);
+      } catch (e) {
+        log.warn(`migration ${id}`, e);
+      }
+      data.migrations.push(id);
+      changed = true;
+    }
+    if (changed) writeRaw(KEY, data);
+    base = JSON.stringify(data);
+  }
+  function activeProfile() {
+    return data.profiles[data.active] || data.profiles[Object.keys(data.profiles)[0]];
+  }
+  function recompute() {
+    config = normalize(activeProfile()?.config?.[site.id], site);
+  }
+  function emit(reason) {
+    for (const fn of subs) {
+      try {
+        fn(config, reason);
+      } catch (e) {
+        log.error("store subscriber", e);
+      }
+    }
+  }
+  function linkVars(p, oldVars, newVars) {
+    for (const id of SITE_KEYS) {
+      if (id === site.id) continue;
+      const other = normalize(p.config?.[id], sites[id]);
+      let touched = false;
+      for (const k of /* @__PURE__ */ new Set([...Object.keys(oldVars), ...Object.keys(newVars)])) {
+        if (same(oldVars[k], newVars[k])) continue;
+        if (newVars[k] === void 0) delete other.vars[k];
+        else other.vars[k] = newVars[k];
+        touched = true;
+      }
+      if (touched) p.config = { ...p.config || {}, schema: SCHEMA, [id]: normalize(other, sites[id]) };
+    }
+  }
+  function commit(reason) {
+    recompute();
+    markDirty();
+    emit(reason);
+  }
+  var store = {
+    init() {
+      data = readRaw(KEY);
+      if (!data || typeof data !== "object" || !data.profiles || !Object.keys(data.profiles).length) {
+        data = freshData();
+        writeRaw(KEY, data);
+      }
+      data.settings ||= defaultSettings();
+      data.buckets ||= {};
+      base = JSON.stringify(data);
+      migrate();
+      for (const t of templates2) {
+        if (!data.profiles[t.id] && !data.deletedTemplates?.includes(t.id)) data.profiles[t.id] = { name: t.name, template: t.id, config: t.config() };
+      }
+      if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0];
+      recompute();
+      syncMode = watchRemote();
+      const flush = () => this.flush();
+      window.addEventListener("pagehide", flush);
+      document.addEventListener("visibilitychange", () => document.hidden && flush());
+    },
+    flush() {
+      saveSoon.flush();
+      saveState.flush();
+    },
+    get config() {
+      return config;
+    },
+    get data() {
+      return data;
+    },
+    get settings() {
+      return data.settings;
+    },
+    get activeId() {
+      return data.active;
+    },
+    get siteId() {
+      return site.id;
+    },
+    get syncMode() {
+      return syncMode;
+    },
+    profiles() {
+      return Object.entries(data.profiles).map(([id, p]) => ({ id, name: p.name, template: p.template, active: id === data.active }));
+    },
+    subscribe(fn) {
+      subs.add(fn);
+      return () => subs.delete(fn);
+    },
+    // mutator bekommt den abschnitt der aktuellen seite
+    update(mutator, reason = "update") {
+      const p = activeProfile();
+      const draft = normalize(p.config?.[site.id], site);
+      const oldVars = { ...draft.vars };
+      mutator(draft);
+      const next = normalize(draft, site);
+      p.config = { ...p.config || {}, schema: SCHEMA, [site.id]: next };
+      if (data.settings.linkLook) linkVars(p, oldVars, next.vars);
+      commit(reason);
+    },
+    get linkLook() {
+      return !!data.settings.linkLook;
+    },
+    // look beider seiten koppeln, beim einschalten einmal alle profile angleichen
+    setLinkLook(on) {
+      data.settings.linkLook = !!on;
+      if (on) for (const p of Object.values(data.profiles)) linkVars(p, {}, normalize(p.config?.[site.id], site).vars);
+      commit("profile");
+    },
+    // look (theme/farben/dichte/typografie) der jeweils anderen seite im selben profil
+    // dient dazu, den style zwischen youtube und music zu uebertragen
+    otherLooks() {
+      const p = activeProfile();
+      return SITE_KEYS.filter((id) => id !== site.id).map((id) => ({
+        id,
+        label: sites[id].label,
+        vars: normalize(p.config?.[id], sites[id]).vars
+      }));
+    },
+    updateSettings(mutator) {
+      mutator(data.settings);
+      markDirty();
+      emit("settings");
+    },
+    // seitenweite einstellungen, normalisiert vom besitzer des buckets
+    bucket(name, normalizeFn) {
+      const b = normalizeFn ? normalizeFn(data.buckets[name]) : data.buckets[name];
+      return b;
+    },
+    updateBucket(name, mutator, normalizeFn) {
+      const draft = normalizeFn ? normalizeFn(data.buckets[name]) : structuredClone(data.buckets[name] || {});
+      mutator(draft);
+      data.buckets[name] = normalizeFn ? normalizeFn(draft) : draft;
+      markDirty();
+      emit(`bucket:${name}`);
+      return data.buckets[name];
+    },
+    setActive(id) {
+      if (!data.profiles[id] || id === data.active) return;
+      data.active = id;
+      commit("profile");
+    },
+    cycleProfile() {
+      const ids = Object.keys(data.profiles);
+      const i = ids.indexOf(data.active);
+      this.setActive(ids[(i + 1) % ids.length]);
+      return data.profiles[data.active].name;
+    },
+    createProfile(name, fromId = data.active) {
+      let id = slug(name);
+      while (data.profiles[id]) id += "-2";
+      const src = data.profiles[fromId];
+      data.profiles[id] = { name: String(name).trim() || "Profil", template: null, config: structuredClone(src ? src.config : {}) };
+      data.active = id;
+      commit("profile");
+      return id;
+    },
+    renameProfile(id, name) {
+      if (!data.profiles[id] || !String(name).trim()) return;
+      data.profiles[id].name = String(name).trim();
+      markDirty();
+      emit("profile");
+    },
+    deleteProfile(id) {
+      if (!data.profiles[id] || Object.keys(data.profiles).length <= 1) return false;
+      if (data.profiles[id].template) (data.deletedTemplates ||= []).push(data.profiles[id].template);
+      delete data.profiles[id];
+      if (data.active === id) data.active = Object.keys(data.profiles)[0];
+      commit("profile");
+      return true;
+    },
+    // setzt nur den abschnitt der aktuellen seite zurueck
+    resetProfile(id, allSites = false) {
+      const p = data.profiles[id];
+      if (!p) return;
+      const t = templateById2[p.template];
+      const fresh = t ? t.config() : {};
+      p.config = allSites ? fresh : { ...p.config || {}, schema: SCHEMA, [site.id]: fresh[site.id] || {} };
+      commit("profile");
+    },
+    exportJson(all = false) {
+      const p = activeProfile();
+      const out = all ? { ...data, buckets: void 0 } : { schema: SCHEMA, profile: { name: p.name, config: normalizeProfile(p.config, sites) } };
+      return JSON.stringify(out, null, 2);
+    },
+    importJson(text) {
+      const obj = JSON.parse(text);
+      if (obj.profiles && typeof obj.profiles === "object") {
+        for (const [id2, p] of Object.entries(obj.profiles)) {
+          if (!p || typeof p !== "object") continue;
+          data.profiles[id2] = { name: String(p.name || id2), template: p.template ?? null, config: normalizeProfile(p.config, sites) };
+        }
+        if (obj.active && data.profiles[obj.active]) data.active = obj.active;
+        if (obj.settings) data.settings = { ...data.settings, ...obj.settings };
+        commit("import");
+        return "Alle Profile importiert";
+      }
+      const cfg = obj.profile?.config || obj.config || obj;
+      const name = obj.profile?.name || "Importiert";
+      const id = this.createProfile(name);
+      data.profiles[id].config = normalizeProfile(cfg, sites);
+      commit("import");
+      return `Profil „${name}“ importiert`;
+    },
+    resetAll() {
+      const buckets = data.buckets;
+      data = freshData();
+      data.buckets = buckets;
+      commit("reset");
+    },
+    state: {
+      get(key, def) {
+        return key in runtime ? runtime[key] : def;
+      },
+      set(key, value) {
+        runtime[key] = value;
+        saveState();
+      }
+    }
+  };
+
+  // src/features/youtube/subGroups/logic.js
+  var GROUPS_BUCKET = "youtube.subGroups";
+  var NONE = "__none";
+  var isObj3 = (x) => x && typeof x === "object" && !Array.isArray(x);
+  var lower = (s) => String(s || "").trim().toLowerCase();
+  function channelKey(ch) {
+    return ch?.id || (ch?.handle ? lower(ch.handle) : null) || (ch?.name ? `name:${lower(ch.name)}` : null);
+  }
+  function cleanChannel(c) {
+    if (!isObj3(c)) return null;
+    const ch = { id: typeof c.id === "string" && c.id ? c.id : null, handle: c.handle ? lower(c.handle) : null, name: String(c.name || "").trim() };
+    return channelKey(ch) ? ch : null;
+  }
+  function normalizeGroups(raw) {
+    const out = { groups: [] };
+    const seen2 = /* @__PURE__ */ new Set();
+    for (const g of isObj3(raw) && Array.isArray(raw.groups) ? raw.groups : []) {
+      if (!isObj3(g) || !String(g.name || "").trim()) continue;
+      let id = String(g.id || "").trim() || `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+      while (seen2.has(id)) id += "x";
+      seen2.add(id);
+      const chans = /* @__PURE__ */ new Map();
+      for (const c of Array.isArray(g.channels) ? g.channels : []) {
+        const ch = cleanChannel(c);
+        if (ch && !chans.has(channelKey(ch))) chans.set(channelKey(ch), ch);
+      }
+      out.groups.push({ id, name: String(g.name).trim().slice(0, 40), channels: [...chans.values()] });
+    }
+    return out;
+  }
+  function sameChannel(a, b) {
+    if (!a || !b) return false;
+    if (a.id && b.id) return a.id === b.id;
+    if (a.handle && b.handle) return lower(a.handle) === lower(b.handle);
+    return !!a.name && !!b.name && lower(a.name) === lower(b.name);
+  }
+  function groupsOf(ch, data2) {
+    return data2.groups.filter((g) => g.channels.some((c) => sameChannel(c, ch)));
+  }
+  function visibleIn(ch, groupId, data2) {
+    if (!groupId) return true;
+    if (groupId === NONE) return !groupsOf(ch, data2).length;
+    const g = data2.groups.find((x) => x.id === groupId);
+    return g ? g.channels.some((c) => sameChannel(c, ch)) : true;
+  }
+  function toggleChannel(data2, groupId, ch) {
+    const g = data2.groups.find((x) => x.id === groupId);
+    if (!g) return false;
+    const i = g.channels.findIndex((c) => sameChannel(c, ch));
+    if (i >= 0) {
+      g.channels.splice(i, 1);
+      return false;
+    }
+    g.channels.push({ id: ch.id || null, handle: ch.handle || null, name: ch.name || "" });
+    return true;
+  }
+  function enrich(data2, ch) {
+    let changed = false;
+    for (const g of data2.groups) {
+      for (const c of g.channels) {
+        if (!sameChannel(c, ch)) continue;
+        if (!c.id && ch.id) c.id = ch.id, changed = true;
+        if (!c.handle && ch.handle) c.handle = lower(ch.handle), changed = true;
+        if (!c.name && ch.name) c.name = ch.name, changed = true;
+      }
+    }
+    return changed;
+  }
+
+  // src/features/youtube/subGroups/index.js
+  var ATTR3 = "data-ytx-sg-hide";
+  var groupsData = () => store.bucket(GROUPS_BUCKET, normalizeGroups);
+  var updateGroups = (fn) => store.updateBucket(GROUPS_BUCKET, fn, normalizeGroups);
+  function addGroup(name) {
+    const n = String(name || "").trim();
+    if (!n) return null;
+    let id = null;
+    updateGroups((d) => {
+      id = `g${Date.now().toString(36)}`;
+      d.groups.push({ id, name: n, channels: [] });
+    });
+    return id;
+  }
+  function knownChannels() {
+    const out = /* @__PURE__ */ new Map();
+    const add2 = (c) => {
+      if (!c?.name && !c?.id) return;
+      const key = c.id || c.handle || `name:${c.name.toLowerCase()}`;
+      const prev2 = out.get(key);
+      out.set(key, { id: c.id || prev2?.id || null, handle: c.handle || prev2?.handle || null, name: c.name || prev2?.name || "" });
+    };
+    for (const c of subscribedChannels()) add2(c);
+    for (const el of outerCards()) add2(channelRefOf(readCard(el)));
+    for (const g of groupsData().groups) for (const c of g.channels) add2(c);
+    return [...out.values()].sort((a, b) => a.name.localeCompare(b.name, "de"));
+  }
+  function outerCards() {
+    const out = [];
+    for (const root of activePageRoots()) {
+      for (const el of qsa(CARD_SELECTORS.join(", "), root)) if (!el.parentElement?.closest(CARD_PARENT)) out.push(el);
+    }
+    return out;
+  }
+  function openPanelTab() {
+    const panel = pageWindow.__ytx?.panel;
+    if (!panel) return;
+    panel.open();
+    panel.select("subGroups");
+  }
+  var subGroups_default = {
+    id: "subs.groups",
+    label: "Abo-Gruppen",
+    group: "Abos",
+    description: "Eigene Gruppen wie „Tech“ oder „Musik“ für deine Abos. Filterleiste über dem Abo-Feed, Zuordnen auf der Kanalseite und im Tab „Abo-Gruppen“",
+    pages: ["subscriptions", "channel"],
+    stability: "mittel",
+    anchors: ["subs.feedTop", "channel.headerButtons"],
+    settings: {
+      showNone: { type: "toggle", label: "Chip „Ohne Gruppe“ anzeigen", default: true },
+      rememberGroup: { type: "toggle", label: "Zuletzt gewählte Gruppe merken", default: false }
+    },
+    setup(ctx) {
+      let s = ctx.settings;
+      let active = s.rememberGroup ? ctx.state.get("subs.activeGroup", null) : null;
+      const stats2 = { checked: 0, hidden: 0 };
+      ctx.css(`[${ATTR3}] { display: none !important; }
+.ytx-sg-bar { all: initial; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 8px; font: 500 14px Roboto, Arial, sans-serif; }
+.ytx-sg-chip { all: initial; cursor: pointer; padding: 6px 12px; border-radius: 8px; font: 500 14px/20px Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); background: var(--yt-sys-color-baseline--additive-background, rgba(255,255,255,.1)); }
+.ytx-sg-chip:hover { background: var(--yt-sys-color-baseline--mono-tonal-hover, rgba(255,255,255,.2)); }
+.ytx-sg-chip[aria-pressed="true"] { color: var(--yt-sys-color-baseline--text-primary-inverse, #0f0f0f); background: var(--yt-sys-color-baseline--text-primary, #f1f1f1); }
+.ytx-sg-chip small { opacity: .65; margin-left: 4px; font-size: 12px; }
+.ytx-sg-edit { all: initial; cursor: pointer; font: 500 13px Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--call-to-action, #3ea6ff); margin-left: 4px; }
+.ytx-sg-info { font: 400 12px Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-secondary, #aaa); margin-left: auto; }`);
+      function apply() {
+        const data2 = groupsData();
+        let checked = 0;
+        let hidden = 0;
+        let learned = false;
+        for (const el of outerCards()) {
+          const card2 = readCard(el);
+          if (!card2) continue;
+          const ch = channelRefOf(card2);
+          checked++;
+          if (groupsOf(ch, data2).length && enrich(data2, ch)) learned = true;
+          const show = ctx.nav.page !== "subscriptions" || visibleIn(ch, active, data2);
+          if (show) el.removeAttribute(ATTR3);
+          else {
+            el.setAttribute(ATTR3, "");
+            hidden++;
+          }
+        }
+        if (learned) updateGroups((d) => Object.assign(d, data2));
+        stats2.checked = checked;
+        stats2.hidden = hidden;
+      }
+      function drawBar(node) {
+        const data2 = groupsData();
+        const chip = (id, label, count) => {
+          const b = h("button", { type: "button", class: "ytx-sg-chip", "aria-pressed": String((active || null) === id) }, label, count != null && h("small", { text: String(count) }));
+          b.addEventListener("click", () => {
+            active = id;
+            if (s.rememberGroup) ctx.state.set("subs.activeGroup", id);
+            apply();
+            drawBar(node);
+            window.scrollTo({ top: 0 });
+          });
+          return b;
+        };
+        const edit = h("button", { type: "button", class: "ytx-sg-edit", text: data2.groups.length ? "✎ Gruppen bearbeiten" : "+ Abo-Gruppe anlegen" });
+        edit.addEventListener("click", openPanelTab);
+        const kids = [chip(null, "Alle")];
+        for (const g of data2.groups) kids.push(chip(g.id, g.name, g.channels.length));
+        if (s.showNone && data2.groups.length) kids.push(chip(NONE, "Ohne Gruppe"));
+        kids.push(edit);
+        if (active) kids.push(h("span", { class: "ytx-sg-info", text: `${stats2.checked - stats2.hidden} von ${stats2.checked} Videos` }));
+        node.replaceChildren(...kids);
+      }
+      const bar = ctx.mount({
+        id: "subs.groups.bar",
+        anchor: "subs.feedTop",
+        position: "before",
+        when: () => ctx.nav.page === "subscriptions",
+        create: () => h("div", { class: "ytx-sg-bar" }),
+        update: (node) => drawBar(node)
+      });
+      const chan = ctx.mount({
+        id: "subs.groups.channel",
+        anchor: "channel.headerButtons",
+        position: "append",
+        when: () => ctx.nav.page === "channel" && !!channelPageInfo(),
+        create: () => {
+          const b = button({
+            label: "Gruppen",
+            icon: "☰",
+            title: "Kanal einer Abo-Gruppe zuordnen",
+            onClick: () => {
+              const ch = channelPageInfo();
+              if (!ch) return toast("Kanal noch nicht erkannt");
+              const data2 = groupsData();
+              const items = [{ title: ch.name }];
+              for (const g of data2.groups) {
+                const on = groupsOf(ch, data2).some((x) => x.id === g.id);
+                items.push({ label: g.name, checked: on, run: () => {
+                  updateGroups((d) => toggleChannel(d, g.id, ch));
+                  toast(`${ch.name} ${on ? "aus" : "in"} „${g.name}“`);
+                  chan.refresh();
+                } });
+              }
+              items.push({ sep: true }, { label: "Neue Gruppe …", run: () => {
+                const name = pageWindow.prompt("Name der neuen Abo-Gruppe");
+                const id = addGroup(name);
+                if (!id) return;
+                updateGroups((d) => toggleChannel(d, id, ch));
+                toast(`${ch.name} in „${name.trim()}“`);
+                chan.refresh();
+              } }, { label: "Alle Gruppen verwalten", run: openPanelTab });
+              showMenu(chan.node, items);
+            }
+          });
+          b.style.marginLeft = "8px";
+          return b;
+        },
+        update: (node) => {
+          const ch = channelPageInfo();
+          const names = ch ? groupsOf(ch, groupsData()).map((g) => g.name) : [];
+          const label = node.querySelector(".ytx-label");
+          const text = names.length ? names.join(", ") : "Gruppen";
+          if (label && label.textContent !== text) label.textContent = text;
+        }
+      });
+      const off = ctx.onSweep(() => {
+        if (ctx.nav.page === "subscriptions") {
+          apply();
+          if (bar.node && active) drawBar(bar.node);
+        }
+      });
+      return {
+        onPage(page) {
+          if (page !== "subscriptions") for (const el of qsa(`[${ATTR3}]`)) el.removeAttribute(ATTR3);
+          bar.refresh();
+          chan.refresh();
+        },
+        update(next) {
+          s = next;
+          bar.refresh();
+        },
+        dispose() {
+          off();
+          for (const el of qsa(`[${ATTR3}]`)) el.removeAttribute(ATTR3);
+          bar.destroy();
+          chan.destroy();
+        },
+        health() {
+          const n = groupsData().groups.length;
+          if (ctx.nav.page === "subscriptions") return bar.ok ? { status: "ok", detail: `${n} Gruppen · ${active ? `Filter aktiv, ${stats2.hidden}/${stats2.checked} ausgeblendet` : "kein Filter"}` } : { status: "warn", detail: "Abo-Feed nicht gefunden (Anmeldung nötig)" };
+          if (ctx.nav.page === "channel") return chan.ok ? { status: "ok", detail: "Gruppen-Button auf der Kanalseite" } : { status: "warn", detail: "Kanal-Kopf nicht gefunden" };
+          return { status: "skip", detail: `${n} Gruppen` };
+        },
+        debug: { apply, setActive: (id) => (active = id, apply()), stats: stats2 }
+      };
+    }
+  };
+
+  // src/core/idb.js
+  var req = (r) => new Promise((ok, fail) => {
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => fail(r.error);
+  });
+  var done = (tx) => new Promise((ok, fail) => {
+    tx.oncomplete = () => ok();
+    tx.onerror = () => fail(tx.error);
+    tx.onabort = () => fail(tx.error || new Error("transaction abgebrochen"));
+  });
+  function openDatabase(name, migrations) {
+    const status = { name, version: migrations.length, open: false, error: null, openedAt: 0, upgradedFrom: null, blocked: false };
+    let dbp = null;
+    const open = () => {
+      if (dbp) return dbp;
+      dbp = new Promise((ok, fail) => {
+        if (typeof indexedDB === "undefined") return fail(new Error("IndexedDB nicht verfügbar"));
+        const r = indexedDB.open(name, migrations.length);
+        r.onupgradeneeded = (e) => {
+          const db3 = r.result;
+          const tx = r.transaction;
+          status.upgradedFrom = e.oldVersion;
+          for (let v = e.oldVersion; v < migrations.length; v++) {
+            try {
+              migrations[v](db3, tx);
+            } catch (err) {
+              log.error(`idb migration ${name} v${v + 1}`, err);
+              tx.abort();
+              return;
+            }
+          }
+        };
+        r.onblocked = () => {
+          status.blocked = true;
+          log.warn(`idb ${name} blockiert durch anderen tab`);
+        };
+        r.onsuccess = () => {
+          const db3 = r.result;
+          db3.onversionchange = () => {
+            db3.close();
+            dbp = null;
+            status.open = false;
+          };
+          status.open = true;
+          status.openedAt = Date.now();
+          ok(db3);
+        };
+        r.onerror = () => {
+          status.error = r.error?.message || "unbekannt";
+          dbp = null;
+          fail(r.error);
+        };
+      });
+      return dbp;
+    };
+    const withStore = async (store2, mode, fn) => {
+      const db3 = await open();
+      const tx = db3.transaction(store2, mode);
+      const result = fn(tx.objectStore(store2), tx);
+      const value = result instanceof IDBRequest ? await req(result) : await result;
+      await done(tx);
+      return value;
+    };
+    return {
+      status,
+      open,
+      get: (store2, key) => withStore(store2, "readonly", (s) => s.get(key)),
+      put: (store2, value) => withStore(store2, "readwrite", (s) => s.put(value)),
+      delete: (store2, key) => withStore(store2, "readwrite", (s) => s.delete(key)),
+      clear: (store2) => withStore(store2, "readwrite", (s) => s.clear()),
+      count: (store2) => withStore(store2, "readonly", (s) => s.count()),
+      getAll: (store2, query, count) => withStore(store2, "readonly", (s) => s.getAll(query, count)),
+      putMany: (store2, values) => withStore(store2, "readwrite", (s) => {
+        for (const v of values) s.put(v);
+      }),
+      deleteMany: (store2, keys) => withStore(store2, "readwrite", (s) => {
+        for (const k of keys) s.delete(k);
+      }),
+      byIndex: (store2, index, query, count) => withStore(store2, "readonly", (s) => s.index(index).getAll(query, count)),
+      // neueste zuerst ueber einen index mit cursor
+      latest: (store2, index, limit = 50) => withStore(
+        store2,
+        "readonly",
+        (s) => new Promise((ok, fail) => {
+          const out = [];
+          const c = s.index(index).openCursor(null, "prev");
+          c.onsuccess = () => {
+            const cur = c.result;
+            if (!cur || out.length >= limit) return ok(out);
+            out.push(cur.value);
+            cur.continue();
+          };
+          c.onerror = () => fail(c.error);
+        })
+      ),
+      deleteWhere: (store2, index, range2) => withStore(
+        store2,
+        "readwrite",
+        (s) => new Promise((ok, fail) => {
+          let n = 0;
+          const c = s.index(index).openCursor(range2);
+          c.onsuccess = () => {
+            const cur = c.result;
+            if (!cur) return ok(n);
+            cur.delete();
+            n++;
+            cur.continue();
+          };
+          c.onerror = () => fail(c.error);
+        })
+      ),
+      async exportAll(stores) {
+        const db3 = await open();
+        const out = { database: name, version: db3.version, exportedAt: (/* @__PURE__ */ new Date()).toISOString(), stores: {} };
+        for (const st of stores || [...db3.objectStoreNames]) out.stores[st] = await withStore(st, "readonly", (s) => s.getAll());
+        return out;
+      },
+      async importAll(dump, { replace = false, stores } = {}) {
+        const db3 = await open();
+        const names = stores || Object.keys(dump.stores || {}).filter((n) => db3.objectStoreNames.contains(n));
+        for (const st of names) {
+          await withStore(st, "readwrite", (s) => {
+            if (replace) s.clear();
+            for (const v of dump.stores[st] || []) s.put(v);
+          });
+        }
+        return names;
+      },
+      async sizes() {
+        const db3 = await open();
+        const out = {};
+        for (const st of db3.objectStoreNames) out[st] = await withStore(st, "readonly", (s) => s.count());
+        return out;
+      },
+      close() {
+        dbp?.then((db3) => db3.close()).catch(() => {
+        });
+        dbp = null;
+        status.open = false;
+      }
+    };
+  }
+
+  // src/features/youtube/watchtime/db.js
+  var YT_DB = "ytx-youtube";
+  var MIGRATIONS2 = [
+    // v1 schauzeit pro video sitzung
+    (db3) => {
+      const views = db3.createObjectStore("views", { keyPath: "id" });
+      views.createIndex("startedAt", "startedAt");
+      views.createIndex("day", "day");
+      db3.createObjectStore("meta", { keyPath: "key" });
+    }
+  ];
+  var db = null;
+  function ytDb() {
+    db ||= openDatabase(YT_DB, MIGRATIONS2);
+    return db;
+  }
+
+  // src/features/youtube/watchtime/logic.js
+  var DAY = 24 * 3600 * 1e3;
+  function dayKey(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  function startOfDay(ts) {
+    const d = new Date(ts);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+  function createSession(p, now) {
+    return { id: `${now}-${p.videoId}`, videoId: p.videoId, kind: p.kind, title: p.title, channel: p.channel, startedAt: now, endedAt: now, day: dayKey(now), wallSec: 0, maxPos: 0, durationSec: Math.round(p.dur || 0) };
+  }
+  function tickSession(s, p, dtSec, now) {
+    if (p.playing && !p.ad) s.wallSec += dtSec;
+    s.maxPos = Math.max(s.maxPos, p.pos || 0);
+    if (p.dur) s.durationSec = Math.round(p.dur);
+    if (!s.title && p.title) s.title = p.title;
+    if (!s.channel?.name && p.channel?.name) s.channel = p.channel;
+    s.endedAt = now;
+    s.percent = s.durationSec ? Math.min(1, s.maxPos / s.durationSec) : null;
+    return s;
+  }
+  function reminderDue({ todaySec, streakSec, limitMin, breakMin, remindEveryMin, state }) {
+    if (limitMin > 0 && todaySec >= limitMin * 60) {
+      const next = state.limitAt == null ? limitMin * 60 : state.limitAt + Math.max(1, remindEveryMin) * 60;
+      if (todaySec >= next) return { kind: "limit", mark: todaySec };
+    }
+    if (breakMin > 0 && streakSec >= breakMin * 60 && (state.breakAt == null || streakSec >= state.breakAt + breakMin * 60)) return { kind: "break", mark: streakSec };
+    return null;
+  }
+  function add(map, key, init, sec) {
+    const v = map.get(key) || { ...init, sec: 0, count: 0 };
+    v.sec += sec;
+    v.count++;
+    map.set(key, v);
+  }
+  function watchStats(views, { from, to, now = Date.now(), days = 7, limit = 10 }) {
+    const list = views.filter((v) => v.startedAt >= from && v.startedAt < to && v.wallSec > 0);
+    const byDay = /* @__PURE__ */ new Map();
+    for (let i = days - 1; i >= 0; i--) byDay.set(dayKey(startOfDay(now) - i * DAY), 0);
+    const channels = /* @__PURE__ */ new Map();
+    const videos = /* @__PURE__ */ new Map();
+    let total = 0;
+    let shorts = 0;
+    for (const v of list) {
+      total += v.wallSec;
+      if (v.kind === "short") shorts += v.wallSec;
+      if (byDay.has(v.day)) byDay.set(v.day, byDay.get(v.day) + v.wallSec);
+      const ck = v.channel?.id || v.channel?.name || "?";
+      add(channels, ck, { name: v.channel?.name || "Unbekannt", id: v.channel?.id || null }, v.wallSec);
+      add(videos, v.videoId, { videoId: v.videoId, title: v.title, channel: v.channel?.name || "", kind: v.kind }, v.wallSec);
+    }
+    const top2 = (m) => [...m.values()].sort((a, b) => b.sec - a.sec).slice(0, limit);
+    const activeDays = [...byDay.values()].filter((x) => x > 0).length;
+    return {
+      total,
+      shorts,
+      videos: videos.size,
+      avgPerDay: days ? total / days : 0,
+      activeDays,
+      byDay: [...byDay.entries()].map(([day, sec]) => ({ day, sec })),
+      topChannels: top2(channels),
+      topVideos: top2(videos)
+    };
+  }
+
+  // src/features/youtube/watchtime/index.js
+  var current = null;
+  var watchTime = {
+    get instance() {
+      return current;
+    }
+  };
+  var watchtime_default = {
+    id: "watch.time",
+    label: "Schauzeit & Tageslimit",
+    group: "Wohlbefinden",
+    description: "Misst lokal, wie lange Videos wirklich laufen (Werbung zählt nicht). „Heute: 42 min“ oben rechts, sanfte Erinnerung beim Tageslimit und nach langem Schauen am Stück. Statistik im Tab „Schauzeit“",
+    stability: "mittel-hoch",
+    anchors: ["top.buttons"],
+    settings: {
+      record: { type: "toggle", label: "Schauzeit aufzeichnen", default: true },
+      showToday: { type: "toggle", label: "„Heute: …“ in der Kopfzeile", default: true },
+      limitMinutes: { type: "range", label: "Tageslimit (Minuten, 0 = aus)", min: 0, max: 480, step: 15, default: 120 },
+      remindEveryMinutes: { type: "range", label: "Nach dem Limit erneut erinnern alle (Minuten)", min: 5, max: 60, step: 5, default: 15 },
+      breakMinutes: { type: "range", label: "Pausen-Erinnerung nach (Minuten am Stück, 0 = aus)", min: 0, max: 240, step: 15, default: 60 },
+      pauseAtLimit: { type: "toggle", label: "Beim Tageslimit Video anhalten", default: false },
+      countShorts: { type: "toggle", label: "Shorts mitzählen", default: true },
+      retentionDays: { type: "range", label: "Aufbewahren (Tage)", min: 30, max: 730, step: 30, default: 365 }
+    },
+    setup(ctx) {
+      let s = ctx.settings;
+      const db3 = ytDb();
+      const st = { session: null, day: dayKey(Date.now()), todayBase: 0, lastTick: Date.now(), lastSave: 0, streak: 0, lastPlayAt: 0, remind: { limitAt: null, breakAt: null }, error: null, saved: 0 };
+      const loadToday = async () => {
+        try {
+          const list = await db3.byIndex("views", "day", st.day);
+          st.todayBase = list.filter((v) => v.id !== st.session?.id).reduce((n, v) => n + (v.wallSec || 0), 0);
+        } catch (e) {
+          st.error = e.message;
+        }
+      };
+      loadToday();
+      const save2 = (sess) => {
+        if (!sess || sess.wallSec < 3) return;
+        db3.put("views", { ...sess, wallSec: Math.round(sess.wallSec) }).then(() => st.saved++).catch((e) => st.error = e.message);
+      };
+      const todaySec = () => st.todayBase + (st.session?.wallSec || 0);
+      const badge2 = ctx.mount({
+        id: "top.watchtime",
+        anchor: "top.buttons",
+        position: "prepend",
+        when: () => s.showToday && s.record,
+        create: () => {
+          const b = button({ label: "Heute –", small: true, title: "Schauzeit heute (ytx)", onClick: () => {
+            const panel = pageWindow.__ytx?.panel;
+            panel?.open();
+            panel?.select("watchStats");
+          } });
+          b.style.margin = "0 4px";
+          return b;
+        },
+        update: (node) => {
+          const sec = todaySec();
+          const text = `Heute ${sec < 60 ? "0 min" : formatDuration(sec)}`;
+          const label = node.querySelector(".ytx-label");
+          if (label && label.textContent !== text) label.textContent = text;
+          const over = s.limitMinutes > 0 && sec >= s.limitMinutes * 60;
+          node.style.color = over ? "var(--yt-sys-color-baseline--call-to-action, #3ea6ff)" : "";
+        }
+      });
+      let card2 = null;
+      const closeCard = () => {
+        card2?.remove();
+        card2 = null;
+      };
+      const remind = (kind) => {
+        closeCard();
+        const sec = todaySec();
+        const paused = kind === "limit" && s.pauseAtLimit;
+        if (paused) pauseActive();
+        const title = kind === "limit" ? "Tageslimit erreicht" : "Zeit für eine kurze Pause?";
+        const text = kind === "limit" ? `Du hast heute schon ${formatDuration(sec)} geschaut (Limit ${formatDuration(s.limitMinutes * 60)}).${paused ? " Das Video ist angehalten." : ""}` : `Du schaust seit ${formatDuration(st.streak)} am Stück.`;
+        const actions2 = h("div", { class: "ytx-row" });
+        if (!paused) actions2.append(button({ label: "Video anhalten", small: true, onClick: () => {
+          pauseActive();
+          closeCard();
+        } }));
+        actions2.append(button({ label: kind === "limit" ? "Weiter schauen" : "Weiter", small: true, onClick: closeCard }));
+        card2 = h("div", { class: "ytx-wt-card", role: "status", "data-ytx-own": "" }, h("b", { text: title }), h("div", { text }), actions2);
+        document.body.append(card2);
+      };
+      ctx.css(`.ytx-wt-card { position: fixed; z-index: 2400; left: 50%; bottom: 28px; transform: translateX(-50%); width: min(420px, 92vw); box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 12px;
+  font: 400 14px/1.4 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); background: var(--yt-sys-color-baseline--menu-background, #282828); box-shadow: 0 6px 28px rgba(0,0,0,.45); border: 1px solid var(--yt-sys-color-baseline--outline, rgba(255,255,255,.12)); }
+.ytx-wt-card b { font-size: 15px; font-weight: 500; }
+.ytx-wt-card .ytx-row { display: flex; gap: 8px; justify-content: flex-end; }`);
+      const tick2 = () => {
+        const now = Date.now();
+        const dt = Math.min(2, Math.max(0, (now - st.lastTick) / 1e3));
+        st.lastTick = now;
+        const day = dayKey(now);
+        if (day !== st.day) {
+          if (st.session) save2(st.session);
+          st.session = null;
+          st.day = day;
+          st.todayBase = 0;
+          st.remind = { limitAt: null, breakAt: null };
+        }
+        if (!s.record) return;
+        let p = activePlayback();
+        if (p && p.kind === "short" && !s.countShorts) p = null;
+        if (st.session && (!p || p.videoId !== st.session.videoId)) {
+          save2(st.session);
+          st.todayBase += st.session.wallSec;
+          st.session = null;
+        }
+        if (p) {
+          st.session ||= createSession(p, now);
+          tickSession(st.session, p, dt, now);
+          if (now - st.lastSave > 15e3) {
+            st.lastSave = now;
+            save2(st.session);
+          }
+        }
+        if (p?.playing && !p.ad) {
+          st.streak += dt;
+          st.lastPlayAt = now;
+        } else if (now - st.lastPlayAt > 5 * 60 * 1e3 && st.streak) {
+          st.streak = 0;
+          st.remind.breakAt = null;
+        }
+        const due = reminderDue({ todaySec: todaySec(), streakSec: st.streak, limitMin: s.limitMinutes, breakMin: s.breakMinutes, remindEveryMin: s.remindEveryMinutes, state: st.remind });
+        if (due) {
+          if (due.kind === "limit") st.remind.limitAt = due.mark;
+          else st.remind.breakAt = due.mark;
+          remind(due.kind);
+        }
+      };
+      const timer2 = setInterval(tick2, 1e3);
+      const badgeTimer = setInterval(() => badge2.refresh(), 1e4);
+      const offHide = listen(window, "pagehide", () => save2(st.session));
+      const prune = () => db3.deleteWhere("views", "startedAt", IDBKeyRange.upperBound(Date.now() - s.retentionDays * DAY)).catch(() => {
+      });
+      const pruneTimer = setTimeout(prune, 2e4);
+      const inst = {
+        todaySec,
+        get session() {
+          return st.session;
+        },
+        state: st,
+        remind,
+        update(next) {
+          s = next;
+          badge2.refresh();
+        },
+        dispose() {
+          clearInterval(timer2);
+          clearInterval(badgeTimer);
+          clearTimeout(pruneTimer);
+          offHide();
+          save2(st.session);
+          closeCard();
+          badge2.destroy();
+          if (current === inst) current = null;
+        },
+        health() {
+          if (!s.record) return { status: "skip", detail: "Aufzeichnung aus" };
+          if (st.error) return { status: "fail", detail: `Speichern: ${st.error}` };
+          const p = st.session;
+          return { status: "ok", detail: `heute ${formatDuration(todaySec())}${p ? ` · läuft: ${p.title || p.videoId} (${Math.round(p.wallSec)} s)` : ""} · am Stück ${Math.round(st.streak / 60)} min${s.limitMinutes ? ` · Limit ${s.limitMinutes} min` : ""}` };
+        }
+      };
+      current = inst;
+      return inst;
+    }
+  };
+
   // src/features/youtube/watchExtras.js
   var endsAt = {
     id: "player.endsAt",
@@ -3649,105 +5098,7 @@ ${chaptersText(true)}
   };
 
   // src/features/youtube/index.js
-  var featureManifests = [transcript_default, copyInfo, duration_default, search_default, sort_default, dimWatched_default, endsAt, publishDate, progressBadge, proxyButtons];
-
-  // src/profiles/youtube.js
-  var H = "hide";
-  var C = "collapse";
-  var tidyDisplay = {
-    "guide.shorts": H,
-    "guide.explore": H,
-    "guide.moreYT": H,
-    "guide.footer": H,
-    "top.create": H,
-    "top.voice": H,
-    "home.shortsShelf": H,
-    "home.chips": H,
-    "home.shelves": H,
-    "home.banner": H,
-    "watch.sidebar": C,
-    "watch.comments": C,
-    "watch.shortsShelf": H,
-    "watch.merch": H,
-    "watch.ads": H,
-    "watch.ambient": H,
-    "watch.infoCards": H,
-    "watch.btn.download": H,
-    "watch.btn.clip": H,
-    "watch.btn.thanks": H,
-    "watch.btn.ask": H,
-    "watch.btn.join": H,
-    "player.endscreen": H,
-    "player.cards": H,
-    "player.pauseOverlay": H,
-    "player.paidPromo": H,
-    "player.watermark": H,
-    "player.btn.cast": H,
-    "thumb.hoverPreview": H,
-    "search.shorts": H,
-    "search.peopleAlsoSearch": H,
-    "search.shelves": H,
-    "search.ads": H,
-    "channel.shortsTab": H,
-    "channel.shortsShelf": H,
-    "subs.shorts": H
-  };
-  var tidyFeatures = {
-    "transcript.copy": { enabled: true },
-    "watch.copyInfo": { enabled: true },
-    "playlist.duration": { enabled: true },
-    "playlist.search": { enabled: true },
-    "playlist.dimWatched": { enabled: false },
-    "playlist.sort": { enabled: true },
-    "player.endsAt": { enabled: true },
-    "watch.publishDate": { enabled: true },
-    "thumb.progressBadge": { enabled: true },
-    "ui.proxyButtons": { enabled: false }
-  };
-  var templates = [
-    {
-      id: "youtube",
-      name: "YouTube (Original)",
-      description: "Nichts verändert. Zum Vergleichen und als Notausgang",
-      config: () => ({})
-    },
-    {
-      id: "aufgeraeumt",
-      name: "Aufgeräumt",
-      description: "Shorts und Ablenkungen weg, nützliche Features an",
-      config: () => ({
-        display: { ...tidyDisplay },
-        behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true },
-        filters: { enabled: true, mode: "dim", shorts: true, pages: ["home", "subscriptions", "search", "watch"] },
-        features: structuredClone(tidyFeatures)
-      })
-    },
-    {
-      id: "fokus",
-      name: "Fokus",
-      description: "Radikal: keine Startseite, keine Empfehlungen, keine Thumbnails",
-      config: () => ({
-        display: {
-          ...tidyDisplay,
-          "guide.subs": C,
-          "top.notifications": H,
-          "home.feedAll": H,
-          "watch.sidebar": H,
-          "watch.comments": H,
-          "watch.chat": C,
-          "watch.btn.likeCount": H,
-          "player.btn.autoplay": H,
-          "thumb.image": H
-        },
-        layout: { presets: { watch: "focus", subscriptions: "list" } },
-        behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, homeRedirect: "/feed/subscriptions" },
-        filters: { enabled: true, mode: "hide", shorts: true, pages: ["home", "subscriptions", "search", "watch", "channel"] },
-        features: structuredClone(tidyFeatures)
-      })
-    }
-  ];
-  var templateById = Object.fromEntries(templates.map((t) => [t.id, t]));
-  var DEFAULT_ACTIVE = "aufgeraeumt";
+  var featureManifests = [transcript_default, copyInfo, duration_default, search_default, sort_default, subGroups_default, watchtime_default, dimWatched_default, endsAt, publishDate, progressBadge, proxyButtons];
 
   // src/sites/youtube.js
   var youtubeSite = {
@@ -3769,7 +5120,7 @@ ${chaptersText(true)}
     features: featureManifests,
     templates,
     filters: { pages: FILTER_PAGES, CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots },
-    panelTabs: ["display", "look", "layout", "behavior", "filters", "features", "profiles", "diagnose"],
+    panelTabs: ["display", "look", "layout", "behavior", "filters", "features", "subGroups", "watchStats", "profiles", "diagnose"],
     boot() {
       initTimedtextCapture();
     }
@@ -5236,774 +6587,40 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     };
   }
 
-  // src/core/config.js
-  var SCHEMA = 3;
-  var SITE_KEYS = ["youtube", "music"];
-  function defaultFilters() {
-    return {
-      enabled: false,
-      mode: "dim",
-      pages: ["home", "subscriptions", "search", "watch"],
-      shorts: false,
-      live: false,
-      channels: { block: [], allowOnly: [] },
-      title: { keywords: [], regex: [], caseSensitive: false },
-      duration: { minSec: null, maxSec: null },
-      age: { maxDays: null },
-      watched: { hide: false, minPercent: 90 }
-    };
-  }
-  function emptySection(def) {
-    const out = {
-      display: {},
-      vars: { theme: "" },
-      layout: { presets: {}, order: {}, topbar: "", zones: null },
-      behavior: {},
-      features: {}
-    };
-    if (def?.filters) out.filters = defaultFilters();
-    return out;
-  }
-  var isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
-  var strList = (x) => Array.isArray(x) ? x.map((s) => String(s).trim()).filter(Boolean) : [];
-  var numOrNull = (x) => x === "" || x === null || x === void 0 || !isFinite(Number(x)) ? null : Number(x);
-  function splitLegacy(raw) {
-    if (!isObj(raw)) return {};
-    if (SITE_KEYS.some((k) => isObj(raw[k]))) return raw;
-    if (["display", "vars", "layout", "behavior", "filters", "features"].some((k) => k in raw)) return { youtube: raw };
-    return {};
-  }
-  function normalize(raw, def) {
-    const src = isObj(raw) ? raw : {};
-    const cfg = emptySection(def);
-    const look = def.look;
-    const presets = def.presets;
-    if (isObj(src.display)) {
-      for (const [id, mode] of Object.entries(src.display)) {
-        const t = def.targetById[id];
-        if (t && t.modes.includes(mode) && mode !== "show") cfg.display[id] = mode;
-      }
-    }
-    if (isObj(src.vars)) {
-      if (look.themes.some((t) => t.id === src.vars.theme)) cfg.vars.theme = src.vars.theme;
-      for (const [id, v] of Object.entries(src.vars)) {
-        if (id === "theme") continue;
-        const c = look.controlById[id];
-        if (!c || v === "" || v === null || v === void 0) continue;
-        if (c.type === "range") {
-          const n = Number(v);
-          if (isFinite(n)) cfg.vars[id] = Math.min(c.max, Math.max(c.min, n));
-        } else if (c.type === "color") {
-          if (/^#[0-9a-f]{3,8}$/i.test(v)) cfg.vars[id] = v;
-        } else if (c.type === "select") {
-          if (c.options.some(([val]) => val === v)) cfg.vars[id] = v;
-        }
-      }
-    }
-    if (isObj(src.layout)) {
-      if (isObj(src.layout.presets)) {
-        for (const [page, id] of Object.entries(src.layout.presets)) {
-          const p = presets.presetById[id];
-          if (p && p.pages.includes(page)) cfg.layout.presets[page] = id;
-        }
-      }
-      if (isObj(src.layout.order)) {
-        for (const [gid, list] of Object.entries(src.layout.order)) {
-          const g = presets.orderGroups[gid];
-          if (!g) continue;
-          const known = new Set(g.items.map(([id]) => id));
-          const clean = strList(list).filter((id) => known.has(id));
-          if (clean.length) cfg.layout.order[gid] = [...new Set(clean)];
-        }
-      }
-      if (presets.topbarModes.some(([v]) => v === src.layout.topbar)) cfg.layout.topbar = src.layout.topbar;
-      if (isObj(src.layout.zones)) cfg.layout.zones = src.layout.zones;
-    }
-    if (isObj(src.behavior)) {
-      for (const [id, v] of Object.entries(src.behavior)) {
-        const b = def.behaviorById[id];
-        if (!b) continue;
-        if (b.type === "toggle") cfg.behavior[id] = !!v;
-        else if (b.type === "select" && b.options.some(([val]) => val === v)) cfg.behavior[id] = v;
-        else if (b.type === "textarea") cfg.behavior[id] = String(v ?? "");
-      }
-    }
-    if (def.filters && isObj(src.filters)) {
-      const f = src.filters;
-      const d = cfg.filters;
-      d.enabled = !!f.enabled;
-      if (["dim", "collapse", "hide"].includes(f.mode)) d.mode = f.mode;
-      if (Array.isArray(f.pages)) d.pages = strList(f.pages);
-      d.shorts = !!f.shorts;
-      d.live = !!f.live;
-      d.channels.block = strList(f.channels?.block);
-      d.channels.allowOnly = strList(f.channels?.allowOnly);
-      d.title.keywords = strList(f.title?.keywords);
-      d.title.regex = strList(f.title?.regex);
-      d.title.caseSensitive = !!f.title?.caseSensitive;
-      d.duration.minSec = numOrNull(f.duration?.minSec);
-      d.duration.maxSec = numOrNull(f.duration?.maxSec);
-      d.age.maxDays = numOrNull(f.age?.maxDays);
-      d.watched.hide = !!f.watched?.hide;
-      d.watched.minPercent = numOrNull(f.watched?.minPercent) ?? 90;
-    }
-    const srcFeatures = isObj(src.features) ? src.features : {};
-    for (const m of def.features) {
-      const s = isObj(srcFeatures[m.id]) ? srcFeatures[m.id] : {};
-      const out = { enabled: !!s.enabled };
-      for (const [key, sd] of Object.entries(m.settings || {})) out[key] = normalizeSetting(sd, s[key]);
-      cfg.features[m.id] = out;
-    }
-    return cfg;
-  }
-  function normalizeProfile(raw, sites2) {
-    const split = splitLegacy(raw);
-    const out = { schema: SCHEMA };
-    for (const key of SITE_KEYS) out[key] = normalize(split[key], sites2[key]);
-    return out;
-  }
-  function normalizeSetting(def, v) {
-    switch (def.type) {
-      case "toggle":
-        return v === void 0 ? !!def.default : !!v;
-      case "select":
-        return def.options.some(([val]) => val === v) ? v : def.default;
-      case "multi": {
-        const allowed = new Set(def.options.map(([val]) => val));
-        return Array.isArray(v) ? v.filter((x) => allowed.has(x)) : def.default.slice();
-      }
-      case "range": {
-        const n = Number(v);
-        return isFinite(n) && v !== null && v !== "" ? Math.min(def.max, Math.max(def.min, n)) : def.default;
-      }
-      case "text":
-        return typeof v === "string" ? v : def.default;
-      default:
-        return v ?? def.default;
-    }
-  }
-
-  // src/profiles/music.js
-  var H2 = "hide";
-  var C2 = "collapse";
-  var tidyDisplay2 = {
-    "m.guide.samples": H2,
-    "m.guide.upgrade": H2,
-    "m.guide.signin": H2,
-    "m.promo.mealbar": H2,
-    "m.promo.background": H2,
-    "m.promo.upsell": H2,
-    "m.home.podcastChip": H2,
-    "m.home.podcasts": H2,
-    "m.home.samplesShelf": H2,
-    "m.explore.podcasts": H2,
-    "m.search.podcasts": C2,
-    "m.search.profiles": H2
-  };
-  var tidyFeatures2 = {
-    "m.history": { enabled: true },
-    "m.favorites": { enabled: true },
-    "m.hub": { enabled: true },
-    "m.releases": { enabled: true },
-    "m.smartQueue": { enabled: true },
-    "m.queueInfo": { enabled: true },
-    "m.lyrics": { enabled: true },
-    "m.audio": { enabled: false }
-  };
-  var musicTemplates = {
-    youtube: () => ({}),
-    aufgeraeumt: () => ({
-      display: { ...tidyDisplay2 },
-      behavior: { "m.stillThere": true },
-      features: structuredClone(tidyFeatures2)
-    }),
-    fokus: () => ({
-      display: {
-        ...tidyDisplay2,
-        "m.guide.explore": H2,
-        "m.home.chips": H2,
-        "m.home.videos": H2,
-        "m.home.playlists": C2,
-        "m.home.background": H2,
-        "m.player.comments": H2,
-        "m.player.related": H2,
-        "m.search.videos": C2
-      },
-      behavior: { "m.stillThere": true, "m.closePromoDialogs": true },
-      features: { ...structuredClone(tidyFeatures2), "m.audio": { enabled: true, preferAudio: true } }
-    })
-  };
-
-  // src/profiles/index.js
-  var templates2 = templates.map((t) => ({
-    ...t,
-    config: () => ({ schema: SCHEMA, youtube: t.config(), music: musicTemplates[t.id]?.() || {} })
-  }));
-  var templateById2 = Object.fromEntries(templates2.map((t) => [t.id, t]));
-
-  // src/core/merge.js
-  var isObj2 = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
-  var same = (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b);
-  function merge3(base2, ours, theirs) {
-    if (same(ours, base2)) return theirs;
-    if (same(theirs, base2)) return ours;
-    if (isObj2(ours) && isObj2(theirs)) {
-      const b = isObj2(base2) ? base2 : {};
-      const out = {};
-      for (const k of /* @__PURE__ */ new Set([...Object.keys(ours), ...Object.keys(theirs)])) {
-        const v = merge3(b[k], ours[k], theirs[k]);
-        if (v !== void 0) out[k] = v;
-      }
-      return out;
-    }
-    return ours;
-  }
-
-  // src/core/store.js
-  var KEY = "ytx.store";
-  var STATE_KEY = "ytx.state";
-  var hasGM = () => typeof GM_getValue === "function" && typeof GM_setValue === "function";
-  function readRaw(key) {
-    try {
-      if (hasGM()) {
-        const v = GM_getValue(key, null);
-        if (v != null) return typeof v === "string" ? JSON.parse(v) : v;
-      }
-    } catch (e) {
-      log.warn("GM_getValue", e);
-    }
-    try {
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : null;
-    } catch {
-      return null;
-    }
-  }
-  function writeRaw(key, value) {
-    const json = JSON.stringify(value);
-    try {
-      if (hasGM()) {
-        GM_setValue(key, json);
-        return;
-      }
-    } catch (e) {
-      log.warn("GM_setValue", e);
-    }
-    try {
-      localStorage.setItem(key, json);
-    } catch (e) {
-      log.warn("localStorage", e);
-    }
-  }
-  function slug(name) {
-    return String(name).toLowerCase().replace(/[äöü]/g, (c) => ({ ä: "ae", ö: "oe", ü: "ue" })[c]).replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "profil";
-  }
-  var defaultSettings = () => ({ hotkeys: {}, panelButton: true, panelTab: "display" });
-  function freshData() {
-    const profiles = {};
-    for (const t of templates2) profiles[t.id] = { name: t.name, template: t.id, config: t.config() };
-    return { schema: SCHEMA, active: DEFAULT_ACTIVE, profiles, settings: defaultSettings(), buckets: {}, migrations: MIGRATIONS.map(([id]) => id) };
-  }
-  var MIGRATIONS = [
-    [
-      "schema-3-sites",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          const split = splitLegacy(p.config);
-          p.config = { schema: SCHEMA, ...split };
-          const t = templateById2[p.template];
-          if (!p.config.music && t) p.config.music = t.config().music;
-        }
-        d.schema = SCHEMA;
-      }
-    ],
-    [
-      "thumbs-color-default",
-      (d) => {
-        const p = d.profiles.aufgeraeumt;
-        const disp = p?.config?.youtube?.display;
-        if (p?.template === "aufgeraeumt" && disp?.["thumb.image"] === "dim") delete disp["thumb.image"];
-      }
-    ],
-    [
-      // neue features in bestehenden profilen einschalten, ausser im original profil
-      "playlist-search-on",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          if (p.template === "youtube" || !p.config?.youtube) continue;
-          const f = p.config.youtube.features ||= {};
-          if (!f["playlist.search"]) f["playlist.search"] = { enabled: true };
-        }
-      }
-    ]
-  ];
-  var data = null;
-  var syncMode = "none";
-  var config = null;
-  var subs = /* @__PURE__ */ new Set();
-  var base = null;
-  var pending = false;
-  function persist() {
-    pending = false;
-    const stored = readRaw(KEY);
-    if (stored && base && JSON.stringify(stored) !== base) {
-      const merged = structuredClone(merge3(JSON.parse(base), data, stored));
-      const changed = !same(merged, data);
-      data = merged;
-      if (changed) {
-        recompute();
-        emit("sync");
-      }
-    }
-    writeRaw(KEY, data);
-    base = JSON.stringify(data);
-  }
-  var saveSoon = debounce(persist, 250, 1500);
-  var markDirty = () => {
-    pending = true;
-    saveSoon();
-  };
-  function onRemote(raw) {
-    let remote;
-    try {
-      remote = typeof raw === "string" ? JSON.parse(raw) : raw;
-    } catch {
-      return;
-    }
-    if (!remote?.profiles || !Object.keys(remote.profiles).length) return;
-    const json = JSON.stringify(remote);
-    if (json === base) return;
-    data = structuredClone(pending ? merge3(JSON.parse(base), data, remote) : remote);
-    base = json;
-    data.settings ||= defaultSettings();
-    data.buckets ||= {};
-    if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0];
-    recompute();
-    emit("sync");
-  }
-  function watchRemote() {
-    try {
-      if (typeof GM_addValueChangeListener === "function") {
-        GM_addValueChangeListener(KEY, (name, oldValue, newValue, remote) => remote && onRemote(newValue));
-        return "gm";
-      }
-    } catch (e) {
-      log.warn("GM_addValueChangeListener", e);
-    }
-    window.addEventListener("storage", (e) => e.key === KEY && e.newValue && onRemote(e.newValue));
-    return "storage";
-  }
-  var runtime = readRaw(STATE_KEY) || {};
-  var saveState = debounce(() => writeRaw(STATE_KEY, runtime), 500, 3e3);
-  function migrate() {
-    data.migrations ||= [];
-    let changed = false;
-    for (const [id, fn] of MIGRATIONS) {
-      if (data.migrations.includes(id)) continue;
-      try {
-        fn(data);
-      } catch (e) {
-        log.warn(`migration ${id}`, e);
-      }
-      data.migrations.push(id);
-      changed = true;
-    }
-    if (changed) writeRaw(KEY, data);
-    base = JSON.stringify(data);
-  }
-  function activeProfile() {
-    return data.profiles[data.active] || data.profiles[Object.keys(data.profiles)[0]];
-  }
-  function recompute() {
-    config = normalize(activeProfile()?.config?.[site.id], site);
-  }
-  function emit(reason) {
-    for (const fn of subs) {
-      try {
-        fn(config, reason);
-      } catch (e) {
-        log.error("store subscriber", e);
-      }
-    }
-  }
-  function linkVars(p, oldVars, newVars) {
-    for (const id of SITE_KEYS) {
-      if (id === site.id) continue;
-      const other = normalize(p.config?.[id], sites[id]);
-      let touched = false;
-      for (const k of /* @__PURE__ */ new Set([...Object.keys(oldVars), ...Object.keys(newVars)])) {
-        if (same(oldVars[k], newVars[k])) continue;
-        if (newVars[k] === void 0) delete other.vars[k];
-        else other.vars[k] = newVars[k];
-        touched = true;
-      }
-      if (touched) p.config = { ...p.config || {}, schema: SCHEMA, [id]: normalize(other, sites[id]) };
-    }
-  }
-  function commit(reason) {
-    recompute();
-    markDirty();
-    emit(reason);
-  }
-  var store = {
-    init() {
-      data = readRaw(KEY);
-      if (!data || typeof data !== "object" || !data.profiles || !Object.keys(data.profiles).length) {
-        data = freshData();
-        writeRaw(KEY, data);
-      }
-      data.settings ||= defaultSettings();
-      data.buckets ||= {};
-      base = JSON.stringify(data);
-      migrate();
-      for (const t of templates2) {
-        if (!data.profiles[t.id] && !data.deletedTemplates?.includes(t.id)) data.profiles[t.id] = { name: t.name, template: t.id, config: t.config() };
-      }
-      if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0];
-      recompute();
-      syncMode = watchRemote();
-      const flush = () => this.flush();
-      window.addEventListener("pagehide", flush);
-      document.addEventListener("visibilitychange", () => document.hidden && flush());
-    },
-    flush() {
-      saveSoon.flush();
-      saveState.flush();
-    },
-    get config() {
-      return config;
-    },
-    get data() {
-      return data;
-    },
-    get settings() {
-      return data.settings;
-    },
-    get activeId() {
-      return data.active;
-    },
-    get siteId() {
-      return site.id;
-    },
-    get syncMode() {
-      return syncMode;
-    },
-    profiles() {
-      return Object.entries(data.profiles).map(([id, p]) => ({ id, name: p.name, template: p.template, active: id === data.active }));
-    },
-    subscribe(fn) {
-      subs.add(fn);
-      return () => subs.delete(fn);
-    },
-    // mutator bekommt den abschnitt der aktuellen seite
-    update(mutator, reason = "update") {
-      const p = activeProfile();
-      const draft = normalize(p.config?.[site.id], site);
-      const oldVars = { ...draft.vars };
-      mutator(draft);
-      const next = normalize(draft, site);
-      p.config = { ...p.config || {}, schema: SCHEMA, [site.id]: next };
-      if (data.settings.linkLook) linkVars(p, oldVars, next.vars);
-      commit(reason);
-    },
-    get linkLook() {
-      return !!data.settings.linkLook;
-    },
-    // look beider seiten koppeln, beim einschalten einmal alle profile angleichen
-    setLinkLook(on) {
-      data.settings.linkLook = !!on;
-      if (on) for (const p of Object.values(data.profiles)) linkVars(p, {}, normalize(p.config?.[site.id], site).vars);
-      commit("profile");
-    },
-    // look (theme/farben/dichte/typografie) der jeweils anderen seite im selben profil
-    // dient dazu, den style zwischen youtube und music zu uebertragen
-    otherLooks() {
-      const p = activeProfile();
-      return SITE_KEYS.filter((id) => id !== site.id).map((id) => ({
-        id,
-        label: sites[id].label,
-        vars: normalize(p.config?.[id], sites[id]).vars
-      }));
-    },
-    updateSettings(mutator) {
-      mutator(data.settings);
-      markDirty();
-      emit("settings");
-    },
-    // seitenweite einstellungen, normalisiert vom besitzer des buckets
-    bucket(name, normalizeFn) {
-      const b = normalizeFn ? normalizeFn(data.buckets[name]) : data.buckets[name];
-      return b;
-    },
-    updateBucket(name, mutator, normalizeFn) {
-      const draft = normalizeFn ? normalizeFn(data.buckets[name]) : structuredClone(data.buckets[name] || {});
-      mutator(draft);
-      data.buckets[name] = normalizeFn ? normalizeFn(draft) : draft;
-      markDirty();
-      emit(`bucket:${name}`);
-      return data.buckets[name];
-    },
-    setActive(id) {
-      if (!data.profiles[id] || id === data.active) return;
-      data.active = id;
-      commit("profile");
-    },
-    cycleProfile() {
-      const ids = Object.keys(data.profiles);
-      const i = ids.indexOf(data.active);
-      this.setActive(ids[(i + 1) % ids.length]);
-      return data.profiles[data.active].name;
-    },
-    createProfile(name, fromId = data.active) {
-      let id = slug(name);
-      while (data.profiles[id]) id += "-2";
-      const src = data.profiles[fromId];
-      data.profiles[id] = { name: String(name).trim() || "Profil", template: null, config: structuredClone(src ? src.config : {}) };
-      data.active = id;
-      commit("profile");
-      return id;
-    },
-    renameProfile(id, name) {
-      if (!data.profiles[id] || !String(name).trim()) return;
-      data.profiles[id].name = String(name).trim();
-      markDirty();
-      emit("profile");
-    },
-    deleteProfile(id) {
-      if (!data.profiles[id] || Object.keys(data.profiles).length <= 1) return false;
-      if (data.profiles[id].template) (data.deletedTemplates ||= []).push(data.profiles[id].template);
-      delete data.profiles[id];
-      if (data.active === id) data.active = Object.keys(data.profiles)[0];
-      commit("profile");
-      return true;
-    },
-    // setzt nur den abschnitt der aktuellen seite zurueck
-    resetProfile(id, allSites = false) {
-      const p = data.profiles[id];
-      if (!p) return;
-      const t = templateById2[p.template];
-      const fresh = t ? t.config() : {};
-      p.config = allSites ? fresh : { ...p.config || {}, schema: SCHEMA, [site.id]: fresh[site.id] || {} };
-      commit("profile");
-    },
-    exportJson(all = false) {
-      const p = activeProfile();
-      const out = all ? { ...data, buckets: void 0 } : { schema: SCHEMA, profile: { name: p.name, config: normalizeProfile(p.config, sites) } };
-      return JSON.stringify(out, null, 2);
-    },
-    importJson(text) {
-      const obj = JSON.parse(text);
-      if (obj.profiles && typeof obj.profiles === "object") {
-        for (const [id2, p] of Object.entries(obj.profiles)) {
-          if (!p || typeof p !== "object") continue;
-          data.profiles[id2] = { name: String(p.name || id2), template: p.template ?? null, config: normalizeProfile(p.config, sites) };
-        }
-        if (obj.active && data.profiles[obj.active]) data.active = obj.active;
-        if (obj.settings) data.settings = { ...data.settings, ...obj.settings };
-        commit("import");
-        return "Alle Profile importiert";
-      }
-      const cfg = obj.profile?.config || obj.config || obj;
-      const name = obj.profile?.name || "Importiert";
-      const id = this.createProfile(name);
-      data.profiles[id].config = normalizeProfile(cfg, sites);
-      commit("import");
-      return `Profil „${name}“ importiert`;
-    },
-    resetAll() {
-      const buckets = data.buckets;
-      data = freshData();
-      data.buckets = buckets;
-      commit("reset");
-    },
-    state: {
-      get(key, def) {
-        return key in runtime ? runtime[key] : def;
-      },
-      set(key, value) {
-        runtime[key] = value;
-        saveState();
-      }
-    }
-  };
-
-  // src/core/idb.js
-  var req = (r) => new Promise((ok, fail) => {
-    r.onsuccess = () => ok(r.result);
-    r.onerror = () => fail(r.error);
-  });
-  var done = (tx) => new Promise((ok, fail) => {
-    tx.oncomplete = () => ok();
-    tx.onerror = () => fail(tx.error);
-    tx.onabort = () => fail(tx.error || new Error("transaction abgebrochen"));
-  });
-  function openDatabase(name, migrations) {
-    const status = { name, version: migrations.length, open: false, error: null, openedAt: 0, upgradedFrom: null, blocked: false };
-    let dbp = null;
-    const open = () => {
-      if (dbp) return dbp;
-      dbp = new Promise((ok, fail) => {
-        if (typeof indexedDB === "undefined") return fail(new Error("IndexedDB nicht verfügbar"));
-        const r = indexedDB.open(name, migrations.length);
-        r.onupgradeneeded = (e) => {
-          const db2 = r.result;
-          const tx = r.transaction;
-          status.upgradedFrom = e.oldVersion;
-          for (let v = e.oldVersion; v < migrations.length; v++) {
-            try {
-              migrations[v](db2, tx);
-            } catch (err) {
-              log.error(`idb migration ${name} v${v + 1}`, err);
-              tx.abort();
-              return;
-            }
-          }
-        };
-        r.onblocked = () => {
-          status.blocked = true;
-          log.warn(`idb ${name} blockiert durch anderen tab`);
-        };
-        r.onsuccess = () => {
-          const db2 = r.result;
-          db2.onversionchange = () => {
-            db2.close();
-            dbp = null;
-            status.open = false;
-          };
-          status.open = true;
-          status.openedAt = Date.now();
-          ok(db2);
-        };
-        r.onerror = () => {
-          status.error = r.error?.message || "unbekannt";
-          dbp = null;
-          fail(r.error);
-        };
-      });
-      return dbp;
-    };
-    const withStore = async (store2, mode, fn) => {
-      const db2 = await open();
-      const tx = db2.transaction(store2, mode);
-      const result = fn(tx.objectStore(store2), tx);
-      const value = result instanceof IDBRequest ? await req(result) : await result;
-      await done(tx);
-      return value;
-    };
-    return {
-      status,
-      open,
-      get: (store2, key) => withStore(store2, "readonly", (s) => s.get(key)),
-      put: (store2, value) => withStore(store2, "readwrite", (s) => s.put(value)),
-      delete: (store2, key) => withStore(store2, "readwrite", (s) => s.delete(key)),
-      clear: (store2) => withStore(store2, "readwrite", (s) => s.clear()),
-      count: (store2) => withStore(store2, "readonly", (s) => s.count()),
-      getAll: (store2, query, count) => withStore(store2, "readonly", (s) => s.getAll(query, count)),
-      putMany: (store2, values) => withStore(store2, "readwrite", (s) => {
-        for (const v of values) s.put(v);
-      }),
-      deleteMany: (store2, keys) => withStore(store2, "readwrite", (s) => {
-        for (const k of keys) s.delete(k);
-      }),
-      byIndex: (store2, index, query, count) => withStore(store2, "readonly", (s) => s.index(index).getAll(query, count)),
-      // neueste zuerst ueber einen index mit cursor
-      latest: (store2, index, limit = 50) => withStore(
-        store2,
-        "readonly",
-        (s) => new Promise((ok, fail) => {
-          const out = [];
-          const c = s.index(index).openCursor(null, "prev");
-          c.onsuccess = () => {
-            const cur = c.result;
-            if (!cur || out.length >= limit) return ok(out);
-            out.push(cur.value);
-            cur.continue();
-          };
-          c.onerror = () => fail(c.error);
-        })
-      ),
-      deleteWhere: (store2, index, range2) => withStore(
-        store2,
-        "readwrite",
-        (s) => new Promise((ok, fail) => {
-          let n = 0;
-          const c = s.index(index).openCursor(range2);
-          c.onsuccess = () => {
-            const cur = c.result;
-            if (!cur) return ok(n);
-            cur.delete();
-            n++;
-            cur.continue();
-          };
-          c.onerror = () => fail(c.error);
-        })
-      ),
-      async exportAll(stores) {
-        const db2 = await open();
-        const out = { database: name, version: db2.version, exportedAt: (/* @__PURE__ */ new Date()).toISOString(), stores: {} };
-        for (const st of stores || [...db2.objectStoreNames]) out.stores[st] = await withStore(st, "readonly", (s) => s.getAll());
-        return out;
-      },
-      async importAll(dump, { replace = false, stores } = {}) {
-        const db2 = await open();
-        const names = stores || Object.keys(dump.stores || {}).filter((n) => db2.objectStoreNames.contains(n));
-        for (const st of names) {
-          await withStore(st, "readwrite", (s) => {
-            if (replace) s.clear();
-            for (const v of dump.stores[st] || []) s.put(v);
-          });
-        }
-        return names;
-      },
-      async sizes() {
-        const db2 = await open();
-        const out = {};
-        for (const st of db2.objectStoreNames) out[st] = await withStore(st, "readonly", (s) => s.count());
-        return out;
-      },
-      close() {
-        dbp?.then((db2) => db2.close()).catch(() => {
-        });
-        dbp = null;
-        status.open = false;
-      }
-    };
-  }
-
   // src/features/music/data/db.js
   var MUSIC_DB = "ytx-music";
-  var MIGRATIONS2 = [
+  var MIGRATIONS3 = [
     // v1 grundschema
-    (db2) => {
-      const plays = db2.createObjectStore("plays", { keyPath: "id" });
+    (db3) => {
+      const plays = db3.createObjectStore("plays", { keyPath: "id" });
       plays.createIndex("startedAt", "startedAt");
       plays.createIndex("videoId", "videoId");
       plays.createIndex("artistKeys", "artistKeys", { multiEntry: true });
-      const tracks = db2.createObjectStore("tracks", { keyPath: "videoId" });
+      const tracks = db3.createObjectStore("tracks", { keyPath: "videoId" });
       tracks.createIndex("seenAt", "seenAt");
-      const artists = db2.createObjectStore("artists", { keyPath: "id" });
+      const artists = db3.createObjectStore("artists", { keyPath: "id" });
       artists.createIndex("checkedAt", "checkedAt");
-      const favorites = db2.createObjectStore("favorites", { keyPath: "key" });
+      const favorites = db3.createObjectStore("favorites", { keyPath: "key" });
       favorites.createIndex("type", "type");
-      const releases = db2.createObjectStore("releases", { keyPath: "id" });
+      const releases = db3.createObjectStore("releases", { keyPath: "id" });
       releases.createIndex("artistId", "artistId");
       releases.createIndex("firstSeen", "firstSeen");
-      db2.createObjectStore("feedback", { keyPath: "key" });
-      const cache4 = db2.createObjectStore("cache", { keyPath: "key" });
+      db3.createObjectStore("feedback", { keyPath: "key" });
+      const cache4 = db3.createObjectStore("cache", { keyPath: "key" });
       cache4.createIndex("ts", "ts");
-      db2.createObjectStore("meta", { keyPath: "key" });
+      db3.createObjectStore("meta", { keyPath: "key" });
     },
     // v2 genre zuordnungen aus genre seiten und suche
-    (db2) => {
-      const genres = db2.createObjectStore("genres", { keyPath: "key" });
+    (db3) => {
+      const genres = db3.createObjectStore("genres", { keyPath: "key" });
       genres.createIndex("checkedAt", "checkedAt");
     }
   ];
   var USER_STORES = ["plays", "favorites", "feedback", "releases", "meta", "genres"];
-  var db = null;
+  var db2 = null;
   function musicDb() {
-    db ||= openDatabase(MUSIC_DB, MIGRATIONS2);
-    return db;
+    db2 ||= openDatabase(MUSIC_DB, MIGRATIONS3);
+    return db2;
   }
   async function getMeta(key, def = null) {
     const r = await musicDb().get("meta", key);
@@ -6061,7 +6678,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     favoritePlaylist: 1,
     feedback: 1.5
   };
-  var DAY = 24 * 3600 * 1e3;
+  var DAY2 = 24 * 3600 * 1e3;
   function playScore(p, w = DEFAULT_WEIGHTS) {
     const pct = Math.max(0, Math.min(1, p.percent ?? 0));
     let s = 0;
@@ -6071,7 +6688,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     if (p.liked) s += w.like;
     return s;
   }
-  var decay = (ageMs, halfLifeDays = 120) => Math.pow(0.5, Math.max(0, ageMs) / (halfLifeDays * DAY));
+  var decay = (ageMs, halfLifeDays = 120) => Math.pow(0.5, Math.max(0, ageMs) / (halfLifeDays * DAY2));
   function bump(map, key, init) {
     let v = map.get(key);
     if (!v) {
@@ -6189,14 +6806,14 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
 
   // src/features/music/data/prefs.js
   var PREFS_BUCKET = "music";
-  var isObj3 = (x) => x && typeof x === "object" && !Array.isArray(x);
+  var isObj4 = (x) => x && typeof x === "object" && !Array.isArray(x);
   var num = (v, def, min, max) => {
     const n = Number(v);
     return v === null || v === void 0 || v === "" || !isFinite(n) ? def : Math.min(max, Math.max(min, n));
   };
   var strList2 = (x) => Array.isArray(x) ? [...new Set(x.map((s) => String(s).trim()).filter(Boolean))] : null;
-  var artistList = (x) => Array.isArray(x) ? x.filter((a) => isObj3(a) && (a.id || a.name)).map((a) => ({ id: a.id || null, name: String(a.name || a.id) })) : [];
-  var songList = (x) => Array.isArray(x) ? x.filter((s) => isObj3(s) && s.videoId).map((s) => ({ videoId: s.videoId, title: String(s.title || ""), artists: artistList(s.artists) })) : [];
+  var artistList = (x) => Array.isArray(x) ? x.filter((a) => isObj4(a) && (a.id || a.name)).map((a) => ({ id: a.id || null, name: String(a.name || a.id) })) : [];
+  var songList = (x) => Array.isArray(x) ? x.filter((s) => isObj4(s) && s.videoId).map((s) => ({ videoId: s.videoId, title: String(s.title || ""), artists: artistList(s.artists) })) : [];
   var PROVIDER_IDS = ["local", "musicbrainz", "lastfm", "ollama"];
   function defaultPrefs() {
     return {
@@ -6216,46 +6833,46 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   }
   function normalizePrefs(raw) {
     const d = defaultPrefs();
-    if (!isObj3(raw)) return d;
+    if (!isObj4(raw)) return d;
     d.discovery = num(raw.discovery, d.discovery, 0, 1);
     d.explain = raw.explain !== false;
-    if (isObj3(raw.history)) {
+    if (isObj4(raw.history)) {
       d.history.paused = !!raw.history.paused;
       d.history.retentionDays = raw.history.retentionDays == null || raw.history.retentionDays === "" ? null : num(raw.history.retentionDays, null, 1, 3650);
       d.history.minListenSec = num(raw.history.minListenSec, d.history.minListenSec, 0, 120);
       d.history.recordContext = raw.history.recordContext !== false;
     }
-    if (isObj3(raw.blocklist)) {
+    if (isObj4(raw.blocklist)) {
       d.blocklist.artists = artistList(raw.blocklist.artists);
       d.blocklist.songs = songList(raw.blocklist.songs);
       d.blocklist.terms = strList2(raw.blocklist.terms) ?? d.blocklist.terms;
     }
-    if (isObj3(raw.excluded)) {
+    if (isObj4(raw.excluded)) {
       d.excluded.artists = artistList(raw.excluded.artists);
       d.excluded.songs = songList(raw.excluded.songs);
     }
     d.hideVersions = strList2(raw.hideVersions) || [];
-    if (isObj3(raw.weights)) for (const k of Object.keys(d.weights)) d.weights[k] = num(raw.weights[k], d.weights[k], -10, 10);
+    if (isObj4(raw.weights)) for (const k of Object.keys(d.weights)) d.weights[k] = num(raw.weights[k], d.weights[k], -10, 10);
     d.halfLifeDays = num(raw.halfLifeDays, d.halfLifeDays, 7, 3650);
-    if (isObj3(raw.releases)) {
+    if (isObj4(raw.releases)) {
       d.releases.enabled = raw.releases.enabled !== false;
       d.releases.intervalHours = num(raw.releases.intervalHours, d.releases.intervalHours, 6, 24 * 14);
       d.releases.maxArtists = num(raw.releases.maxArtists, d.releases.maxArtists, 1, 100);
       d.releases.includeTopArtists = raw.releases.includeTopArtists !== false;
       d.releases.maxAgeDays = num(raw.releases.maxAgeDays, d.releases.maxAgeDays, 7, 730);
     }
-    if (isObj3(raw.smartQueue)) {
+    if (isObj4(raw.smartQueue)) {
       for (const k of Object.keys(d.smartQueue)) if (k in raw.smartQueue) d.smartQueue[k] = !!raw.smartQueue[k];
     }
-    if (isObj3(raw.providers)) {
+    if (isObj4(raw.providers)) {
       for (const id of PROVIDER_IDS) {
         const p = raw.providers[id];
-        if (!isObj3(p)) continue;
+        if (!isObj4(p)) continue;
         d.providers[id].enabled = id === "local" ? p.enabled !== false : !!p.enabled;
         for (const k of Object.keys(d.providers[id])) if (k !== "enabled" && typeof p[k] === "string") d.providers[id][k] = p[k];
       }
     }
-    if (isObj3(raw.genres)) d.genres.favorites = strList2(raw.genres.favorites) || [];
+    if (isObj4(raw.genres)) d.genres.favorites = strList2(raw.genres.favorites) || [];
     return d;
   }
   var SESSION_KEY = "ytx.music.session";
@@ -6341,8 +6958,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   }
   function matchMood(moods, keywords) {
     if (!keywords?.length) return null;
-    const lower = keywords.map((k) => k.toLowerCase());
-    return moods.find((m) => lower.some((k) => m.name.toLowerCase().includes(k))) || null;
+    const lower2 = keywords.map((k) => k.toLowerCase());
+    return moods.find((m) => lower2.some((k) => m.name.toLowerCase().includes(k))) || null;
   }
 
   // src/features/music/runtime.js
@@ -6407,7 +7024,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         emit2("plays", rec);
         return true;
       },
-      list({ from = 0, to = Date.now() + DAY } = {}) {
+      list({ from = 0, to = Date.now() + DAY2 } = {}) {
         return musicDb().byIndex("plays", "startedAt", IDBKeyRange.bound(from, to));
       },
       recent(limit = 50) {
@@ -6435,7 +7052,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       async applyRetention() {
         const days = music.prefs().history.retentionDays;
         if (!days) return 0;
-        const n = await musicDb().deleteWhere("plays", "startedAt", IDBKeyRange.upperBound(Date.now() - days * DAY));
+        const n = await musicDb().deleteWhere("plays", "startedAt", IDBKeyRange.upperBound(Date.now() - days * DAY2));
         if (n) {
           invalidate();
           emit2("plays", null);
@@ -6456,19 +7073,19 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       },
       async toggle(item) {
         const key = `${item.type}:${item.id}`;
-        const db2 = musicDb();
-        const prev2 = await db2.get("favorites", key);
-        if (prev2) await db2.delete("favorites", key);
-        else await db2.put("favorites", { key, type: item.type, id: item.id, name: item.name || item.title || "", artists: item.artists || [], thumbnail: item.thumbnail || "", weight: item.weight ?? 1, addedAt: Date.now() });
+        const db3 = musicDb();
+        const prev2 = await db3.get("favorites", key);
+        if (prev2) await db3.delete("favorites", key);
+        else await db3.put("favorites", { key, type: item.type, id: item.id, name: item.name || item.title || "", artists: item.artists || [], thumbnail: item.thumbnail || "", weight: item.weight ?? 1, addedAt: Date.now() });
         invalidate();
         emit2("favorites", { key, on: !prev2 });
         return !prev2;
       },
       async setWeight(key, weight) {
-        const db2 = musicDb();
-        const prev2 = await db2.get("favorites", key);
+        const db3 = musicDb();
+        const prev2 = await db3.get("favorites", key);
         if (!prev2) return;
-        await db2.put("favorites", { ...prev2, weight });
+        await db3.put("favorites", { ...prev2, weight });
         invalidate();
         emit2("favorites", { key, on: true });
       },
@@ -6485,11 +7102,11 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       },
       async adjust({ type, id, name, artists, delta = 0, ignore }) {
         const key = `${type}:${id}`;
-        const db2 = musicDb();
-        const prev2 = await db2.get("feedback", key) || { key, type, id, name, artists: artists || [], value: 0 };
+        const db3 = musicDb();
+        const prev2 = await db3.get("feedback", key) || { key, type, id, name, artists: artists || [], value: 0 };
         const next = { ...prev2, name: name || prev2.name, value: Math.max(-3, Math.min(3, (prev2.value || 0) + delta)), ts: Date.now() };
         if (ignore !== void 0) next.ignore = !!ignore;
-        await db2.put("feedback", next);
+        await db3.put("feedback", next);
         invalidate();
         emit2("feedback", next);
         return next;
@@ -7140,9 +7757,9 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       await musicDb().clear("cache");
     },
     async cacheInfo() {
-      const db2 = musicDb();
-      const count = await db2.count("cache").catch(() => 0);
-      const newest = await db2.latest("cache", "ts", 1).catch(() => []);
+      const db3 = musicDb();
+      const count = await db3.count("cache").catch(() => 0);
+      const newest = await db3.latest("cache", "ts", 1).catch(() => []);
       return { count, newest: newest[0]?.ts || 0 };
     }
   };
@@ -7238,7 +7855,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     if (last2 && now - last2 < (opts.recentHours ?? 3) * 3600 * 1e3 && !c.sources.some((s) => s.kind === "history")) score -= 0.6;
     const favoriteArtist = keys.some((k) => profile.artists.get(k)?.favorite);
     if (!songPlays && !artistPlays && !favoriteArtist) reasons.push("Noch nie gehört");
-    if (last2 && now - last2 > (opts.longAgoDays ?? 45) * DAY && profile.songs.get(c.videoId)?.score > 0 && !reasons.includes("Lange nicht gehört")) reasons.push("Lange nicht gehört");
+    if (last2 && now - last2 > (opts.longAgoDays ?? 45) * DAY2 && profile.songs.get(c.videoId)?.score > 0 && !reasons.includes("Lange nicht gehört")) reasons.push("Lange nicht gehört");
     return { score, reasons, familiarity: fam, affinity: aff };
   }
   function rank(candidates, profile, options = {}) {
@@ -7511,7 +8128,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       for (const t of col?.tracks.slice(0, 12) || []) cands.push(toCandidate(t, { kind: "featured", via: seed.name, viaKey: seed.key }));
     }
     for (const s of await music.favorites.byType("song")) cands.push(toCandidate({ videoId: s.id, title: s.name, artists: s.artists }, { kind: "seed", via: "deinen Lieblingssongs", weight: 0.9 }));
-    const old = Date.now() - 45 * DAY;
+    const old = Date.now() - 45 * DAY2;
     for (const s of profile.topSongs(40)) if (s.lastPlayed && s.lastPlayed < old) cands.push(toCandidate(s, { kind: "history" }));
     return { candidates: cands.filter(Boolean), excludeIds: recentIds(profile, 2) };
   }
@@ -7544,7 +8161,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     return { candidates: cands.filter(Boolean) };
   }
   async function longAgo(ctx) {
-    const old = Date.now() - 45 * DAY;
+    const old = Date.now() - 45 * DAY2;
     const cands = ctx.profile.topSongs(300).filter((s) => s.lastPlayed && s.lastPlayed < old && s.completes > 0).map((s) => toCandidate(s, { kind: "history" }));
     return { candidates: cands.filter(Boolean), overrides: { discovery: 0.1, maxPerArtist: 3 } };
   }
@@ -7662,7 +8279,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     if (checking) return checking;
     checking = (async () => {
       const prefs = music.prefs();
-      const db2 = music.db();
+      const db3 = music.db();
       const profile = await music.profile();
       const favs = await music.favorites.byType("artist");
       const list = favs.filter((f) => f.id).map((f) => ({ id: f.id, name: f.name }));
@@ -7674,7 +8291,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       const thisYear = new Date(now).getFullYear();
       const due = [];
       for (const a of artists) {
-        const rec = await db2.get("artists", a.id);
+        const rec = await db3.get("artists", a.id);
         if (force || !rec || now - (rec.checkedAt || 0) > prefs.releases.intervalHours * 3600 * 1e3) due.push({ ...a, rec });
       }
       let fresh = 0;
@@ -7685,22 +8302,22 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           const page = await catalog.artist(a.id, { maxAge: 3600 * 1e3 });
           const baseline = !a.rec;
           for (const r of page.releases) {
-            const prev2 = await db2.get("releases", r.id);
+            const prev2 = await db3.get("releases", r.id);
             if (prev2) continue;
             const isFresh = !baseline;
             if (isFresh) fresh++;
-            await db2.put("releases", { id: r.id, artistId: a.id, artistName: page.name || a.name, title: r.title, kind: r.kind || "Album", year: r.year || null, thumbnail: r.thumbnail || "", firstSeen: now, fresh: isFresh, recent: !!r.year && r.year >= thisYear });
+            await db3.put("releases", { id: r.id, artistId: a.id, artistName: page.name || a.name, title: r.title, kind: r.kind || "Album", year: r.year || null, thumbnail: r.thumbnail || "", firstSeen: now, fresh: isFresh, recent: !!r.year && r.year >= thisYear });
           }
-          await db2.put("artists", { id: a.id, name: page.name || a.name, checkedAt: Date.now(), releaseCount: page.releases.length, similar: page.similar.slice(0, 10) });
+          await db3.put("artists", { id: a.id, name: page.name || a.name, checkedAt: Date.now(), releaseCount: page.releases.length, similar: page.similar.slice(0, 10) });
         } catch (e) {
           errors.push(`${a.name}: ${e.message}`);
         }
         checked++;
         onProgress?.(checked, due.length);
       }
-      const maxAge = prefs.releases.maxAgeDays * DAY;
+      const maxAge = prefs.releases.maxAgeDays * DAY2;
       for (const r of await music.releases.all()) {
-        if (r.fresh && now - r.firstSeen > maxAge) await db2.put("releases", { ...r, fresh: false });
+        if (r.fresh && now - r.firstSeen > maxAge) await db3.put("releases", { ...r, fresh: false });
       }
       const result = { at: Date.now(), artists: artists.length, checked, fresh, errors };
       await music.setMeta("lastReleaseCheck", result);
@@ -7965,7 +8582,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       });
       function toggle2() {
         drawer.toggle();
-        if (drawer.isOpen) render2();
+        if (drawer.isOpen) render3();
       }
       ctx.action("music.hub", toggle2);
       function drawTabs() {
@@ -7976,7 +8593,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
               ui.tab = id;
               ctx.state.set("m.hub.tab", id);
               ui.result = null;
-              render2();
+              render3();
             });
             return b;
           })
@@ -8105,7 +8722,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       }
       async function load3(redraw = false, force = false) {
         if (redraw) drawTools();
-        if (ui.tab === "queue") return render2();
+        if (ui.tab === "queue") return render3();
         const args = mixArgs();
         const key = cacheKey(args);
         const hit = cache3.get(key);
@@ -8161,7 +8778,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         artistOverride = artist;
         ui.tab = tab;
         ui.result = null;
-        render2();
+        render3();
       }
       function playAll(start = 0) {
         const items = ui.result?.items || [];
@@ -8180,9 +8797,9 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           main.append(h("div", { class: "section-title", text: "Veröffentlichungen" }));
           const grid = h("div", { class: "grid" });
           for (const rel of r.releases.slice(0, 24)) {
-            const card = h("div", { class: "card", title: `${rel.artistName} · ${rel.title}` }, rel.thumbnail ? h("img", { src: rel.thumbnail, loading: "lazy", alt: "" }) : h("img", { alt: "" }), h("div", { class: ["title", rel.fresh && "new"], text: `${rel.fresh ? "● " : ""}${rel.title}` }), h("div", { class: "sub", text: `${rel.artistName}${rel.year ? ` · ${rel.year}` : ""}${rel.kind ? ` · ${rel.kind}` : ""}` }));
-            card.addEventListener("click", () => navigateEndpoint(endpoints.browse(rel.id, null, "ALBUM")));
-            grid.append(card);
+            const card2 = h("div", { class: "card", title: `${rel.artistName} · ${rel.title}` }, rel.thumbnail ? h("img", { src: rel.thumbnail, loading: "lazy", alt: "" }) : h("img", { alt: "" }), h("div", { class: ["title", rel.fresh && "new"], text: `${rel.fresh ? "● " : ""}${rel.title}` }), h("div", { class: "sub", text: `${rel.artistName}${rel.year ? ` · ${rel.year}` : ""}${rel.kind ? ` · ${rel.kind}` : ""}` }));
+            card2.addEventListener("click", () => navigateEndpoint(endpoints.browse(rel.id, null, "ALBUM")));
+            grid.append(card2);
           }
           main.append(grid);
         } else if (ui.tab === "releases") {
@@ -8223,7 +8840,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           main.append(row2);
         });
       }
-      function render2() {
+      function render3() {
         if (!drawer.isOpen) return;
         drawTabs();
         drawTools();
@@ -8249,18 +8866,18 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       const shelfTitle = (text, ...buttons) => h("div", { style: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px", margin: "8px 0 16px" } }, h("div", { text, style: { font: "700 24px/1.3 Roboto, Arial, sans-serif", color: T2.primary, marginRight: "8px" } }), ...buttons);
       const shelfRow = () => h("div", { style: { display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "6px" } });
       const shelfCard = ({ img, title, sub, highlight, onClick }) => {
-        const card = h(
+        const card2 = h(
           "div",
           { style: { flex: "none", width: "150px", cursor: "pointer", color: T2.primary, font: "400 13px/1.35 Roboto, Arial, sans-serif" } },
           img ? h("img", { src: img, loading: "lazy", alt: "", style: { width: "150px", height: "150px", borderRadius: "4px", objectFit: "cover", background: "rgba(255,255,255,.08)" } }) : h("div", { style: { width: "150px", height: "150px", borderRadius: "4px", background: "rgba(255,255,255,.08)" } }),
           h("div", { text: title, style: { marginTop: "6px", fontWeight: "500", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: highlight ? "#ffc83d" : "inherit" } }),
           h("div", { text: sub, title: sub, style: { color: T2.secondary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } })
         );
-        card.addEventListener("click", (e) => {
+        card2.addEventListener("click", (e) => {
           e.preventDefault();
           onClick();
         });
-        return card;
+        return card2;
       };
       const SHOWN = "m.hub.shown";
       const home = { pool: null, poolAt: 0, step: 0, picked: [], loading: false, note: "" };
@@ -8408,12 +9025,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         drawer,
         open: () => {
           drawer.open();
-          render2();
+          render3();
         },
         update(next) {
           s = next;
           shelf.refresh();
-          render2();
+          render3();
         },
         onPage() {
           shelf.refresh();
@@ -8429,6 +9046,223 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           if (!btn2.ok) return { status: "warn", detail: "Kopfzeile für den Mix-Button nicht gefunden" };
           const r = ui.result;
           return { status: r?.errors?.length ? "warn" : "ok", detail: `Button da${badge2 ? ` · ${badge2} neue Veröffentlichungen` : ""}${r ? ` · letzter Mix ${r.items?.length || 0} Titel, ${r.requests} Abrufe${r.errors?.length ? `, Fehler: ${r.errors[0]}` : ""}` : ""}` };
+        }
+      };
+    }
+  };
+
+  // src/core/clipboard.js
+  var clipboardState = { last: null, method: null };
+  async function copyText(text) {
+    clipboardState.last = text;
+    if (typeof GM_setClipboard === "function") {
+      try {
+        GM_setClipboard(text, "text");
+        clipboardState.method = "gm";
+        return true;
+      } catch (e) {
+        log.warn("GM_setClipboard", e);
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      clipboardState.method = "navigator";
+      return true;
+    } catch {
+    }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;pointer-events:none";
+      document.body.append(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      ta.remove();
+      if (ok) {
+        clipboardState.method = "execCommand";
+        return true;
+      }
+    } catch {
+    }
+    clipboardState.method = "failed";
+    log.warn("clipboard: kopieren fehlgeschlagen");
+    return false;
+  }
+
+  // src/features/music/logic/recap.js
+  function weekStart(ts) {
+    const d = new Date(ts);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - (d.getDay() + 6) % 7);
+    return d.getTime();
+  }
+  var lastWeekStart = (now) => weekStart(weekStart(now) - DAY2);
+  function weekLabel(start) {
+    const end = new Date(start + 6 * DAY2);
+    const a = new Date(start);
+    const fmt = (d, withMonth) => `${d.getDate()}.${withMonth ? `${d.getMonth() + 1}.` : ""}`;
+    return `${fmt(a, a.getMonth() !== end.getMonth())}–${fmt(end, true)}${end.getFullYear()}`;
+  }
+  function weeklyRecap(plays, start, { limit = 5 } = {}) {
+    const end = start + 7 * DAY2;
+    const firstSeen = /* @__PURE__ */ new Map();
+    for (const p of plays) {
+      for (const a of p.artists || []) {
+        const k = artistKey(a);
+        if (!k) continue;
+        const prev2 = firstSeen.get(k);
+        if (prev2 == null || p.startedAt < prev2) firstSeen.set(k, p.startedAt);
+      }
+    }
+    const week = plays.filter((p) => p.startedAt >= start && p.startedAt < end);
+    if (!week.length) return null;
+    const artists = /* @__PURE__ */ new Map();
+    const songs = /* @__PURE__ */ new Map();
+    let listenedSec = 0;
+    let skips = 0;
+    for (const p of week) {
+      listenedSec += p.listenedSec || 0;
+      if (p.skipped) skips++;
+      const s = songs.get(p.videoId) || { videoId: p.videoId, title: p.title, artists: p.artists || [], plays: 0, listenedSec: 0 };
+      s.plays++;
+      s.listenedSec += p.listenedSec || 0;
+      songs.set(p.videoId, s);
+      const seen2 = /* @__PURE__ */ new Set();
+      for (const a of p.artists || []) {
+        const k = artistKey(a);
+        if (!k || seen2.has(k)) continue;
+        seen2.add(k);
+        const v = artists.get(k) || { key: k, id: a.id || null, name: a.name, plays: 0, listenedSec: 0, isNew: firstSeen.get(k) >= start };
+        v.plays++;
+        v.listenedSec += p.listenedSec || 0;
+        artists.set(k, v);
+      }
+    }
+    const byTime = (a, b) => b.listenedSec - a.listenedSec || b.plays - a.plays;
+    const all = [...artists.values()].sort(byTime);
+    return {
+      start,
+      end,
+      label: weekLabel(start),
+      plays: week.length,
+      listenedSec,
+      skipRate: week.length ? skips / week.length : 0,
+      songCount: songs.size,
+      artistCount: artists.size,
+      topArtists: all.slice(0, limit),
+      topSongs: [...songs.values()].sort(byTime).slice(0, limit),
+      newArtists: all.filter((a) => a.isNew).slice(0, 8),
+      newArtistCount: all.filter((a) => a.isNew).length
+    };
+  }
+  function recapText(r, fmt) {
+    const names = (list) => list.map((a) => a.name).join(", ");
+    return [
+      `Meine Musikwoche ${r.label}`,
+      `${fmt(r.listenedSec)} gehört · ${r.plays} Wiedergaben · ${r.songCount} Songs · ${r.artistCount} Künstler`,
+      "",
+      "Top-Künstler",
+      ...r.topArtists.map((a, i) => `${i + 1}. ${a.name} (${fmt(a.listenedSec)})`),
+      "",
+      "Top-Songs",
+      ...r.topSongs.map((s, i) => `${i + 1}. ${s.title} – ${names(s.artists)} (${s.plays}×)`),
+      ...r.newArtists.length ? ["", `Neu entdeckt (${r.newArtistCount})`, names(r.newArtists)] : []
+    ].join("\n");
+  }
+
+  // src/features/music/weekly.js
+  var SEEN = "weeklySeen";
+  var card = null;
+  var CSS2 = `
+.ytx-m-recap { position: fixed; z-index: 2300; left: 16px; bottom: 88px; width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 170px); overflow: auto; box-sizing: border-box; padding: 16px 18px; border-radius: 12px;
+  font: 400 13px/1.45 Roboto, Arial, sans-serif; color: var(--ytmusic-text-primary, #fff); background: var(--ytmusic-brand-background-solid, #212121); box-shadow: 0 8px 32px rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.1); }
+.ytx-m-recap h3 { margin: 0 0 2px; font-size: 17px; font-weight: 700; }
+.ytx-m-recap .sub { color: var(--ytmusic-text-secondary, #aaa); margin-bottom: 10px; }
+.ytx-m-recap .sec { margin: 10px 0 4px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--ytmusic-text-secondary, #aaa); }
+.ytx-m-recap ol { margin: 0; padding-left: 20px; }
+.ytx-m-recap li { margin: 2px 0; }
+.ytx-m-recap .muted { color: var(--ytmusic-text-secondary, #aaa); }
+.ytx-m-recap .new { display: flex; flex-wrap: wrap; gap: 6px; }
+.ytx-m-recap .new button { all: initial; cursor: pointer; padding: 3px 9px; border-radius: 12px; font: 500 12px Roboto, Arial, sans-serif; color: #000; background: #ffc83d; }
+.ytx-m-recap .acts { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+.ytx-m-recap .acts button { all: initial; cursor: pointer; padding: 6px 12px; border-radius: 16px; font: 500 12px Roboto, Arial, sans-serif; color: var(--ytmusic-text-primary, #fff); background: rgba(255,255,255,.12); }
+.ytx-m-recap .acts button.primary { color: #000; background: #fff; }
+`;
+  function closeRecap() {
+    card?.remove();
+    card = null;
+  }
+  function render2(r) {
+    closeRecap();
+    const style = h("style", { text: CSS2 });
+    const who = (s) => s.artists.map((a) => a.name).join(", ");
+    const newBox = h("div", { class: "new" });
+    for (const a of r.newArtists) {
+      const b = h("button", { type: "button", title: a.id ? "Künstlerseite öffnen" : "", text: a.name });
+      if (a.id) b.addEventListener("click", () => navigateEndpoint(endpoints.browse(a.id, null, "ARTIST")));
+      newBox.append(b);
+    }
+    const copy = h("button", { type: "button", text: "Als Text kopieren" });
+    copy.addEventListener("click", async () => toast(await copyText(recapText(r, formatDuration)) ? "Rückblick kopiert" : "Kopieren fehlgeschlagen"));
+    const close = h("button", { type: "button", class: "primary", text: "Schließen" });
+    close.addEventListener("click", closeRecap);
+    card = h(
+      "div",
+      { class: "ytx-m-recap", role: "dialog", "data-ytx-own": "" },
+      style,
+      h("h3", { text: "Deine Musikwoche" }),
+      h("div", { class: "sub", text: `${r.label} · ${formatDuration(r.listenedSec)} · ${r.plays} Wiedergaben · ${r.artistCount} Künstler` }),
+      h("div", { class: "sec", text: "Top-Künstler" }),
+      h("ol", null, ...r.topArtists.map((a) => h("li", null, a.name, h("span", { class: "muted", text: ` · ${formatDuration(a.listenedSec)}` })))),
+      h("div", { class: "sec", text: "Top-Songs" }),
+      h("ol", null, ...r.topSongs.map((s) => h("li", null, s.title, h("span", { class: "muted", text: ` – ${who(s)} · ${s.plays}×` })))),
+      h("div", { class: "sec", text: r.newArtistCount ? `Neu entdeckt · ${r.newArtistCount}` : "Neu entdeckt" }),
+      r.newArtists.length ? newBox : h("div", { class: "muted", text: "Diese Woche keine neuen Künstler. Im Mix-Fenster unter „Noch nie gehört“ gibt es Vorschläge." }),
+      h("div", { class: "acts" }, copy, close)
+    );
+    document.body.append(card);
+  }
+  async function showRecap(start = lastWeekStart(Date.now())) {
+    const plays = await music.history.list({ from: 0 });
+    const r = weeklyRecap(plays, start);
+    if (!r) return false;
+    render2(r);
+    return true;
+  }
+  var weeklyFeature = {
+    id: "m.weekly",
+    site: "music",
+    label: "Wochenrückblick",
+    group: "Hören",
+    description: "Ab Montag einmal pro Woche eine kleine Karte: Hörzeit, Top-Künstler, Top-Songs und neu entdeckte Künstler der letzten Woche. Jederzeit auch im Tab „Statistik“",
+    stability: "hoch",
+    settings: {},
+    setup(ctx) {
+      let last2 = null;
+      const check = async () => {
+        try {
+          const start = lastWeekStart(Date.now());
+          if (await music.getMeta(SEEN) === start) return;
+          const shown = await showRecap(start);
+          await music.setMeta(SEEN, start);
+          last2 = { at: Date.now(), start, shown };
+        } catch (e) {
+          ctx.log.warn("music weekly", e);
+          last2 = { at: Date.now(), error: e.message };
+        }
+      };
+      const t = setTimeout(check, 6e3);
+      return {
+        check,
+        dispose() {
+          clearTimeout(t);
+          closeRecap();
+        },
+        health() {
+          if (!last2) return { status: "skip", detail: "prüft kurz nach dem Laden" };
+          if (last2.error) return { status: "warn", detail: last2.error };
+          return { status: "ok", detail: last2.shown ? "Rückblick dieser Woche gezeigt" : "keine Hördaten letzte Woche" };
         }
       };
     }
@@ -8896,7 +9730,7 @@ ${data2.source}` : ""].join("\n").trim();
   };
 
   // src/features/music/index.js
-  var featureManifests2 = [historyFeature, favoritesFeature, hubFeature, releasesFeature, smartQueueFeature, queueInfoFeature, lyricsFeature, audioFeature];
+  var featureManifests2 = [historyFeature, favoritesFeature, hubFeature, releasesFeature, weeklyFeature, smartQueueFeature, queueInfoFeature, lyricsFeature, audioFeature];
 
   // src/core/diagnose.js
   var checks = /* @__PURE__ */ new Map();
@@ -9099,8 +9933,8 @@ ${data2.source}` : ""].join("\n").trim();
   function refreshAsync() {
     if (Date.now() - info.at < 8e3) return;
     info.at = Date.now();
-    const db2 = musicDb();
-    Promise.all([db2.sizes(), db2.latest("plays", "startedAt", 1), music.getMeta("lastReleaseCheck")]).then(([sizes, last2, check]) => {
+    const db3 = musicDb();
+    Promise.all([db3.sizes(), db3.latest("plays", "startedAt", 1), music.getMeta("lastReleaseCheck")]).then(([sizes, last2, check]) => {
       info.sizes = sizes;
       info.lastPlay = last2[0] || null;
       info.lastCheck = check;
@@ -9156,10 +9990,10 @@ ${data2.source}` : ""].join("\n").trim();
     );
     registerCheck("music.data", "Music", "Lokale Daten", () => {
       refreshAsync();
-      const db2 = musicDb().status;
+      const db3 = musicDb().status;
       const p = music.prefs();
       const res = [
-        { id: "music.idb", label: "IndexedDB", status: db2.error || info.error ? "fail" : db2.open ? "ok" : "skip", detail: db2.error || info.error || `${db2.name} v${db2.version}${db2.open ? " offen" : " noch nicht geöffnet"}${db2.blocked ? " · von anderem Tab blockiert" : ""}${info.sizes ? ` · ${Object.entries(info.sizes).map(([k, v]) => `${k} ${v}`).join(", ")}` : ""}` },
+        { id: "music.idb", label: "IndexedDB", status: db3.error || info.error ? "fail" : db3.open ? "ok" : "skip", detail: db3.error || info.error || `${db3.name} v${db3.version}${db3.open ? " offen" : " noch nicht geöffnet"}${db3.blocked ? " · von anderem Tab blockiert" : ""}${info.sizes ? ` · ${Object.entries(info.sizes).map(([k, v]) => `${k} ${v}`).join(", ")}` : ""}` },
         { id: "music.history", label: "Hörverlauf", status: p.history.paused ? "warn" : info.lastPlay ? "ok" : "skip", detail: `${p.history.paused ? "pausiert · " : ""}letzter Eintrag ${ago(info.lastPlay?.endedAt)}${info.lastPlay ? ` (${info.lastPlay.title}, ${Math.round((info.lastPlay.percent || 0) * 100)} %${info.lastPlay.skipped ? ", übersprungen" : ""})` : ""}${p.history.retentionDays ? ` · Aufbewahrung ${p.history.retentionDays} Tage` : ""}` },
         { id: "music.releaseCheck", label: "Letzter Künstler-Check", status: info.lastCheck?.errors?.length ? "warn" : info.lastCheck ? "ok" : "skip", detail: info.lastCheck ? `${ago(info.lastCheck.at)} · ${info.lastCheck.checked}/${info.lastCheck.artists} Künstler · ${info.lastCheck.fresh} neu${info.lastCheck.errors?.length ? ` · ${info.lastCheck.errors[0]}` : ""}` : "noch keiner" },
         { id: "music.session", label: "Session-Preset", status: "ok", detail: music.session()?.presetId || "keins" }
@@ -9305,45 +10139,6 @@ ${data2.source}` : ""].join("\n").trim();
     for (const fn of ["pushState", "replaceState"]) if (history[fn]?.__orig) history[fn] = history[fn].__orig;
   }
 
-  // src/core/clipboard.js
-  var clipboardState = { last: null, method: null };
-  async function copyText(text) {
-    clipboardState.last = text;
-    if (typeof GM_setClipboard === "function") {
-      try {
-        GM_setClipboard(text, "text");
-        clipboardState.method = "gm";
-        return true;
-      } catch (e) {
-        log.warn("GM_setClipboard", e);
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(text);
-      clipboardState.method = "navigator";
-      return true;
-    } catch {
-    }
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      ta.setAttribute("readonly", "");
-      ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;pointer-events:none";
-      document.body.append(ta);
-      ta.select();
-      const ok = document.execCommand("copy");
-      ta.remove();
-      if (ok) {
-        clipboardState.method = "execCommand";
-        return true;
-      }
-    } catch {
-    }
-    clipboardState.method = "failed";
-    log.warn("clipboard: kopieren fehlgeschlagen");
-    return false;
-  }
-
   // src/core/hotkeys.js
   var actions = /* @__PURE__ */ new Map();
   var bindings = {};
@@ -9453,9 +10248,9 @@ ${data2.source}` : ""].join("\n").trim();
 .ytx-collapse-bar .ytx-hint { margin-left: auto; opacity: .7; font-weight: 400; }`);
     return out.join("\n");
   }
-  var current = {};
+  var current2 = {};
   function applyDisplay(cfg) {
-    current = cfg.display;
+    current2 = cfg.display;
     const root = document.documentElement;
     for (const t of site.targets) {
       const name = attrName(t.id);
@@ -9474,7 +10269,7 @@ ${data2.source}` : ""].join("\n").trim();
   }
   function syncCollapse() {
     for (const t of site.targets) {
-      const active = current[t.id] === "collapse" && onPage(t);
+      const active = current2[t.id] === "collapse" && onPage(t);
       if (!active) {
         for (const bar of qsa(`.ytx-collapse-bar[data-ytx-bar="${t.id}"]`)) bar.remove();
         continue;
@@ -9529,7 +10324,7 @@ ${data2.source}` : ""].join("\n").trim();
       for (const t of site.targets) {
         if (t.pages && !t.pages.includes(nav.page)) continue;
         const n = t.sel.filter(validSelector).reduce((sum, s) => sum + qsa(s).length, 0);
-        const mode = current[t.id] || "show";
+        const mode = current2[t.id] || "show";
         const ready = !t.core || nav.page !== "watch" || document.querySelector("ytd-watch-metadata #actions ytd-menu-renderer");
         results.push({
           id: `display.${t.id}`,
@@ -9797,22 +10592,22 @@ ${data2.source}` : ""].join("\n").trim();
 
   // src/appliers/filters.js
   var F = () => site.filters;
-  var ATTR3 = "data-ytx-f";
+  var ATTR4 = "data-ytx-f";
   var seen = /* @__PURE__ */ new WeakMap();
   var rules = null;
   var version = 0;
   var filterStats = { page: "", checked: 0, hits: 0, reasons: {}, unreadable: 0 };
-  var CSS2 = `
-[${ATTR3}="hide"] { display: none !important; }
-[${ATTR3}="dim"]:not([data-ytx-f-open]) { opacity: var(--ytx-dim-opacity, .3) !important; transition: opacity .15s ease !important; }
-[${ATTR3}="dim"]:not([data-ytx-f-open]):hover { opacity: 1 !important; }
-[${ATTR3}="collapse"]:not([data-ytx-f-open]) > :not(.ytx-fbar) { display: none !important; }
-[${ATTR3}="collapse"]:not([data-ytx-f-open]) { min-height: 0 !important; height: auto !important; }
+  var CSS3 = `
+[${ATTR4}="hide"] { display: none !important; }
+[${ATTR4}="dim"]:not([data-ytx-f-open]) { opacity: var(--ytx-dim-opacity, .3) !important; transition: opacity .15s ease !important; }
+[${ATTR4}="dim"]:not([data-ytx-f-open]):hover { opacity: 1 !important; }
+[${ATTR4}="collapse"]:not([data-ytx-f-open]) > :not(.ytx-fbar) { display: none !important; }
+[${ATTR4}="collapse"]:not([data-ytx-f-open]) { min-height: 0 !important; height: auto !important; }
 .ytx-fbar { all: initial; display: none; box-sizing: border-box; width: 100%; padding: 6px 10px; margin: 2px 0 6px; border-radius: 8px; cursor: pointer;
   font: 12px/1.3 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-secondary, #aaa); background: var(--yt-sys-color-baseline--additive-background, rgba(255,255,255,.06)); }
-[${ATTR3}="collapse"] > .ytx-fbar { display: block; }
-[${ATTR3}="collapse"][data-ytx-f-open] > .ytx-fbar { opacity: .6; }
-[${ATTR3}] [${ATTR3}] { opacity: 1 !important; }
+[${ATTR4}="collapse"] > .ytx-fbar { display: block; }
+[${ATTR4}="collapse"][data-ytx-f-open] > .ytx-fbar { opacity: .6; }
+[${ATTR4}] [${ATTR4}] { opacity: 1 !important; }
 `;
   function outermostCards() {
     const out = [];
@@ -9826,7 +10621,7 @@ ${data2.source}` : ""].join("\n").trim();
     return out;
   }
   function clearCard(el) {
-    el.removeAttribute(ATTR3);
+    el.removeAttribute(ATTR4);
     el.removeAttribute("data-ytx-f-reason");
     el.removeAttribute("data-ytx-f-open");
     el.querySelector(":scope > .ytx-fbar")?.remove();
@@ -9837,7 +10632,7 @@ ${data2.source}` : ""].join("\n").trim();
     const active = f.enabled && f.pages.includes(nav.page);
     if (filterStats.page !== nav.url) Object.assign(filterStats, { page: nav.url, checked: 0, hits: 0, reasons: {}, unreadable: 0 });
     if (!active) {
-      for (const el of qsa(`[${ATTR3}]`)) clearCard(el);
+      for (const el of qsa(`[${ATTR4}]`)) clearCard(el);
       return;
     }
     for (const el of outermostCards()) {
@@ -9854,17 +10649,17 @@ ${data2.source}` : ""].join("\n").trim();
       filterStats.checked++;
       if (!meta || !meta.title && !meta.videoId) {
         filterStats.unreadable++;
-        if (el.hasAttribute(ATTR3)) clearCard(el);
+        if (el.hasAttribute(ATTR4)) clearCard(el);
         continue;
       }
       const reason = evaluate(meta, rules);
       if (!reason) {
-        if (el.hasAttribute(ATTR3)) clearCard(el);
+        if (el.hasAttribute(ATTR4)) clearCard(el);
         continue;
       }
       filterStats.hits++;
       filterStats.reasons[reason] = (filterStats.reasons[reason] || 0) + 1;
-      el.setAttribute(ATTR3, f.mode);
+      el.setAttribute(ATTR4, f.mode);
       el.setAttribute("data-ytx-f-reason", reason);
       let bar = el.querySelector(":scope > .ytx-fbar");
       if (f.mode === "collapse") {
@@ -9889,10 +10684,10 @@ ${data2.source}` : ""].join("\n").trim();
     sweep2();
   }
   function initFilters() {
-    setCss("filters", CSS2);
+    setCss("filters", CSS3);
     onSweep("filters", sweep2);
     onDispose(() => {
-      for (const el of qsa(`[${ATTR3}]`)) clearCard(el);
+      for (const el of qsa(`[${ATTR4}]`)) clearCard(el);
     });
     registerCheck("filters", "Filter", "Filter", () => {
       if (!rules) return { status: "skip" };
@@ -10256,7 +11051,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const search = h("input", { type: "search", placeholder: "Suchen …", value: app.ui.displaySearch || "" });
     const onlyPage = toggle(app.ui.displayOnlyPage ?? false, (v) => {
       app.ui.displayOnlyPage = v;
-      render2();
+      render3();
     });
     const list = h("div");
     root.append(
@@ -10266,9 +11061,9 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     );
     search.addEventListener("input", () => {
       app.ui.displaySearch = search.value;
-      render2();
+      render3();
     });
-    function render2() {
+    function render3() {
       list.replaceChildren();
       const q2 = search.value.trim().toLowerCase();
       for (const group of site.GROUPS) {
@@ -10302,8 +11097,8 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
         list.append(det);
       }
     }
-    render2();
-    root.refreshCounts = render2;
+    render3();
+    root.refreshCounts = render3;
     return root;
   }
   function lookTab(app) {
@@ -10376,9 +11171,9 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     root.append(row("Verhalten beim Scrollen", select(topbarModes3, cfg.layout.topbar, (v) => update((c) => c.layout.topbar = v))));
     for (const [gid, g] of Object.entries(orderGroups3)) {
       root.append(h("h3", { text: `Reihenfolge: ${g.label}` }));
-      const current2 = cfg.layout.order[gid] || [];
-      const enabled = current2.length > 0;
-      let list = enabled ? current2.slice() : g.items.map(([id]) => id);
+      const current3 = cfg.layout.order[gid] || [];
+      const enabled = current3.length > 0;
+      let list = enabled ? current3.slice() : g.items.map(([id]) => id);
       const labels = Object.fromEntries(g.items);
       for (const [id] of g.items) if (!list.includes(id)) list.push(id);
       const box = h("div", { class: "orderlist" });
@@ -10504,9 +11299,9 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
           draw();
         })
       );
-      const card = h("div", { class: "card" }, head, h("div", { class: "desc" }, m.description, health && h("div", { class: "hint", text: health.detail })), settings);
+      const card2 = h("div", { class: "card" }, head, h("div", { class: "desc" }, m.description, health && h("div", { class: "hint", text: health.detail })), settings);
       draw();
-      root.append(card);
+      root.append(card2);
     }
     return root;
   }
@@ -10707,7 +11502,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const byHour = Array.from({ length: 24 }, () => ({ plays: 0, listenedSec: 0 }));
     const byWeekday = Array.from({ length: 7 }, () => ({ plays: 0, listenedSec: 0 }));
     const totals = { plays: 0, listenedSec: 0, completes: 0, skips: 0, quickSkips: 0, liked: 0, songs: 0, artists: 0 };
-    const add = (map, key, init, p) => {
+    const add2 = (map, key, init, p) => {
       let v = map.get(key);
       if (!v) {
         v = { ...init, plays: 0, listenedSec: 0, skips: 0, completes: 0 };
@@ -10726,12 +11521,12 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       if (p.skipped) totals.skips++;
       if (p.quickSkip) totals.quickSkips++;
       if (p.liked) totals.liked++;
-      add(songs, p.videoId, { videoId: p.videoId, title: p.title, artists: p.artists || [] }, p);
+      add2(songs, p.videoId, { videoId: p.videoId, title: p.title, artists: p.artists || [] }, p);
       const a = p.artists?.[0];
-      if (a) add(artists, artistKey(a), { key: artistKey(a), id: a.id || null, name: a.name }, p);
-      if (p.album?.id) add(albums, p.album.id, { id: p.album.id, name: p.album.name, artists: p.artists || [] }, p);
+      if (a) add2(artists, artistKey(a), { key: artistKey(a), id: a.id || null, name: a.name }, p);
+      if (p.album?.id) add2(albums, p.album.id, { id: p.album.id, name: p.album.name, artists: p.artists || [] }, p);
       const k = groupBy === "month" ? monthKey(p.startedAt) : weekKey(p.startedAt);
-      add(series, k, { period: k }, p);
+      add2(series, k, { period: k }, p);
       const d = new Date(p.startedAt);
       byHour[d.getHours()].plays++;
       byHour[d.getHours()].listenedSec += p.listenedSec || 0;
@@ -11035,11 +11830,11 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     );
     root.append(h("h3", { text: "Speicher" }));
     async(root, async () => {
-      const db2 = music.db();
-      const sizes = await db2.sizes();
+      const db3 = music.db();
+      const sizes = await db3.sizes();
       const cache4 = await catalog.cacheInfo();
       return [
-        listItem("IndexedDB", `${db2.status.name} v${db2.status.version} · ${db2.status.open ? "offen" : "geschlossen"}${db2.status.upgradedFrom != null ? ` · migriert von v${db2.status.upgradedFrom}` : ""}`),
+        listItem("IndexedDB", `${db3.status.name} v${db3.status.version} · ${db3.status.open ? "offen" : "geschlossen"}${db3.status.upgradedFrom != null ? ` · migriert von v${db3.status.upgradedFrom}` : ""}`),
         listItem("Einträge", Object.entries(sizes).map(([k, v]) => `${k}: ${v}`).join(" · ")),
         listItem("Seiten-Cache", `${cache4.count} Seiten · neuester ${when(cache4.newest)} · ${catalog.stats.requests} Abrufe in dieser Sitzung`, btn("Cache leeren", async () => {
           await catalog.clearCache();
@@ -11061,13 +11856,16 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     app.ui.statsRange ||= "30";
     const body = h("div");
     root.append(
+      h("div", { class: "btns" }, btn("Wochenrückblick (letzte Woche)", async () => {
+        if (!await showRecap()) app.flash("Letzte Woche keine Hördaten");
+      }, "primary")),
       row("Zeitraum", select(ranges, app.ui.statsRange, (v) => {
         app.ui.statsRange = v;
         draw();
       })),
       body
     );
-    const bars2 = (list, labelFn, valueFn) => {
+    const bars3 = (list, labelFn, valueFn) => {
       const max = Math.max(1, ...list.map(valueFn));
       return h(
         "div",
@@ -11103,10 +11901,10 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       top2("Top-Songs", st.topSongs, (x) => `${x.title} – ${(x.artists || []).map((a) => a.name).join(", ")}`);
       top2("Top-Künstler", st.topArtists, (x) => x.name);
       if (st.topAlbums.length) top2("Top-Alben", st.topAlbums, (x) => x.name);
-      body.append(h("h3", { text: "Verlauf" }), bars2(st.series, (x) => x.period, (x) => x.listenedSec), h("div", { class: "hint", text: `${st.series[0]?.period || ""} … ${st.series.at(-1)?.period || ""}` }));
-      body.append(h("h3", { text: "Tageszeit" }), bars2(st.byHour, (x, i) => `${i} Uhr`, (x) => x.listenedSec), h("div", { class: "hint", text: "0 Uhr … 23 Uhr" }));
+      body.append(h("h3", { text: "Verlauf" }), bars3(st.series, (x) => x.period, (x) => x.listenedSec), h("div", { class: "hint", text: `${st.series[0]?.period || ""} … ${st.series.at(-1)?.period || ""}` }));
+      body.append(h("h3", { text: "Tageszeit" }), bars3(st.byHour, (x, i) => `${i} Uhr`, (x) => x.listenedSec), h("div", { class: "hint", text: "0 Uhr … 23 Uhr" }));
       const days = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-      body.append(h("h3", { text: "Wochentag" }), bars2(st.byWeekday, (x, i) => days[i], (x) => x.listenedSec), h("div", { class: "hint", text: days.join(" · ") }));
+      body.append(h("h3", { text: "Wochentag" }), bars3(st.byWeekday, (x, i) => days[i], (x) => x.listenedSec), h("div", { class: "hint", text: days.join(" · ") }));
       if (st.highSkip.length) top2("Oft übersprungen", st.highSkip, (x) => `${x.title} – ${(x.artists || []).map((a) => a.name).join(", ")}`);
       body.append(h("div", { class: "btns" }, btn("Als Text kopieren", async () => {
         const label = ranges.find(([v]) => v === r)?.[1];
@@ -11124,6 +11922,165 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       })));
     }
     draw().catch((e) => body.replaceChildren(h("p", { class: "err", text: e.message })));
+    return root;
+  }
+
+  // src/panel/youtubeTabs.js
+  function subGroupsTab(app) {
+    const root = h("div");
+    const data2 = groupsData();
+    const enabled = app.store.config.features["subs.groups"]?.enabled;
+    if (!enabled) root.append(h("p", { class: "hint", text: "Feature „Abo-Gruppen“ ist aus. Einschalten unter Features, damit die Filterleiste im Abo-Feed erscheint." }));
+    root.append(h("h3", { text: "Gruppen" }));
+    for (const g of data2.groups) {
+      const name = h("input", { type: "text", value: g.name });
+      name.addEventListener("change", () => updateGroups((d) => {
+        const x = d.groups.find((y) => y.id === g.id);
+        if (x && name.value.trim()) x.name = name.value.trim();
+      }));
+      const up2 = btn("↑", () => {
+        updateGroups((d) => {
+          const i = d.groups.findIndex((y) => y.id === g.id);
+          if (i > 0) [d.groups[i - 1], d.groups[i]] = [d.groups[i], d.groups[i - 1]];
+        });
+        app.rerender();
+      }, "tiny");
+      const del = btn("Löschen", () => {
+        const box = h("div", { class: "btns" }, h("span", { class: "muted", text: `„${g.name}“ löschen? Die Kanäle bleiben abonniert.` }), btn("Ja", () => {
+          updateGroups((d) => d.groups = d.groups.filter((y) => y.id !== g.id));
+          app.rerender();
+        }, "tiny danger"), btn("Nein", () => box.remove(), "tiny"));
+        rowEl.after(box);
+      }, "tiny danger");
+      const rowEl = h("div", { class: "row" }, name, h("span", { class: "muted", text: `${g.channels.length} Kanäle` }), up2, del);
+      root.append(rowEl);
+    }
+    const newName = h("input", { type: "text", placeholder: "Neue Gruppe, z. B. Tech" });
+    const add2 = () => {
+      if (addGroup(newName.value)) app.rerender();
+    };
+    newName.addEventListener("keydown", (e) => e.key === "Enter" && add2());
+    root.append(h("div", { class: "row" }, newName, btn("Anlegen", add2, "primary")));
+    if (!data2.groups.length) {
+      root.append(h("p", { class: "hint", text: "Lege zuerst eine Gruppe an, dann kannst du unten Kanäle zuordnen." }));
+      return root;
+    }
+    root.append(h("h3", { text: "Kanäle zuordnen" }));
+    const search = h("input", { type: "search", placeholder: "Kanal suchen …", value: app.ui.sgSearch || "" });
+    const onlyFree = toggle(app.ui.sgFree ?? false, (v) => {
+      app.ui.sgFree = v;
+      draw();
+    });
+    const list = h("div");
+    root.append(search, row("Nur Kanäle ohne Gruppe", onlyFree), list);
+    search.addEventListener("input", () => {
+      app.ui.sgSearch = search.value;
+      draw();
+    });
+    function draw() {
+      const d = groupsData();
+      const q2 = search.value.trim().toLowerCase();
+      const chans = knownChannels().filter((c) => !q2 || `${c.name} ${c.handle || ""}`.toLowerCase().includes(q2)).filter((c) => !app.ui.sgFree || !groupsOf(c, d).length);
+      list.replaceChildren();
+      if (!chans.length) {
+        list.append(h("p", { class: "hint", text: "Keine Kanäle gefunden. ytx kennt Kanäle aus deiner Abo-Liste in der Seitenleiste (mit Anmeldung) und aus den Videos im Abo-Feed. Auf jeder Kanalseite gibt es außerdem einen Button „Gruppen“." }));
+        return;
+      }
+      for (const c of chans.slice(0, 300)) {
+        const mine = new Set(groupsOf(c, d).map((g) => g.id));
+        const chips2 = h("div", { class: "chips" }, ...d.groups.map((g) => {
+          const b = h("button", { type: "button", class: "chip", "aria-pressed": String(mine.has(g.id)), text: g.name });
+          b.addEventListener("click", () => {
+            updateGroups((x) => toggleChannel(x, g.id, c));
+            b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true"));
+          });
+          return b;
+        }));
+        list.append(h("div", { class: "row stack" }, h("div", { class: "label" }, c.name || c.handle || c.id, c.handle && h("small", { text: c.handle })), chips2));
+      }
+      if (chans.length > 300) list.append(h("p", { class: "hint", text: `${chans.length - 300} weitere, Suche nutzen` }));
+    }
+    draw();
+    return root;
+  }
+  function bars2(list, max, labelFn) {
+    return h(
+      "div",
+      { style: { display: "flex", alignItems: "flex-end", gap: "4px", height: "80px", margin: "6px 0 2px" } },
+      ...list.map((x) => h("div", { title: `${labelFn(x)}: ${formatDuration(x.sec)}`, style: { flex: "1", minWidth: "6px", height: `${Math.max(2, x.sec / Math.max(1, max) * 80)}px`, background: "var(--accent)", borderRadius: "3px 3px 0 0", opacity: x.sec ? "1" : ".25" } }))
+    );
+  }
+  function watchStatsTab(app) {
+    const root = h("div");
+    const f = app.store.config.features["watch.time"];
+    if (!f?.enabled) {
+      root.append(h("p", { class: "hint", text: "Feature „Schauzeit & Tageslimit“ ist aus. Einschalten unter Features." }));
+    }
+    const ranges = [["7", "7 Tage"], ["30", "30 Tage"], ["90", "90 Tage"]];
+    app.ui.wtRange ||= "7";
+    const body = h("div");
+    const rangeBox = h("div", { class: "chips" }, ...ranges.map(([v, l]) => {
+      const b = h("button", { type: "button", class: "chip", "aria-pressed": String(app.ui.wtRange === v), text: l });
+      b.addEventListener("click", () => {
+        app.ui.wtRange = v;
+        app.rerender();
+      });
+      return b;
+    }));
+    root.append(row("Zeitraum", rangeBox), body);
+    const draw = async () => {
+      const days = Number(app.ui.wtRange);
+      const now = Date.now();
+      const from = startOfDay(now) - (days - 1) * DAY;
+      const views = await ytDb().byIndex("views", "startedAt", IDBKeyRange.lowerBound(from));
+      const live = watchTime.instance?.session;
+      if (live && live.wallSec >= 1 && !views.some((v) => v.id === live.id)) views.push({ ...live });
+      else if (live) Object.assign(views.find((v) => v.id === live.id), { wallSec: live.wallSec });
+      const st = watchStats(views, { from, to: now + 1, now, days });
+      const today = st.byDay.at(-1)?.sec || 0;
+      const limit = f?.limitMinutes || 0;
+      body.replaceChildren(
+        h(
+          "div",
+          { class: "summary", style: { flexWrap: "wrap" } },
+          h("span", null, h("b", { text: formatDuration(today) }), "heute"),
+          h("span", null, h("b", { text: formatDuration(st.avgPerDay) }), "Ø pro Tag"),
+          h("span", null, h("b", { text: formatDuration(st.total) }), `in ${days} Tagen`),
+          h("span", null, h("b", { text: st.total ? `${Math.round(st.shorts / st.total * 100)} %` : "0 %" }), "Shorts")
+        ),
+        limit ? h("p", { class: "hint", text: `Tageslimit ${formatDuration(limit * 60)} · heute ${Math.min(999, Math.round(today / (limit * 60) * 100))} % · einstellbar unter Features › Schauzeit` }) : h("p", { class: "hint", text: "Kein Tageslimit gesetzt (Features › Schauzeit)" })
+      );
+      const shown = st.byDay.slice(-Math.min(days, 31));
+      const max = Math.max(limit * 60, ...shown.map((x) => x.sec));
+      body.append(h("h3", { text: "Pro Tag" }), bars2(shown, max, (x) => x.day), h("div", { class: "hint", text: `${shown[0]?.day || ""} … heute` }));
+      body.append(h("h3", { text: "Meiste Zeit bei" }));
+      if (!st.topChannels.length) body.append(h("p", { class: "muted", text: "Noch keine Daten." }));
+      st.topChannels.forEach((c, i) => body.append(h("div", { class: "row" }, h("div", { class: "label" }, `${i + 1}. ${c.name}`, h("small", { text: `${c.count} Videos` })), h("span", { class: "muted", text: formatDuration(c.sec) }))));
+      body.append(h("h3", { text: "Videos" }));
+      st.topVideos.forEach((v) => body.append(h("div", { class: "row" }, h("div", { class: "label" }, v.title || v.videoId, h("small", { text: `${v.channel}${v.kind === "short" ? " · Short" : ""}` })), h("span", { class: "muted", text: formatDuration(v.sec) }))));
+    };
+    draw().catch((e) => body.replaceChildren(h("p", { class: "err", text: e.message })));
+    root.append(h("h3", { text: "Daten" }), h(
+      "div",
+      { class: "btns" },
+      btn("Als Text kopieren", async () => {
+        const days = Number(app.ui.wtRange);
+        const now = Date.now();
+        const from = startOfDay(now) - (days - 1) * DAY;
+        const st = watchStats(await ytDb().byIndex("views", "startedAt", IDBKeyRange.lowerBound(from)), { from, to: now + 1, now, days });
+        const text = [`Meine YouTube-Zeit · ${days} Tage`, `${formatDuration(st.total)} gesamt · Ø ${formatDuration(st.avgPerDay)} pro Tag`, "", ...st.byDay.map((d) => `${d.day}: ${formatDuration(d.sec)}`), "", "Top-Kanäle", ...st.topChannels.map((c, i) => `${i + 1}. ${c.name} (${formatDuration(c.sec)})`)].join("\n");
+        app.flash(await app.copyText(text) ? "Kopiert" : "Kopieren fehlgeschlagen");
+      }),
+      btn("Verlauf löschen", (e) => {
+        const box = h("div", { class: "btns" }, h("span", { class: "muted", text: "Gesamte Schauzeit löschen?" }), btn("Ja", async () => {
+          await ytDb().clear("views");
+          if (watchTime.instance) watchTime.instance.state.todayBase = 0;
+          app.flash("Schauzeit gelöscht");
+          app.rerender();
+        }, "tiny danger"), btn("Nein", () => box.remove(), "tiny"));
+        e.currentTarget.parentElement.after(box);
+      }, "danger")
+    ));
     return root;
   }
 
@@ -11198,6 +12155,8 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     behavior: ["Verhalten", behaviorTab],
     filters: ["Filter", filterTab],
     features: ["Features", featuresTab],
+    subGroups: ["Abo-Gruppen", subGroupsTab],
+    watchStats: ["Schauzeit", watchStatsTab],
     music: ["Musik", musicTab],
     musicData: ["Verlauf & Daten", musicDataTab],
     musicStats: ["Statistik", musicStatsTab],
@@ -11246,9 +12205,9 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       tab = id;
       for (const [k, b] of tabButtons) b.setAttribute("aria-selected", String(k === id));
       app.store.updateSettings((s) => s[`panelTab.${site.id}`] = id);
-      render2();
+      render3();
     }
-    function render2() {
+    function render3() {
       if (panel.hidden) return;
       const scroll = main.scrollTop;
       const def = TABS2.find(([id]) => id === tab) || TABS2[0];
@@ -11267,7 +12226,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       const s = summarize2(runChecks());
       footInfo.textContent = `v${app.version} · ${s.fail ? `${s.fail} Fehler · ` : ""}${s.warn ? `${s.warn} Warnungen` : "Diagnose ok"}`;
     }
-    app.rerender = render2;
+    app.rerender = render3;
     app.flash = (text) => {
       status.textContent = text;
       clearTimeout(flashTimer);
@@ -11277,7 +12236,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       if (!host2.isConnected) document.documentElement.append(host2);
       panel.hidden = false;
       geo.place();
-      render2();
+      render3();
       clearInterval(countTimer);
       countTimer = setInterval(() => {
         if (panel.hidden) return;
@@ -11298,7 +12257,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
         fillProfiles();
         return;
       }
-      if (reason !== "settings" && !reason.startsWith("bucket:")) render2();
+      if (reason !== "settings" && !reason.startsWith("bucket:")) render3();
     });
     listen(shadow, "keydown", (e) => {
       if (e.key === "Escape") {
@@ -11314,7 +12273,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       geo.stop();
       host2.remove();
     });
-    return { open, close, toggle: toggle2, render: render2, select: select2, shadow, get isOpen() {
+    return { open, close, toggle: toggle2, render: render3, select: select2, shadow, get isOpen() {
       return !panel.hidden;
     } };
   }

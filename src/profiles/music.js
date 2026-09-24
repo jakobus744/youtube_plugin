@@ -24,6 +24,7 @@ const tidyFeatures = {
   'm.favorites': { enabled: true },
   'm.hub': { enabled: true },
   'm.releases': { enabled: true },
+  'm.weekly': { enabled: true },
   'm.smartQueue': { enabled: true },
   'm.queueInfo': { enabled: true },
   'm.lyrics': { enabled: true },

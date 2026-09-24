@@ -236,6 +236,13 @@ export const playlistPanel = {
   },
   itemElements() {
     return qsa('ytd-watch-flexy ytd-playlist-panel-renderer#playlist ytd-playlist-panel-video-renderer')
+  },
+  // titel und kanal eines eintrags im panel
+  readElement(el) {
+    const d = dataOf(el)
+    const r = d?.playlistPanelVideoRenderer || d
+    if (!r) return null
+    return { videoId: r.videoId, title: runsText(r.title), channel: runsText(r.shortBylineText || r.longBylineText) }
   }
 }
 

@@ -105,6 +105,8 @@ function boot() {
       requestSweep()
       return
     }
+    // profile oder tastenkuerzel aus einem anderen tab
+    if (reason === 'sync') setBindings(store.settings.hotkeys)
     applyDisplay(c)
     applyVars(c)
     applyLayout(c)

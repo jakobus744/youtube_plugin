@@ -12,26 +12,24 @@ export const PANEL_CSS = `
   --accent: var(--yt-sys-color-baseline--call-to-action, #3ea6ff);
   --ok: #3fb950; --warn: #d29922; --fail: #f85149; --skip: #6e7681;
   position: fixed; z-index: 2250; top: 64px; right: 12px; bottom: 12px; width: min(440px, calc(100vw - 24px));
-  display: flex; flex-direction: column; overflow: hidden; border-radius: 14px;
+  min-width: min(300px, calc(100vw - 16px)); min-height: min(220px, calc(100vh - 16px)); max-width: calc(100vw - 16px); max-height: calc(100vh - 16px);
+  display: flex; flex-direction: column; overflow: auto; resize: both; border-radius: 14px;
   font: 400 13px/1.4 Roboto, "Segoe UI", Arial, sans-serif; color: var(--fg); background: var(--bg);
   box-shadow: 0 8px 40px rgba(0,0,0,.45); border: 1px solid var(--line);
 }
 .panel[hidden] { display: none; }
-header { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+header { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: move; user-select: none; touch-action: none; }
+header select, header button { cursor: pointer; }
 header .logo { font-weight: 700; font-size: 15px; letter-spacing: .02em; }
 header select { flex: 1; min-width: 0; }
 .iconbtn { width: 30px; height: 30px; border: 0; border-radius: 50%; background: none; color: var(--fg2); cursor: pointer; font-size: 16px; }
 .iconbtn:hover { background: var(--hover); color: var(--fg); }
-nav { display: flex; gap: 2px; padding: 6px 8px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
-nav::-webkit-scrollbar { height: 6px; }
-nav::-webkit-scrollbar-track { background: transparent; }
-nav::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
-nav::-webkit-scrollbar-thumb:hover { background: var(--fg2); }
+nav { flex: none; display: flex; flex-wrap: wrap; gap: 2px 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
 nav button { flex: none; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--fg2); cursor: pointer; font: 500 12px/1.2 inherit; font-family: inherit; }
 nav button:hover { background: var(--hover); color: var(--fg); }
 nav button[aria-selected="true"] { background: var(--fg); color: var(--bg); }
-main { flex: 1; overflow: auto; padding: 10px 12px 20px; }
-footer { padding: 6px 12px; border-top: 1px solid var(--line); color: var(--fg2); font-size: 11px; display: flex; justify-content: space-between; gap: 8px; }
+main { flex: 1 1 auto; min-height: 120px; overflow: auto; padding: 10px 12px 20px; }
+footer { flex: none; padding: 6px 12px 6px 12px; padding-right: 22px; border-top: 1px solid var(--line); color: var(--fg2); font-size: 11px; display: flex; justify-content: space-between; gap: 8px; }
 h3 { margin: 16px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--fg2); }
 h3:first-child { margin-top: 4px; }
 details { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: var(--bg2); }

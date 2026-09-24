@@ -53,7 +53,11 @@ Kürzel lassen sich unter **Profile › Tastenkürzel** ändern.
 Panel-Tabs YouTube: **Anzeige · Look · Layout · Verhalten · Filter · Features · Profile · Diagnose**
 Panel-Tabs Music: **Anzeige · Look · Layout · Verhalten · Features · Musik · Verlauf & Daten · Statistik · Profile · Diagnose**
 
-Profile gelten für beide Seiten (jede Seite hat ihren eigenen Abschnitt). Musik-Vorlieben, Blocklisten, Verlauf und Favoriten sind profilunabhängig: dein Geschmack gehört zu dir, nicht zum Look-Profil.
+Profile gelten für beide Seiten (jede Seite hat ihren eigenen Abschnitt). Sind YouTube und Music gleichzeitig offen, gleichen sich die Tabs live ab. Im **Look**-Tab lässt sich der Style der anderen Seite übernehmen oder dauerhaft koppeln.
+
+Das Panel lässt sich an der Kopfzeile verschieben (Doppelklick = zurück), unten rechts in der Größe ändern und bleibt immer im sichtbaren Bereich.
+
+Musik-Vorlieben, Blocklisten, Verlauf und Favoriten sind profilunabhängig: dein Geschmack gehört zu dir, nicht zum Look-Profil.
 
 ---
 
@@ -61,7 +65,8 @@ Profile gelten für beide Seiten (jede Seite hat ihren eigenen Abschnitt). Musik
 
 - **★ in der Playerleiste**: Song, Künstler oder Album favorisieren, „Mehr/Weniger davon“, Song ignorieren, Künstler blockieren. Auf Künstler-, Album- und Playlist-Seiten gibt es einen eigenen ★-Button.
 - **Mix** oben rechts: Für dich · Neu · Genre · Lange nicht gehört · Noch nie gehört · Ähnlich · Mehr von · Smart Radio · Reihenfolge. Regler **Bekannt ⟷ Entdecken**, Session-Preset (Fokus, Gym, Abends, Entdecken, Nur bekannte Musik). Jede Zeile zeigt, warum sie da ist, und hat ⋯ für Feedback. **„▶ Alles abspielen“** spielt den Mix in ytx-eigener Reihenfolge.
-- **Startseite**: Regal „Neu von deinen Künstlern“.
+- **Startseite**: Regal **„Für dich (ytx)“** mit „↻ Neu mischen“, „Mehr Neues“ und „YouTube-Vorschläge wechseln“ (wechselt YouTubes Stimmungen), darunter „Neu von deinen Künstlern“.
+- **Genres**: feste Auswahl mit Techno-, Hardstyle- und Hip-Hop-Varianten plus freie Eingabe.
 - **Warteschlange**: Gesamt- und Restdauer, Markierungen für blockierte, oft übersprungene und doppelte Titel, optional Auto-Skip (Tab **Musik**).
 - **Songtext**: Button „Songtext kopieren“ über dem Text.
 - **Verlauf & Daten**: Pausieren, Einträge löschen, Künstler/Songs vom Profil ausschließen, Aufbewahrungsdauer, Export/Import als JSON.
@@ -135,7 +140,7 @@ ytx/
 │   │       └── metadataProviders/  index · local · musicbrainz · lastfm · ollama · http
 │   ├── profiles/                youtube.js · music.js · index.js
 │   └── panel/                   index · tabs · musicTabs · controls · styles
-├── tests/                       47 Tests + fixtures/music (echte Seitendaten)
+├── tests/                       52 Tests + fixtures/music (echte Seitendaten)
 └── tools/                       serve.mjs (Test-Handoff) · music-fixtures.mjs
 ```
 
@@ -169,7 +174,7 @@ Getestet im eingebauten Chromium **ohne Anmeldung**, stumm geschaltet, Stand 15.
 | Verhalten | Qualität, Geschwindigkeit, Pause im Hintergrund, Kanal-Trailer | ⚠️ ungetestet |
 | Filter | Kanal, Positivliste, Stichwort, Regex, Shorts, Live, Dauer, Alter | ✅ · Gesehen ⚠️ Login |
 | Transkript | 5 Formate, Spurwahl, Kapitel, Zitieren | ✅ · Panel-Fallback ⚠️ |
-| Playlist | Dauer gesamt/übrig, Sortieren | ✅ · Später ansehen, gesehene dimmen ⚠️ Login |
+| Playlist | Dauer gesamt/übrig, Sortieren, Suche nach Titel/Kanal (Seite + Panel neben dem Video) | ✅ · Später ansehen, gesehene dimmen ⚠️ Login |
 | Video | Endzeit, Datum, Kopieren-Menü, Proxy-Buttons | ✅ |
 | 0.2.0-Umbau | Start, Anzeige-Regeln, alle 8 Panel-Tabs, Diagnose ohne Fehler | ✅ Regression Startseite; Videoseite nach dem Umbau nicht erneut live geprüft |
 

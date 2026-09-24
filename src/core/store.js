@@ -3,6 +3,7 @@ import { templates, templateById, DEFAULT_ACTIVE } from '../profiles/index.js'
 import { sites, site } from '../sites/index.js'
 import { debounce } from './scheduler.js'
 import { log } from './log.js'
+import { merge3, same } from './merge.js'
 
 // profile gelten fuer beide seiten, jede seite hat ihren eigenen abschnitt
 // buckets sind seitenweite einstellungen ausserhalb der profile
@@ -83,13 +84,84 @@ const MIGRATIONS = [
       const disp = p?.config?.youtube?.display
       if (p?.template === 'aufgeraeumt' && disp?.['thumb.image'] === 'dim') delete disp['thumb.image']
     }
+  ],
+  [
+    // neue features in bestehenden profilen einschalten, ausser im original profil
+    'playlist-search-on',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        if (p.template === 'youtube' || !p.config?.youtube) continue
+        const f = (p.config.youtube.features ||= {})
+        if (!f['playlist.search']) f['playlist.search'] = { enabled: true }
+      }
+    }
   ]
 ]
 
 let data = null
+let syncMode = 'none'
 let config = null
 const subs = new Set()
-const saveSoon = debounce(() => writeRaw(KEY, data), 250, 1500)
+// base ist der zuletzt gemeinsame stand mit dem speicher
+// andere tabs (youtube und music) schreiben denselben schluessel
+let base = null
+let pending = false
+
+function persist() {
+  pending = false
+  const stored = readRaw(KEY)
+  if (stored && base && JSON.stringify(stored) !== base) {
+    // anderer tab hat inzwischen gespeichert, eigene aenderungen darauf setzen
+    const merged = structuredClone(merge3(JSON.parse(base), data, stored))
+    const changed = !same(merged, data)
+    data = merged
+    if (changed) {
+      recompute()
+      emit('sync')
+    }
+  }
+  writeRaw(KEY, data)
+  base = JSON.stringify(data)
+}
+const saveSoon = debounce(persist, 250, 1500)
+const markDirty = () => {
+  pending = true
+  saveSoon()
+}
+
+// aenderung aus einem anderen tab uebernehmen
+function onRemote(raw) {
+  let remote
+  try {
+    remote = typeof raw === 'string' ? JSON.parse(raw) : raw
+  } catch {
+    return
+  }
+  if (!remote?.profiles || !Object.keys(remote.profiles).length) return
+  const json = JSON.stringify(remote)
+  if (json === base) return
+  data = structuredClone(pending ? merge3(JSON.parse(base), data, remote) : remote)
+  base = json
+  data.settings ||= defaultSettings()
+  data.buckets ||= {}
+  if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0]
+  recompute()
+  emit('sync')
+}
+
+function watchRemote() {
+  try {
+    if (typeof GM_addValueChangeListener === 'function') {
+      GM_addValueChangeListener(KEY, (name, oldValue, newValue, remote) => remote && onRemote(newValue))
+      return 'gm'
+    }
+  } catch (e) {
+    log.warn('GM_addValueChangeListener', e)
+  }
+  // ohne gm nur tabs derselben seite
+  window.addEventListener('storage', (e) => e.key === KEY && e.newValue && onRemote(e.newValue))
+  return 'storage'
+}
 
 let runtime = readRaw(STATE_KEY) || {}
 const saveState = debounce(() => writeRaw(STATE_KEY, runtime), 500, 3000)
@@ -104,6 +176,7 @@ function migrate() {
     changed = true
   }
   if (changed) writeRaw(KEY, data)
+  base = JSON.stringify(data)
 }
 
 function activeProfile() {
@@ -120,9 +193,26 @@ function emit(reason) {
   }
 }
 
+// geaenderte look werte auf die anderen seiten des profils uebertragen
+// was es dort nicht gibt verwirft normalize
+function linkVars(p, oldVars, newVars) {
+  for (const id of SITE_KEYS) {
+    if (id === site.id) continue
+    const other = normalize(p.config?.[id], sites[id])
+    let touched = false
+    for (const k of new Set([...Object.keys(oldVars), ...Object.keys(newVars)])) {
+      if (same(oldVars[k], newVars[k])) continue
+      if (newVars[k] === undefined) delete other.vars[k]
+      else other.vars[k] = newVars[k]
+      touched = true
+    }
+    if (touched) p.config = { ...(p.config || {}), schema: SCHEMA, [id]: normalize(other, sites[id]) }
+  }
+}
+
 function commit(reason) {
   recompute()
-  saveSoon()
+  markDirty()
   emit(reason)
 }
 
@@ -135,6 +225,7 @@ export const store = {
     }
     data.settings ||= defaultSettings()
     data.buckets ||= {}
+    base = JSON.stringify(data)
     migrate()
     // neue eingebaute profile nachtragen
     for (const t of templates) {
@@ -142,6 +233,7 @@ export const store = {
     }
     if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0]
     recompute()
+    syncMode = watchRemote()
     // entprelltes speichern vor dem verlassen der seite nachholen
     const flush = () => this.flush()
     window.addEventListener('pagehide', flush)
@@ -168,6 +260,9 @@ export const store = {
   get siteId() {
     return site.id
   },
+  get syncMode() {
+    return syncMode
+  },
   profiles() {
     return Object.entries(data.profiles).map(([id, p]) => ({ id, name: p.name, template: p.template, active: id === data.active }))
   },
@@ -181,9 +276,23 @@ export const store = {
   update(mutator, reason = 'update') {
     const p = activeProfile()
     const draft = normalize(p.config?.[site.id], site)
+    const oldVars = { ...draft.vars }
     mutator(draft)
-    p.config = { ...(p.config || {}), schema: SCHEMA, [site.id]: normalize(draft, site) }
+    const next = normalize(draft, site)
+    p.config = { ...(p.config || {}), schema: SCHEMA, [site.id]: next }
+    if (data.settings.linkLook) linkVars(p, oldVars, next.vars)
     commit(reason)
+  },
+
+  get linkLook() {
+    return !!data.settings.linkLook
+  },
+
+  // look beider seiten koppeln, beim einschalten einmal alle profile angleichen
+  setLinkLook(on) {
+    data.settings.linkLook = !!on
+    if (on) for (const p of Object.values(data.profiles)) linkVars(p, {}, normalize(p.config?.[site.id], site).vars)
+    commit('profile')
   },
 
   // look (theme/farben/dichte/typografie) der jeweils anderen seite im selben profil
@@ -199,7 +308,7 @@ export const store = {
 
   updateSettings(mutator) {
     mutator(data.settings)
-    saveSoon()
+    markDirty()
     emit('settings')
   },
 
@@ -213,7 +322,7 @@ export const store = {
     const draft = normalizeFn ? normalizeFn(data.buckets[name]) : structuredClone(data.buckets[name] || {})
     mutator(draft)
     data.buckets[name] = normalizeFn ? normalizeFn(draft) : draft
-    saveSoon()
+    markDirty()
     emit(`bucket:${name}`)
     return data.buckets[name]
   },
@@ -244,7 +353,7 @@ export const store = {
   renameProfile(id, name) {
     if (!data.profiles[id] || !String(name).trim()) return
     data.profiles[id].name = String(name).trim()
-    saveSoon()
+    markDirty()
     emit('profile')
   },
 

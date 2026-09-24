@@ -127,7 +127,12 @@ export const targets = [
     pages: ['home'],
     modes: SH,
     sel: ['ytd-browse[page-subtype="home"] ytd-feed-filter-chip-bar-renderer', 'ytd-browse[page-subtype="home"] #chips-wrapper'],
-    css: { hide: (p) => `${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer { --ytd-rich-grid-chips-bar-height: 0px !important; }` }
+    css: {
+      hide: (p) =>
+        `${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer { --ytd-rich-grid-chips-bar-height: 0px !important; }
+${p} ytd-app #frosted-glass { display: none !important; }
+${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display: none !important; }`
+    }
   },
   {
     id: 'home.shelves',

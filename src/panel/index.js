@@ -6,6 +6,7 @@ import { button } from '../features/ui.js'
 import { summarize, runChecks } from '../core/diagnose.js'
 import { musicTab, musicDataTab, musicStatsTab } from './musicTabs.js'
 import { site } from '../sites/index.js'
+import { makeMovable } from './geometry.js'
 
 const ALL_TABS = {
   display: ['Anzeige', displayTab],
@@ -33,17 +34,17 @@ export function createPanel(app) {
   const profileSelect = h('select', { title: 'Aktives Profil' })
   const closeBtn = h('button', { class: 'iconbtn', title: 'Schließen (Alt+Y)', text: '✕' })
   const nav = h('nav', { role: 'tablist' })
-  // normales mausrad soll die tableiste auch seitlich scrollen, nicht nur trackpad/shift
-  listen(nav, 'wheel', (e) => {
-    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
-    nav.scrollLeft += e.deltaY
-    e.preventDefault()
-  }, { passive: false })
   const main = h('main')
   const status = h('span')
   const footInfo = h('span')
-  const panel = h('div', { class: 'panel', hidden: true }, h('header', null, h('span', { class: 'logo', text: site.id === 'music' ? 'ytx ♫' : 'ytx' }), profileSelect, closeBtn), nav, main, h('footer', null, status, footInfo))
+  const head = h('header', { title: 'Ziehen zum Verschieben · Doppelklick setzt Position zurück' }, h('span', { class: 'logo', text: site.id === 'music' ? 'ytx ♫' : 'ytx' }), profileSelect, closeBtn)
+  const panel = h('div', { class: 'panel', hidden: true }, head, nav, main, h('footer', null, status, footInfo))
   shadow.append(panel)
+  const rectKey = `panelRect.${site.id}`
+  const geo = makeMovable(panel, head, {
+    load: () => app.store.settings[rectKey] || null,
+    save: (r) => app.store.updateSettings((s) => (r ? (s[rectKey] = r) : delete s[rectKey]))
+  })
 
   let tab = app.store.settings[`panelTab.${site.id}`] || app.store.settings.panelTab || 'display'
   if (!TABS.some(([id]) => id === tab)) tab = 'display'
@@ -103,6 +104,7 @@ export function createPanel(app) {
   function open() {
     if (!host.isConnected) document.documentElement.append(host)
     panel.hidden = false
+    geo.place()
     render()
     clearInterval(countTimer)
     // treffer zahlen ab und zu auffrischen solange offen
@@ -142,6 +144,7 @@ export function createPanel(app) {
   document.documentElement.append(host)
   onDispose(() => {
     clearInterval(countTimer)
+    geo.stop()
     host.remove()
   })
 

@@ -48,6 +48,7 @@ const tidyFeatures = {
   'transcript.copy': { enabled: true },
   'watch.copyInfo': { enabled: true },
   'playlist.duration': { enabled: true },
+  'playlist.search': { enabled: true },
   'playlist.dimWatched': { enabled: false },
   'playlist.sort': { enabled: true },
   'player.endsAt': { enabled: true },

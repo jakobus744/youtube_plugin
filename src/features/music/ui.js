@@ -67,7 +67,7 @@ header h2 { flex: 1; margin: 0; font-size: 18px; font-weight: 500; }
 .tools label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ytmusic-text-secondary, #aaa); }
 .tools input[type=range] { width: 130px; accent-color: #fff; }
 .tools select, .tools input[type=search] { font: inherit; font-size: 12px; padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.15); color: inherit; background: rgba(255,255,255,.06); }
-.tools select option { color: #000; }
+.tools select option, .tools select optgroup { color: #000; }
 main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
 .status { padding: 8px 10px; font-size: 12px; color: var(--ytmusic-text-secondary, #aaa); }
 .status.err { color: #ff8a80; }

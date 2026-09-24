@@ -96,7 +96,11 @@ export function lookTab(app) {
           }, 'tiny')
         )
       ),
-      h('p', { class: 'hint', text: 'Übernimmt Theme, Farben und passende Regler (z. B. Ecken-Rundung, Schrift). Nicht jede Einstellung existiert auf beiden Seiten.' })
+      h('p', { class: 'hint', text: 'Übernimmt Theme, Farben und passende Regler (z. B. Ecken-Rundung, Schrift). Nicht jede Einstellung existiert auf beiden Seiten.' }),
+      row(`Look mit ${others.map((o) => o.label).join(', ')} koppeln`, toggle(app.store.linkLook, (v) => {
+        app.store.setLinkLook(v)
+        app.rerender()
+      }), { note: 'Theme und Farben gelten dann automatisch für beide Seiten, in allen Profilen. Beim Einschalten wird dieser Look übernommen' })
     )
   }
 
@@ -460,7 +464,7 @@ export function registerCoreChecks(registerCheck, app) {
     return [
       { id: 'core.polymer', label: `Polymer-Daten lesbar (${site.appHost})`, status: c.appFound ? (c.polymerData ? 'ok' : 'fail') : 'skip', detail: c.polymerData ? 'ok' : 'Script läuft vermutlich in isolierter Welt – @sandbox / @inject-into prüfen' },
       { id: 'core.player', label: 'Player-API', status: document.querySelector('#movie_player') ? (c.playerApi ? 'ok' : 'fail') : 'skip', detail: c.playerApi ? 'getPlayerResponse verfügbar' : 'Kein Player auf dieser Seite' },
-      { id: 'core.storage', label: 'Speicher', status: 'ok', detail: c.gmStorage ? 'GM_setValue' : 'localStorage (Fallback, pro Browser-Profil)' },
+      { id: 'core.storage', label: 'Speicher', status: c.gmStorage ? 'ok' : 'warn', detail: c.gmStorage ? `GM_setValue · Abgleich zwischen Tabs: ${app.store.syncMode === 'gm' ? 'live (YouTube und Music)' : 'nur gleiche Seite'}` : 'localStorage (Fallback): YouTube und Music speichern getrennt, Profile werden nicht geteilt' },
       { id: 'core.nav', label: 'Navigations-Events', status: app.nav.eventsSeen.size ? 'ok' : 'skip', detail: app.nav.eventsSeen.size ? Array.from(app.nav.eventsSeen).join(', ') : 'Noch keine yt-navigate Events gesehen (normal direkt nach dem Laden)' },
       { id: 'core.sweep', label: 'Observer', status: sweepStats.lastMs > 80 ? 'warn' : 'ok', detail: `${sweepStats.runs} Durchläufe · letzter ${sweepStats.lastMs} ms` }
     ]

@@ -10,7 +10,8 @@ export const TOKEN_SCOPE = 'html:root:root, html:root:root [dark], html:root:roo
 export const LOOK_GROUPS = ['Farben', 'Dichte', 'Typografie', 'Thumbnails', 'Buttons', 'Allgemein']
 
 export const colorControls = [
-  { id: 'bg', label: 'Hintergrund', tokens: [TOKEN('base-background'), '--yt-spec-base-background'], extra: (v) => `ytd-app, #masthead-container, ytd-masthead, #background.ytd-masthead, tp-yt-app-drawer #contentContainer, ytd-mini-guide-renderer { background-color: ${v} !important; }` },
+  { id: 'bg', label: 'Hintergrund', tokens: [TOKEN('base-background'), '--yt-spec-base-background'], extra: (v) => `ytd-app, #masthead-container, ytd-masthead, #background.ytd-masthead, tp-yt-app-drawer #contentContainer, ytd-mini-guide-renderer { background-color: ${v} !important; }
+#frosted-glass, ytd-feed-filter-chip-bar-renderer #chips-wrapper, ytd-rich-grid-renderer > #header { background: ${v} !important; backdrop-filter: none !important; }` },
   { id: 'raised', label: 'Flächen & Karten', tokens: [TOKEN('raised-background'), '--yt-spec-raised-background'] },
   { id: 'menu', label: 'Menüs & Dialoge', tokens: [TOKEN('menu-background'), '--yt-spec-menu-background'] },
   { id: 'text', label: 'Text', tokens: [TOKEN('text-primary'), '--yt-spec-text-primary'] },

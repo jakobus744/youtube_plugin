@@ -21,6 +21,7 @@ const meta = (name, extra = []) =>
     '// @run-at       document-start',
     '// @grant        GM_getValue',
     '// @grant        GM_setValue',
+    '// @grant        GM_addValueChangeListener',
     '// @grant        GM_setClipboard',
     '// @grant        GM_xmlhttpRequest',
     '// @connect      musicbrainz.org',

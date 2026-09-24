@@ -7,6 +7,7 @@ import { buildMix, checkReleases, releaseCheckRunning } from './engine.js'
 import { MIXES } from './mixes.js'
 import { catalog } from './data/catalog.js'
 import { SESSION_PRESETS } from './logic/sessions.js'
+import { GENRE_GROUPS, ALL_GENRES } from './logic/genres.js'
 import { ytxQueue } from './ytxQueue.js'
 import { createDrawer, trackRow, pill } from './ui.js'
 import { toast } from '../ui.js'
@@ -38,6 +39,7 @@ export const hubFeature = {
   anchors: ['top.buttons', 'm.browse.top'],
   hotkeys: [['music.hub', 'Mix-Fenster öffnen/schließen', 'Alt+M']],
   settings: {
+    forYouShelf: { type: 'toggle', label: 'Regal „Für dich (ytx)“ mit Neu mischen auf der Startseite', default: true },
     homeShelf: { type: 'toggle', label: 'Regal „Neu von deinen Künstlern“ auf der Startseite', default: true },
     maxRequests: { type: 'range', label: 'Max. neue Seitenabrufe pro Mix', min: 2, max: 40, step: 1, default: 12 },
     explain: { type: 'toggle', label: 'Begründungen anzeigen', default: true }
@@ -115,15 +117,28 @@ export const hubFeature = {
       })
       t.append(sel)
       if (ui.tab === 'genre') {
-        const input = h('input', { type: 'search', placeholder: 'Genre oder Stimmung', value: ui.genre, list: 'ytx-genres' })
+        const pick = h(
+          'select',
+          { title: 'Genre wählen' },
+          h('option', { value: '', text: 'Genre wählen …', selected: !ALL_GENRES.includes(ui.genre) }),
+          ...GENRE_GROUPS.map(([group, list]) => h('optgroup', { label: group }, ...list.map((g) => h('option', { value: g, text: g, selected: g === ui.genre }))))
+        )
+        pick.addEventListener('change', () => {
+          if (!pick.value) return
+          ui.genre = pick.value
+          ctx.state.set('m.hub.genre', ui.genre)
+          load(true)
+        })
+        const input = h('input', { type: 'search', placeholder: 'oder frei eingeben', value: ALL_GENRES.includes(ui.genre) ? '' : ui.genre, list: 'ytx-genres' })
         const dl = h('datalist', { id: 'ytx-genres' })
-        catalog.moods().then((m) => dl.replaceChildren(...[...m.genres, ...m.moods].map((g) => h('option', { value: g.name })))).catch(() => {})
+        catalog.moods().then((m) => dl.replaceChildren(...[...new Set([...ALL_GENRES, ...m.genres.map((g) => g.name), ...m.moods.map((g) => g.name)])].map((g) => h('option', { value: g })))).catch(() => {})
         input.addEventListener('change', () => {
+          if (!input.value.trim()) return
           ui.genre = input.value.trim()
           ctx.state.set('m.hub.genre', ui.genre)
           load(true)
         })
-        t.append(input, dl)
+        t.append(pick, input, dl)
         const favs = prefs.genres.favorites
         if (ui.genre) {
           const on = favs.includes(ui.genre)
@@ -357,16 +372,138 @@ export const hubFeature = {
 
     // ---------- startseite ----------
 
-    const shelf = ctx.mount({
-      id: 'm.hub.homeShelf',
-      anchor: 'm.browse.top',
-      position: 'prepend',
-      when: () => s.homeShelf && ctx.nav.page === 'home',
-      create: () => h('div', { class: 'ytx-m-shelf', style: { margin: '0 0 24px' } }),
-      update: (node) => drawShelf(node)
-    })
+    const T = { primary: 'var(--ytmusic-text-primary, #fff)', secondary: 'var(--ytmusic-text-secondary, #aaa)' }
+    const shelfTitle = (text, ...buttons) =>
+      h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', margin: '8px 0 16px' } }, h('div', { text, style: { font: '700 24px/1.3 Roboto, Arial, sans-serif', color: T.primary, marginRight: '8px' } }), ...buttons)
+    const shelfRow = () => h('div', { style: { display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '6px' } })
+    const shelfCard = ({ img, title, sub, highlight, onClick }) => {
+      const card = h(
+        'div',
+        { style: { flex: 'none', width: '150px', cursor: 'pointer', color: T.primary, font: '400 13px/1.35 Roboto, Arial, sans-serif' } },
+        img ? h('img', { src: img, loading: 'lazy', alt: '', style: { width: '150px', height: '150px', borderRadius: '4px', objectFit: 'cover', background: 'rgba(255,255,255,.08)' } }) : h('div', { style: { width: '150px', height: '150px', borderRadius: '4px', background: 'rgba(255,255,255,.08)' } }),
+        h('div', { text: title, style: { marginTop: '6px', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: highlight ? '#ffc83d' : 'inherit' } }),
+        h('div', { text: sub, title: sub, style: { color: T.secondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } })
+      )
+      card.addEventListener('click', (e) => {
+        e.preventDefault()
+        onClick()
+      })
+      return card
+    }
 
-    async function drawShelf(node) {
+    // ---------- fuer dich (ytx) mit neu mischen ----------
+
+    const SHOWN = 'm.hub.shown'
+    const home = { pool: null, poolAt: 0, step: 0, picked: [], loading: false, note: '' }
+
+    // gewichteter zufall, vorne liegende passen besser, schon gezeigte kommen zuletzt dran
+    function pickFresh(items, n) {
+      const shown = new Set(ctx.state.get(SHOWN, []))
+      let pool = items.filter((i) => !shown.has(i.videoId))
+      if (pool.length < n) {
+        shown.clear()
+        pool = items.slice()
+      }
+      const w = pool.map((_, i) => 1 / (i + 4))
+      const out = []
+      while (out.length < n && pool.length) {
+        let r = Math.random() * w.reduce((a, b) => a + b, 0)
+        let k = 0
+        while (k < w.length - 1 && (r -= w[k]) > 0) k++
+        out.push(pool.splice(k, 1)[0])
+        w.splice(k, 1)
+      }
+      ctx.state.set(SHOWN, [...shown, ...out.map((x) => x.videoId)].slice(-400))
+      return out
+    }
+
+    async function loadPool() {
+      const base = music.effective().discovery
+      const discovery = Math.min(1, base + [0, 0.25, 0.5][home.step % 3])
+      let res = await buildMix('forYou', { discovery }, { maxRequests: 8, limit: 80 })
+      home.note = ''
+      if (!res.items?.length) {
+        const favs = music.prefs().genres.favorites
+        if (favs.length) {
+          const genre = favs[Math.floor(Math.random() * favs.length)]
+          res = await buildMix('genre', { genre, discovery }, { maxRequests: 6, limit: 60 })
+          home.note = `Aus deinem Lieblingsgenre ${genre}`
+        }
+      }
+      home.pool = res.items || []
+      home.poolAt = Date.now()
+    }
+
+    async function shuffle(target, rebuild = false) {
+      if (home.loading) return
+      home.loading = true
+      drawForYou(target, true)
+      try {
+        const shownCount = ctx.state.get(SHOWN, []).length
+        // oft gemischt oder mehr neues gewuenscht: neuen pool holen
+        if (rebuild || !home.pool || Date.now() - home.poolAt > 30 * 60 * 1000 || (home.pool.length && shownCount >= home.pool.length * 0.6)) {
+          if (rebuild) home.step++
+          await loadPool()
+        }
+        home.picked = pickFresh(home.pool, 12)
+      } catch (e) {
+        home.note = `Fehler: ${e.message}`
+      } finally {
+        home.loading = false
+        drawForYou(target, true)
+      }
+    }
+
+    function switchYouTube() {
+      const chips = [...document.querySelectorAll('ytmusic-browse-response:not([hidden]) ytmusic-section-list-renderer > #header ytmusic-chip-cloud-chip-renderer')].filter((c) => c.getAttribute('data-ytx-mchip') !== 'podcasts')
+      if (!chips.length) {
+        navigateEndpoint(endpoints.browse('FEmusic_home'))
+        toast('YouTube-Startseite neu geladen')
+        return
+      }
+      const turn = ctx.state.get('m.hub.chipTurn', 0)
+      const chip = chips[turn % chips.length]
+      ctx.state.set('m.hub.chipTurn', turn + 1)
+      const target = chip.querySelector('a, button') || chip
+      target.click()
+      toast(`YouTube-Startseite: ${chip.textContent.trim()}`)
+    }
+
+    function drawForYou(target, force = false) {
+      if (!target) return
+      if (!s.forYouShelf) {
+        target.replaceChildren()
+        return
+      }
+      if (!force && target.__drawn) return
+      target.__drawn = true
+      if (!home.picked.length && !home.loading && !home.pool) {
+        shuffle(target)
+        return
+      }
+      const mix = pill({ label: home.loading ? 'mischt …' : '↻ Neu mischen', title: 'Andere Vorschläge aus deinem Profil', onClick: () => shuffle(target) })
+      const more = pill({ label: 'Mehr Neues', title: 'Neuen Pool holen, stärker in Richtung Entdecken', onClick: () => shuffle(target, true) })
+      const yt = pill({ label: 'YouTube-Vorschläge wechseln', title: 'Wechselt durch YouTubes eigene Stimmungen, damit die Regale darunter anders werden', onClick: switchYouTube })
+      const play = pill({ label: '▶ Alle abspielen', onClick: () => home.picked.length && ytxQueue.play(home.picked, { title: 'Für dich' }) })
+      const row = shelfRow()
+      for (const it of home.picked) {
+        row.append(shelfCard({ img: it.thumbnail, title: it.title, sub: `${it.artists.map((a) => a.name).join(', ')}${it.reasons?.[0] ? ` · ${it.reasons[0]}` : ''}`, onClick: () => navigateEndpoint(endpoints.radio(it.videoId)) }))
+      }
+      const children = [shelfTitle('Für dich (ytx)', mix, more, yt, play)]
+      if (home.note) children.push(h('div', { text: home.note, style: { color: T.secondary, font: '400 13px Roboto, Arial, sans-serif', margin: '-8px 0 12px' } }))
+      if (home.picked.length) children.push(row)
+      else if (!home.loading) children.push(h('div', { text: 'Noch zu wenig Daten. Favorisiere ein paar Künstler (★ in der Playerleiste), merke dir Genres im Mix-Fenster oder hör ein paar Songs, dann erscheinen hier Vorschläge.', style: { color: T.secondary, font: '400 14px Roboto, Arial, sans-serif', marginBottom: '16px' } }))
+      target.replaceChildren(...children)
+    }
+
+    // ---------- neu von deinen kuenstlern ----------
+
+    async function drawReleases(node) {
+      if (!node) return
+      if (!s.homeShelf) {
+        node.replaceChildren()
+        return
+      }
       if (node.__at && Date.now() - node.__at < 60 * 1000) return
       node.__at = Date.now()
       const list = (await music.releases.latest(40).catch(() => [])).filter((r) => r.fresh || r.recent).slice(0, 12)
@@ -374,28 +511,34 @@ export const hubFeature = {
         node.replaceChildren()
         return
       }
-      const row = h('div', { style: { display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '6px' } })
-      for (const r of list) {
-        const card = h(
-          'a',
-          { href: `/browse/${r.id}`, style: { flex: 'none', width: '150px', color: 'var(--ytmusic-text-primary, #fff)', textDecoration: 'none', font: '400 13px/1.35 Roboto, Arial, sans-serif' } },
-          h('img', { src: r.thumbnail, loading: 'lazy', alt: '', style: { width: '150px', height: '150px', borderRadius: '4px', objectFit: 'cover', background: 'rgba(255,255,255,.08)' } }),
-          h('div', { text: `${r.fresh ? '● ' : ''}${r.title}`, style: { marginTop: '6px', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: r.fresh ? '#ffc83d' : 'inherit' } }),
-          h('div', { text: `${r.artistName}${r.kind ? ` · ${r.kind}` : ''}`, style: { color: 'var(--ytmusic-text-secondary, #aaa)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } })
-        )
-        card.addEventListener('click', (e) => {
-          e.preventDefault()
-          navigateEndpoint(endpoints.browse(r.id, null, 'ALBUM'))
-        })
-        row.append(card)
-      }
-      node.replaceChildren(h('div', { style: { font: '700 24px/1.3 Roboto, Arial, sans-serif', color: 'var(--ytmusic-text-primary, #fff)', margin: '8px 0 16px' }, text: 'Neu von deinen Künstlern' }), row)
+      const row = shelfRow()
+      for (const r of list) row.append(shelfCard({ img: r.thumbnail, title: `${r.fresh ? '● ' : ''}${r.title}`, sub: `${r.artistName}${r.kind ? ` · ${r.kind}` : ''}`, highlight: r.fresh, onClick: () => navigateEndpoint(endpoints.browse(r.id, null, 'ALBUM')) }))
+      node.replaceChildren(shelfTitle('Neu von deinen Künstlern'), row)
     }
+
+    const shelf = ctx.mount({
+      id: 'm.hub.homeShelf',
+      anchor: 'm.browse.top',
+      position: 'prepend',
+      when: () => (s.homeShelf || s.forYouShelf) && ctx.nav.page === 'home',
+      create: () => {
+        const forYou = h('div', { class: 'ytx-m-shelf-foryou' })
+        const rel = h('div', { class: 'ytx-m-shelf-releases' })
+        const node = h('div', { class: 'ytx-m-shelf', style: { margin: '0 0 24px' } }, forYou, rel)
+        node.__forYou = forYou
+        node.__rel = rel
+        return node
+      },
+      update: (node) => {
+        drawForYou(node.__forYou)
+        drawReleases(node.__rel)
+      }
+    })
 
     const offs = [
       music.on('releases', () => {
         updateBadge()
-        if (shelf.node) shelf.node.__at = 0
+        if (shelf.node?.__rel) shelf.node.__rel.__at = 0
         shelf.refresh()
         cache.clear()
       }),

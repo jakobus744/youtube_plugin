@@ -4,7 +4,7 @@ import { tagRules } from '../registry/youtube/tags.js'
 import { colorControls, controls, themes, LOOK_GROUPS, controlById, TOKEN_SCOPE, extraCss } from '../registry/youtube/look.js'
 import { layoutPresets, presetById, LAYOUT_PAGES, orderGroups, topbarModes, topbarCss } from '../registry/youtube/presets.js'
 import { pageFromUrl, videoIdFromUrl, PAGE_LABELS, FILTER_PAGES } from '../registry/youtube/pages.js'
-import { CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots } from '../registry/youtube/paths.js'
+import { CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots, channelRefOf, channelPageInfo, subscribedChannels, activePlayback, pauseActive } from '../registry/youtube/paths.js'
 import { behaviors, behaviorById } from '../behaviors/youtube.js'
 import { featureManifests } from '../features/youtube/index.js'
 import { templates } from '../profiles/youtube.js'
@@ -30,6 +30,8 @@ export const youtubeSite = {
   features: featureManifests,
   templates,
   filters: { pages: FILTER_PAGES, CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots },
+  channels: { channelRefOf, channelPageInfo, subscribedChannels },
+  playback: { activePlayback, pauseActive },
   panelTabs: ['display', 'look', 'layout', 'behavior', 'filters', 'features', 'subGroups', 'watchStats', 'profiles', 'diagnose'],
   boot() {
     initTimedtextCapture()

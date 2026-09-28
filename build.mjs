@@ -18,6 +18,7 @@ const meta = (name, extra = []) =>
     `// @description  ${pkg.description}`,
     '// @match        https://www.youtube.com/*',
     '// @match        https://music.youtube.com/*',
+    '// @match        https://m.youtube.com/*',
     '// @run-at       document-start',
     '// @grant        GM_getValue',
     '// @grant        GM_setValue',

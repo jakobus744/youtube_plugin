@@ -23,6 +23,15 @@ const PAGE_CSS = `
 ytmusic-player-queue-item[data-ytx-skip] { opacity: .55; }
 ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 .ytx-m-bar-btns { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; }
+.ytx-m-fab { all: initial; display: none; position: fixed; z-index: 2150; right: 16px; bottom: 150px; width: 52px; height: 52px; border-radius: 26px; align-items: center; justify-content: center; cursor: pointer;
+  font: 700 13px Roboto, Arial, sans-serif; color: #000; background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.45); }
+.ytx-m-fab[data-badge]:after { content: attr(data-badge); position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; box-sizing: border-box; font-size: 11px; line-height: 18px; text-align: center; color: #fff; background: #e53935; }
+@media (max-width: 600px) {
+  ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
+  ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
+  .ytx-m-fab { display: flex; }
+  .ytx-m-shelf { padding-inline: 16px; }
+}
 `
 
 export function initMusicUiCss() {
@@ -81,6 +90,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
 .reason { font-size: 10.5px; padding: 1px 6px; border-radius: 4px; color: var(--ytmusic-text-secondary, #bbb); background: rgba(255,255,255,.07); }
 .acts { display: flex; gap: 2px; opacity: .55; }
 .row:hover .acts { opacity: 1; }
+@media (hover: none) { .acts { opacity: 1; } .ib { width: 38px; height: 38px; } .tab, .chip { padding: 8px 12px; font-size: 13px; } }
 .ib { border: 0; cursor: pointer; width: 30px; height: 30px; border-radius: 15px; font-size: 15px; color: inherit; background: transparent; }
 .ib:hover { background: rgba(255,255,255,.12); }
 .btn { border: 0; cursor: pointer; padding: 6px 12px; border-radius: 16px; font: 500 12px/1.3 inherit; font-family: inherit; color: #000; background: #fff; }

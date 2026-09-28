@@ -1,11 +1,18 @@
 import { store } from '../../../core/store.js'
 import { pageWindow } from '../../../core/bridge.js'
 import { qsa } from '../../../core/dom.js'
-import { CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots, channelRefOf, channelPageInfo, subscribedChannels } from '../../../registry/youtube/paths.js'
+import { site } from '../../../sites/index.js'
 import { GROUPS_BUCKET, NONE, normalizeGroups, visibleIn, toggleChannel, groupsOf, enrich } from './logic.js'
 import { h, button, showMenu, toast } from '../../ui.js'
 
 // abo gruppen: filterleiste im abo feed, zuordnen auf der kanalseite und im panel
+// kacheln und kanaele kommen aus der registry der jeweiligen seite (desktop oder mobil)
+
+const cards = () => site.filters
+const channelRefOf = (card) => site.channels.channelRefOf(card)
+const channelPageInfo = () => site.channels.channelPageInfo()
+const subscribedChannels = () => site.channels.subscribedChannels()
+const readCard = (el) => cards().readCard(el)
 
 const ATTR = 'data-ytx-sg-hide'
 
@@ -40,8 +47,9 @@ export function knownChannels() {
 
 function outerCards() {
   const out = []
-  for (const root of activePageRoots()) {
-    for (const el of qsa(CARD_SELECTORS.join(', '), root)) if (!el.parentElement?.closest(CARD_PARENT)) out.push(el)
+  const f = cards()
+  for (const root of f.activePageRoots()) {
+    for (const el of qsa(f.CARD_SELECTORS.join(', '), root)) if (!el.parentElement?.closest(f.CARD_PARENT)) out.push(el)
   }
   return out
 }

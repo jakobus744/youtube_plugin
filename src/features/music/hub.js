@@ -54,9 +54,10 @@ export const hubFeature = {
 
     const updateBadge = async () => {
       badge = await music.releases.unseenCount().catch(() => 0)
-      if (btn.node) {
-        if (badge) btn.node.setAttribute('data-badge', String(badge))
-        else btn.node.removeAttribute('data-badge')
+      for (const node of [btn.node, fab]) {
+        if (!node) continue
+        if (badge) node.setAttribute('data-badge', String(badge))
+        else node.removeAttribute('data-badge')
       }
     }
 
@@ -71,6 +72,13 @@ export const hubFeature = {
       }
     })
 
+    // auf dem handy ist oben kein platz, dort schwebt der mix button unten rechts
+    const fab = h('button', { type: 'button', class: 'ytx-m-fab', title: 'ytx Mix', 'data-ytx-own': '', text: 'Mix' })
+    fab.addEventListener('click', (e) => {
+      e.stopPropagation()
+      toggle()
+    })
+    document.body.append(fab)
     function toggle() {
       drawer.toggle()
       if (drawer.isOpen) render()
@@ -566,6 +574,7 @@ export const hubFeature = {
         offQueue()
         for (const off of offs) off()
         btn.destroy()
+        fab.remove()
         shelf.destroy()
         drawer.host.remove()
       },

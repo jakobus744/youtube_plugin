@@ -1,7 +1,7 @@
 {
   "name": "ytx",
-  "version": "0.2.2",
-  "description": "YouTube und YouTube Music anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features, lokale Musik-Empfehlungen",
+  "version": "0.3.0",
+  "description": "YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen",
   "private": true,
   "type": "module",
   "scripts": {

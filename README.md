@@ -1,6 +1,6 @@
 # ytx – YouTube & YouTube Music anpassen
 
-Ein Userscript für Desktop-YouTube **und** YouTube Music. Elemente anzeigen, dimmen, einklappen oder ausblenden, eigenes Theme, Layout-Presets, Verhalten, Filter und Zusatzfunktionen. Auf YouTube Music kommen dazu ein lokaler Hörverlauf mit Geschmacksprofil, Favoriten, erklärbare Empfehlungen („Für dich“, „Neu von deinen Künstlern“, Genre-Finder, Smart Radio), Smart Queue, Songtext kopieren und eine private Statistik.
+Ein Userscript für YouTube am Rechner, **YouTube auf dem Handy** (`m.youtube.com`) und YouTube Music. Elemente anzeigen, dimmen, einklappen oder ausblenden, eigenes Theme, Layout-Presets, Verhalten, Filter und Zusatzfunktionen. Auf YouTube Music kommen dazu ein lokaler Hörverlauf mit Geschmacksprofil, Favoriten, erklärbare Empfehlungen („Für dich“, „Neu von deinen Künstlern“, Genre-Finder, Smart Radio), Smart Queue, Songtext kopieren und eine private Statistik.
 
 Beide Seiten laufen auf demselben ytx-Kern (Panel, Profile, Navigation, Diagnose, Mount, Features). Nur Registry und Features sind pro Seite getrennt.
 
@@ -31,9 +31,17 @@ Startprofil ist **„Aufgeräumt“**. **„YouTube (Original)“** schaltet auf
 2. `chrome://extensions` → Tampermonkey → Details → **„Zugriff auf Datei-URLs zulassen“**.
 3. `npm run dev`, speichern, Seite neu laden.
 
-### Firefox + Violentmonkey (nicht getestet)
+### Android: Firefox + Violentmonkey
 
-Script wie oben installieren. ytx braucht Seitenkontext (`@inject-into page`). Meldet die Diagnose „Polymer-Daten lesbar: Fehler“, laufen Anzeige/Look/Layout weiter, Features mit Datenzugriff nicht.
+1. **Firefox** aus dem Play Store installieren.
+2. In Firefox: Menü ⋮ → **Erweiterungen** → **Violentmonkey** hinzufügen (Tampermonkey geht auch, Violentmonkey ist kleiner und quelloffen).
+3. Den **[ytx-Link](https://raw.githubusercontent.com/jakobus744/youtube_plugin/main/dist/ytx.user.js)** in Firefox öffnen → Violentmonkey zeigt die Installationsseite → **Installieren**.
+4. **m.youtube.com** öffnen und anmelden. Oben erscheinen **ytx** (Panel) und **⏱** (Schauzeit heute).
+5. Für ein App-Gefühl: Menü ⋮ → **Zum Startbildschirm hinzufügen**. Das Icon öffnet YouTube direkt.
+
+Auf dem Handy ist das Panel ein Blatt von unten, die Bedienelemente sind größer. Auf YouTube Music liegt „Mix“ als runder Knopf unten rechts.
+
+Mobil gibt es: Ausblenden (Shorts-Tab, Shorts-Regale, Werbung, Empfehlungen, Kommentar-Vorschau …), Themes und Farben, Filter (Kanäle, Stichwörter, Shorts, Dauer, Alter), Abo-Gruppen, Schauzeit mit Tageslimit, Shorts-Umleitung. Profile und Daten liegen pro Gerät, zum Übertragen **Profile › Export/Import** nutzen.
 
 ---
 
@@ -51,6 +59,7 @@ Script wie oben installieren. ytx braucht Seitenkontext (`@inject-into page`). M
 Kürzel lassen sich unter **Profile › Tastenkürzel** ändern.
 
 Panel-Tabs YouTube: **Anzeige · Look · Layout · Verhalten · Filter · Features · Abo-Gruppen · Schauzeit · Profile · Diagnose**
+Panel-Tabs mobil: **Anzeige · Look · Verhalten · Filter · Features · Abo-Gruppen · Schauzeit · Profile · Diagnose**
 Panel-Tabs Music: **Anzeige · Look · Layout · Verhalten · Features · Musik · Verlauf & Daten · Statistik · Profile · Diagnose**
 
 Profile gelten für beide Seiten (jede Seite hat ihren eigenen Abschnitt). Sind YouTube und Music gleichzeitig offen, gleichen sich die Tabs live ab. Im **Look**-Tab lässt sich der Style der anderen Seite übernehmen oder dauerhaft koppeln.
@@ -123,10 +132,11 @@ ytx/
 │   │   ├── pageData.js          gedrosselter Seitenlader mit Cache
 │   │   ├── bridge.js · mount.js · observer.js · diagnose.js · hotkeys.js
 │   │   └── css.js · dom.js · format.js · clipboard.js · log.js · lifecycle.js · scheduler.js
-│   ├── sites/                   index.js · youtube.js · music.js
+│   ├── sites/                   index.js · youtube.js · music.js · mobile.js
 │   ├── registry/
 │   │   ├── shared.js            Modi, Attributnamen
 │   │   ├── youtube/             targets (63) · anchors · tags · paths · look · presets · pages
+│   │   ├── mobile/              targets (21) · anchors · tags · look (Farberkennung) · paths (Kacheln aus dem DOM)
 │   │   └── music/               targets (33) · anchors · tags · look · presets · pages
 │   │                            player.js (Store, Player-API, Queue, Songtext, Navigation)
 │   │                            parse.js · initialData.js (Seitendaten sprachunabhängig)
@@ -146,7 +156,7 @@ ytx/
 │   │       └── metadataProviders/  index · local · musicbrainz · lastfm · ollama · http
 │   ├── profiles/                youtube.js · music.js · index.js
 │   └── panel/                   index · tabs · musicTabs · controls · styles
-├── tests/                       57 Tests + fixtures/music (echte Seitendaten)
+├── tests/                       58 Tests + fixtures/music (echte Seitendaten)
 └── tools/                       serve.mjs (Test-Handoff) · music-fixtures.mjs
 ```
 
@@ -182,6 +192,7 @@ Getestet im eingebauten Chromium **ohne Anmeldung**, stumm geschaltet, Stand 15.
 | Transkript | 5 Formate, Spurwahl, Kapitel, Zitieren | ✅ · Panel-Fallback ⚠️ |
 | Playlist | Dauer gesamt/übrig, Sortieren, Suche nach Titel/Kanal (Seite + Panel neben dem Video) | ✅ · Später ansehen, gesehene dimmen ⚠️ Login |
 | Video | Endzeit, Datum, Kopieren-Menü, Proxy-Buttons | ✅ |
+| Mobil (m.youtube.com) | Start, Farberkennung, Themes, 21 Ausblend-Ziele, Kanal-/Shorts-Filter, Panel als Blatt, Gruppen-Button auf der Kanalseite, Schauzeit-Erkennung | ✅ in Handy-Emulation (Chromium), ⚠️ Firefox Android selbst und Login ungetestet |
 | Abo-Gruppen | Gruppen anlegen, Zuordnen auf der Kanalseite und im Panel | ✅ · Filterleiste im Abo-Feed ⚠️ braucht Login, nur Logik getestet |
 | Schauzeit | Messen, Zwischenspeichern, Heute-Anzeige, Tageslimit-Karte, Statistik-Tab | ✅ mit simuliertem Abspielen (Testfenster spielt nicht wirklich ab) |
 | 0.2.0-Umbau | Start, Anzeige-Regeln, alle 8 Panel-Tabs, Diagnose ohne Fehler | ✅ Regression Startseite; Videoseite nach dem Umbau nicht erneut live geprüft |
@@ -233,6 +244,6 @@ Getestet im eingebauten Chromium **ohne Anmeldung**, stumm geschaltet, Stand 15.
 
 **Allgemein**
 
-- Nur Desktop. `m.youtube.com`, Apps und Embeds nicht abgedeckt.
+- Kein Einbau in die offizielle YouTube-App, keine Embeds. Handy über Firefox + Violentmonkey (siehe Installation).
 - Speicher pro Browser. Kein Sync (Export/Import nutzen).
 - Mit Login, in Tampermonkey selbst und in Firefox nicht getestet. Testanleitung: [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md#test-mit-eingeloggtem-konto).

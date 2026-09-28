@@ -55,7 +55,8 @@ export function runsText(t) {
 }
 
 export function capabilities() {
-  const host = document.documentElement.getAttribute('data-ytx-site') === 'music' ? 'ytmusic-app' : 'ytd-app'
+  const siteId = document.documentElement.getAttribute('data-ytx-site')
+  const host = siteId === 'music' ? 'ytmusic-app' : siteId === 'mobile' ? 'ytm-app' : 'ytd-app'
   const app = document.querySelector(host)
   return {
     polymerData: !!(app && (dataOf(app) || app.polymerController?.store)),

@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.2.2
-// @description  YouTube und YouTube Music anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features, lokale Musik-Empfehlungen
+// @version      0.3.0
+// @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
+// @match        https://m.youtube.com/*
 // @run-at       document-start
 // @grant        GM_getValue
 // @grant        GM_setValue
@@ -28,8 +29,8 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.2.2",
-    description: "YouTube und YouTube Music anpassen: Anzeige, Look, Layout, Verhalten, Filter, Features, lokale Musik-Empfehlungen",
+    version: "0.3.0",
+    description: "YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen",
     private: true,
     type: "module",
     scripts: {
@@ -92,7 +93,8 @@
     return "";
   }
   function capabilities() {
-    const host2 = document.documentElement.getAttribute("data-ytx-site") === "music" ? "ytmusic-app" : "ytd-app";
+    const siteId = document.documentElement.getAttribute("data-ytx-site");
+    const host2 = siteId === "music" ? "ytmusic-app" : siteId === "mobile" ? "ytm-app" : "ytd-app";
     const app = document.querySelector(host2);
     return {
       polymerData: !!(app && (dataOf(app) || app.polymerController?.store)),
@@ -163,7 +165,7 @@
 
   // src/core/site.js
   var host = typeof location !== "undefined" ? location.hostname : "";
-  var SITE_ID = host === "music.youtube.com" ? "music" : "youtube";
+  var SITE_ID = host === "music.youtube.com" ? "music" : host === "m.youtube.com" ? "mobile" : "youtube";
 
   // src/registry/shared.js
   var SH = ["show", "hide"];
@@ -3433,7 +3435,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
 
   // src/core/config.js
   var SCHEMA = 3;
-  var SITE_KEYS = ["youtube", "music"];
+  var SITE_KEYS = ["youtube", "music", "mobile"];
   function defaultFilters() {
     return {
       enabled: false,
@@ -3730,10 +3732,49 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
     })
   };
 
+  // src/profiles/mobile.js
+  var H3 = "hide";
+  var C3 = "collapse";
+  var tidyDisplay3 = {
+    "mb.pivot.shorts": H3,
+    "mb.pivot.create": H3,
+    "mb.home.shorts": H3,
+    "mb.home.nudge": H3,
+    "mb.watch.shorts": H3,
+    "mb.watch.carousel": H3,
+    "mb.watch.endscreen": H3,
+    "mb.search.shorts": H3,
+    "mb.search.shelves": C3,
+    "mb.channel.shortsTab": H3,
+    "mb.channel.shorts": H3,
+    "mb.subs.shorts": H3,
+    "mb.ads": H3,
+    "mb.premiumPromo": H3
+  };
+  var tidyFeatures3 = {
+    "subs.groups": { enabled: true },
+    "watch.time": { enabled: true }
+  };
+  var mobileTemplates = {
+    youtube: () => ({}),
+    aufgeraeumt: () => ({
+      display: { ...tidyDisplay3 },
+      behavior: { shortsRedirect: true },
+      filters: { enabled: true, mode: "dim", shorts: true, pages: ["home", "subscriptions", "search", "watch"] },
+      features: structuredClone(tidyFeatures3)
+    }),
+    fokus: () => ({
+      display: { ...tidyDisplay3, "mb.home.feed": H3, "mb.home.sections": H3, "mb.home.chips": H3, "mb.watch.related": C3, "mb.watch.comments": C3 },
+      behavior: { shortsRedirect: true, homeRedirect: "/feed/subscriptions" },
+      filters: { enabled: true, mode: "hide", shorts: true, pages: ["home", "subscriptions", "search", "watch", "channel"] },
+      features: structuredClone(tidyFeatures3)
+    })
+  };
+
   // src/profiles/index.js
   var templates2 = templates.map((t) => ({
     ...t,
-    config: () => ({ schema: SCHEMA, youtube: t.config(), music: musicTemplates[t.id]?.() || {} })
+    config: () => ({ schema: SCHEMA, youtube: t.config(), music: musicTemplates[t.id]?.() || {}, mobile: mobileTemplates[t.id]?.() || {} })
   }));
   var templateById2 = Object.fromEntries(templates2.map((t) => [t.id, t]));
 
@@ -3846,6 +3887,17 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
             const f = p.config.music.features ||= {};
             f["m.weekly"] ||= { enabled: true };
           }
+        }
+      }
+    ],
+    [
+      // mobil abschnitt fuer bestehende profile aus der vorlage
+      "mobile-section",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          if (!p.config || p.config.mobile) continue;
+          const t = templateById2[p.template] || templateById2.aufgeraeumt;
+          p.config.mobile = p.template === "youtube" ? {} : t.config().mobile;
         }
       }
     ]
@@ -4210,6 +4262,11 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
   }
 
   // src/features/youtube/subGroups/index.js
+  var cards = () => site.filters;
+  var channelRefOf2 = (card2) => site.channels.channelRefOf(card2);
+  var channelPageInfo2 = () => site.channels.channelPageInfo();
+  var subscribedChannels2 = () => site.channels.subscribedChannels();
+  var readCard2 = (el) => cards().readCard(el);
   var ATTR3 = "data-ytx-sg-hide";
   var groupsData = () => store.bucket(GROUPS_BUCKET, normalizeGroups);
   var updateGroups = (fn) => store.updateBucket(GROUPS_BUCKET, fn, normalizeGroups);
@@ -4231,15 +4288,16 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
       const prev2 = out.get(key);
       out.set(key, { id: c.id || prev2?.id || null, handle: c.handle || prev2?.handle || null, name: c.name || prev2?.name || "" });
     };
-    for (const c of subscribedChannels()) add2(c);
-    for (const el of outerCards()) add2(channelRefOf(readCard(el)));
+    for (const c of subscribedChannels2()) add2(c);
+    for (const el of outerCards()) add2(channelRefOf2(readCard2(el)));
     for (const g of groupsData().groups) for (const c of g.channels) add2(c);
     return [...out.values()].sort((a, b) => a.name.localeCompare(b.name, "de"));
   }
   function outerCards() {
     const out = [];
-    for (const root of activePageRoots()) {
-      for (const el of qsa(CARD_SELECTORS.join(", "), root)) if (!el.parentElement?.closest(CARD_PARENT)) out.push(el);
+    const f = cards();
+    for (const root of f.activePageRoots()) {
+      for (const el of qsa(f.CARD_SELECTORS.join(", "), root)) if (!el.parentElement?.closest(f.CARD_PARENT)) out.push(el);
     }
     return out;
   }
@@ -4279,9 +4337,9 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         let hidden = 0;
         let learned = false;
         for (const el of outerCards()) {
-          const card2 = readCard(el);
+          const card2 = readCard2(el);
           if (!card2) continue;
-          const ch = channelRefOf(card2);
+          const ch = channelRefOf2(card2);
           checked++;
           if (groupsOf(ch, data2).length && enrich(data2, ch)) learned = true;
           const show = ctx.nav.page !== "subscriptions" || visibleIn(ch, active, data2);
@@ -4329,14 +4387,14 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         id: "subs.groups.channel",
         anchor: "channel.headerButtons",
         position: "append",
-        when: () => ctx.nav.page === "channel" && !!channelPageInfo(),
+        when: () => ctx.nav.page === "channel" && !!channelPageInfo2(),
         create: () => {
           const b = button({
             label: "Gruppen",
             icon: "☰",
             title: "Kanal einer Abo-Gruppe zuordnen",
             onClick: () => {
-              const ch = channelPageInfo();
+              const ch = channelPageInfo2();
               if (!ch) return toast("Kanal noch nicht erkannt");
               const data2 = groupsData();
               const items = [{ title: ch.name }];
@@ -4363,7 +4421,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
           return b;
         },
         update: (node) => {
-          const ch = channelPageInfo();
+          const ch = channelPageInfo2();
           const names = ch ? groupsOf(ch, groupsData()).map((g) => g.name) : [];
           const label = node.querySelector(".ytx-label");
           const text = names.length ? names.join(", ") : "Gruppen";
@@ -4632,6 +4690,8 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
   }
 
   // src/features/youtube/watchtime/index.js
+  var activePlayback2 = () => site.playback.activePlayback();
+  var pauseActive2 = () => site.playback.pauseActive();
   var current = null;
   var watchTime = {
     get instance() {
@@ -4689,7 +4749,8 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         },
         update: (node) => {
           const sec = todaySec();
-          const text = `Heute ${sec < 60 ? "0 min" : formatDuration(sec)}`;
+          const t = sec < 60 ? "0 min" : formatDuration(sec);
+          const text = innerWidth < 520 ? `⏱ ${t}` : `Heute ${t}`;
           const label = node.querySelector(".ytx-label");
           if (label && label.textContent !== text) label.textContent = text;
           const over = s.limitMinutes > 0 && sec >= s.limitMinutes * 60;
@@ -4705,12 +4766,12 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         closeCard();
         const sec = todaySec();
         const paused = kind === "limit" && s.pauseAtLimit;
-        if (paused) pauseActive();
+        if (paused) pauseActive2();
         const title = kind === "limit" ? "Tageslimit erreicht" : "Zeit für eine kurze Pause?";
         const text = kind === "limit" ? `Du hast heute schon ${formatDuration(sec)} geschaut (Limit ${formatDuration(s.limitMinutes * 60)}).${paused ? " Das Video ist angehalten." : ""}` : `Du schaust seit ${formatDuration(st.streak)} am Stück.`;
         const actions2 = h("div", { class: "ytx-row" });
         if (!paused) actions2.append(button({ label: "Video anhalten", small: true, onClick: () => {
-          pauseActive();
+          pauseActive2();
           closeCard();
         } }));
         actions2.append(button({ label: kind === "limit" ? "Weiter schauen" : "Weiter", small: true, onClick: closeCard }));
@@ -4734,7 +4795,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
           st.remind = { limitAt: null, breakAt: null };
         }
         if (!s.record) return;
-        let p = activePlayback();
+        let p = activePlayback2();
         if (p && p.kind === "short" && !s.countShorts) p = null;
         if (st.session && (!p || p.videoId !== st.session.videoId)) {
           save2(st.session);
@@ -5120,6 +5181,8 @@ ${chaptersText(true)}
     features: featureManifests,
     templates,
     filters: { pages: FILTER_PAGES, CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots },
+    channels: { channelRefOf, channelPageInfo, subscribedChannels },
+    playback: { activePlayback, pauseActive },
     panelTabs: ["display", "look", "layout", "behavior", "filters", "features", "subGroups", "watchStats", "profiles", "diagnose"],
     boot() {
       initTimedtextCapture();
@@ -7318,6 +7381,15 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
 ytmusic-player-queue-item[data-ytx-skip] { opacity: .55; }
 ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 .ytx-m-bar-btns { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; }
+.ytx-m-fab { all: initial; display: none; position: fixed; z-index: 2150; right: 16px; bottom: 150px; width: 52px; height: 52px; border-radius: 26px; align-items: center; justify-content: center; cursor: pointer;
+  font: 700 13px Roboto, Arial, sans-serif; color: #000; background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.45); }
+.ytx-m-fab[data-badge]:after { content: attr(data-badge); position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; box-sizing: border-box; font-size: 11px; line-height: 18px; text-align: center; color: #fff; background: #e53935; }
+@media (max-width: 600px) {
+  ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
+  ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
+  .ytx-m-fab { display: flex; }
+  .ytx-m-shelf { padding-inline: 16px; }
+}
 `;
   function initMusicUiCss() {
     setCss("music.ui", PAGE_CSS);
@@ -7370,6 +7442,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
 .reason { font-size: 10.5px; padding: 1px 6px; border-radius: 4px; color: var(--ytmusic-text-secondary, #bbb); background: rgba(255,255,255,.07); }
 .acts { display: flex; gap: 2px; opacity: .55; }
 .row:hover .acts { opacity: 1; }
+@media (hover: none) { .acts { opacity: 1; } .ib { width: 38px; height: 38px; } .tab, .chip { padding: 8px 12px; font-size: 13px; } }
 .ib { border: 0; cursor: pointer; width: 30px; height: 30px; border-radius: 15px; font-size: 15px; color: inherit; background: transparent; }
 .ib:hover { background: rgba(255,255,255,.12); }
 .btn { border: 0; cursor: pointer; padding: 6px 12px; border-radius: 16px; font: 500 12px/1.3 inherit; font-family: inherit; color: #000; background: #fff; }
@@ -8565,9 +8638,10 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       const drawer = createDrawer({ title: "ytx Mix" });
       const updateBadge = async () => {
         badge2 = await music.releases.unseenCount().catch(() => 0);
-        if (btn2.node) {
-          if (badge2) btn2.node.setAttribute("data-badge", String(badge2));
-          else btn2.node.removeAttribute("data-badge");
+        for (const node of [btn2.node, fab]) {
+          if (!node) continue;
+          if (badge2) node.setAttribute("data-badge", String(badge2));
+          else node.removeAttribute("data-badge");
         }
       };
       const btn2 = ctx.mount({
@@ -8580,6 +8654,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           return b;
         }
       });
+      const fab = h("button", { type: "button", class: "ytx-m-fab", title: "ytx Mix", "data-ytx-own": "", text: "Mix" });
+      fab.addEventListener("click", (e) => {
+        e.stopPropagation();
+        toggle2();
+      });
+      document.body.append(fab);
       function toggle2() {
         drawer.toggle();
         if (drawer.isOpen) render3();
@@ -9039,6 +9119,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           offQueue();
           for (const off of offs) off();
           btn2.destroy();
+          fab.remove();
           shelf.destroy();
           drawer.host.remove();
         },
@@ -10050,8 +10131,555 @@ ${data2.source}` : ""].join("\n").trim();
     }
   };
 
+  // src/registry/mobile/targets.js
+  var GROUPS3 = ["Navigation", "Startseite", "Videoseite", "Suche", "Kanal", "Abo-Feed", "Werbung"];
+  var targets3 = [
+    // navigation unten
+    {
+      id: "mb.pivot.shorts",
+      label: "Shorts-Tab unten",
+      group: "Navigation",
+      modes: SH,
+      sel: ['ytm-pivot-bar-item-renderer[data-ytx-mbpivot="shorts"]']
+    },
+    {
+      id: "mb.pivot.create",
+      label: "Erstellen-Button (+) unten",
+      group: "Navigation",
+      modes: SH,
+      sel: ['ytm-pivot-bar-item-renderer[data-ytx-mbpivot="create"]']
+    },
+    {
+      id: "mb.pivot.all",
+      label: "Untere Leiste komplett",
+      group: "Navigation",
+      radical: true,
+      modes: SH,
+      sel: ["ytm-pivot-bar-renderer"],
+      note: "Navigation dann über Logo, Suche und Zurück"
+    },
+    {
+      id: "mb.top.cast",
+      label: "Cast-Button oben",
+      group: "Navigation",
+      modes: SH,
+      sel: ["ytm-mobile-topbar-renderer .topbar-cast-button", 'ytm-mobile-topbar-renderer [class*="cast"]']
+    },
+    // startseite
+    {
+      id: "mb.home.chips",
+      label: "Filter-Chips",
+      group: "Startseite",
+      pages: ["home"],
+      modes: SH,
+      sel: ["ytm-browse ytm-feed-filter-chip-bar-renderer", "ytm-browse ytm-chip-cloud-renderer"]
+    },
+    {
+      id: "mb.home.shorts",
+      label: "Shorts-Regale",
+      group: "Startseite",
+      pages: ["home"],
+      modes: SDCH,
+      sel: ["ytm-browse ytm-reel-shelf-renderer", "ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)"]
+    },
+    {
+      id: "mb.home.sections",
+      label: "Themen-Regale (Neu, Nachrichten …)",
+      group: "Startseite",
+      pages: ["home"],
+      modes: SDCH,
+      sel: ["ytm-browse ytm-rich-section-renderer:not(:has(ytm-shorts-lockup-view-model))"]
+    },
+    {
+      id: "mb.home.nudge",
+      label: "Hinweis-Boxen (Anmelden, Verlauf …)",
+      group: "Startseite",
+      modes: SH,
+      sel: ["ytm-feed-nudge-renderer"]
+    },
+    {
+      id: "mb.home.feed",
+      label: "Empfehlungen komplett",
+      group: "Startseite",
+      pages: ["home"],
+      radical: true,
+      modes: SH,
+      sel: ["ytm-browse ytm-rich-grid-renderer"],
+      note: "Startseite bleibt leer, tipp auf Abos"
+    },
+    // videoseite
+    {
+      id: "mb.watch.related",
+      label: "Empfohlene Videos",
+      group: "Videoseite",
+      pages: ["watch"],
+      modes: SDCH,
+      sel: ['ytm-watch ytm-item-section-renderer[section-identifier="related-items"]', "ytm-watch .related-items-container"]
+    },
+    {
+      id: "mb.watch.comments",
+      label: "Kommentar-Vorschau",
+      group: "Videoseite",
+      pages: ["watch"],
+      modes: SDCH,
+      sel: ["ytm-watch ytm-item-section-renderer:has(yt-comment-teaser-carousel-item-view-model)", "ytm-watch ytm-comments-entry-point-header-renderer", 'ytm-watch ytm-item-section-renderer[section-identifier="comments-entry-point"]']
+    },
+    {
+      id: "mb.watch.shorts",
+      label: "Shorts bei den Empfehlungen",
+      group: "Videoseite",
+      pages: ["watch"],
+      modes: SH,
+      sel: ["ytm-watch ytm-reel-shelf-renderer", "ytm-watch ytm-shorts-lockup-view-model"]
+    },
+    {
+      id: "mb.watch.carousel",
+      label: "Info-Karussell unter dem Titel",
+      group: "Videoseite",
+      pages: ["watch"],
+      modes: SH,
+      sel: ["ytm-watch yt-video-metadata-carousel-view-model"]
+    },
+    {
+      id: "mb.watch.endscreen",
+      label: "Endbildschirm im Player",
+      group: "Videoseite",
+      modes: SH,
+      sel: ["#player-endscreen-container", "#movie_player .ytp-ce-element", "#movie_player .ytp-endscreen-content"]
+    },
+    // suche
+    {
+      id: "mb.search.shorts",
+      label: "Shorts in der Suche",
+      group: "Suche",
+      pages: ["search"],
+      modes: SDCH,
+      sel: ["ytm-search ytm-reel-shelf-renderer", "ytm-search ytm-shorts-lockup-view-model", 'ytm-search ytm-video-with-context-renderer:has(a[href^="/shorts/"])']
+    },
+    {
+      id: "mb.search.shelves",
+      label: "Zusatz-Regale („Andere Nutzer sahen …“)",
+      group: "Suche",
+      pages: ["search"],
+      modes: SDCH,
+      sel: ["ytm-search ytm-horizontal-card-list-renderer", "ytm-search ytm-shelf-renderer"]
+    },
+    // kanal
+    {
+      id: "mb.channel.shortsTab",
+      label: "Shorts-Tab",
+      group: "Kanal",
+      pages: ["channel"],
+      modes: SH,
+      sel: ['ytm-browse yt-tab-shape[data-ytx-mbtab="shorts"]']
+    },
+    {
+      id: "mb.channel.shorts",
+      label: "Shorts-Regal",
+      group: "Kanal",
+      pages: ["channel"],
+      modes: SDCH,
+      sel: ["ytm-browse ytm-reel-shelf-renderer"]
+    },
+    // abos
+    {
+      id: "mb.subs.shorts",
+      label: "Shorts im Abo-Feed",
+      group: "Abo-Feed",
+      pages: ["subscriptions"],
+      modes: SDCH,
+      sel: ["ytm-browse ytm-reel-shelf-renderer", "ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)"]
+    },
+    // werbung
+    {
+      id: "mb.ads",
+      label: "Werbe-Kacheln und Banner",
+      group: "Werbung",
+      modes: SH,
+      sel: ["ytm-companion-slot", "ytm-companion-ad-renderer", "ad-slot-renderer", "ytm-promoted-sparkles-web-renderer", "ytm-promoted-video-renderer", "ytm-rich-item-renderer:has(ad-slot-renderer)", "ytm-statement-banner-renderer"]
+    },
+    {
+      id: "mb.premiumPromo",
+      label: "Premium-Hinweise",
+      group: "Werbung",
+      modes: SH,
+      sel: ["ytm-mealbar-promo-renderer", "ytm-premium-promo-renderer", "ytm-upsell-dialog-renderer"]
+    }
+  ];
+  var targetById3 = Object.fromEntries(targets3.map((t) => [t.id, t]));
+
+  // src/registry/mobile/anchors.js
+  var anchors3 = {
+    "top.buttons": {
+      label: "Kopfzeile rechts",
+      sel: ["ytm-mobile-topbar-renderer .mobile-topbar-header-content", "ytm-mobile-topbar-renderer header"]
+    },
+    "subs.feedTop": {
+      label: "Abo-Feed oben",
+      visibleOnly: true,
+      sel: ["ytm-browse ytm-rich-grid-renderer", "ytm-browse ytm-section-list-renderer", "ytm-browse ytm-single-column-browse-results-renderer"]
+    },
+    "channel.headerButtons": {
+      label: "Kanal-Kopf Buttons",
+      visibleOnly: true,
+      sel: ["ytm-browse yt-page-header-view-model yt-flexible-actions-view-model", "ytm-browse yt-page-header-renderer yt-flexible-actions-view-model"]
+    }
+  };
+
+  // src/registry/mobile/tags.js
+  var TAG_ATTRS2 = ["data-ytx-mbpivot", "data-ytx-mbtab"];
+  var PIVOT = [
+    [/\b(w2w|pivot-w2w|home)\b/, "home"],
+    [/\b(shorts|pivot-shorts)\b/, "shorts"],
+    [/\b(subs|pivot-subs|subscriptions)\b/, "subs"],
+    [/\b(library|pivot-library|you)\b/, "you"],
+    [/\b(create|upload|pivot-create)\b/, "create"]
+  ];
+  var tagRules3 = [
+    {
+      id: "mb.pivot",
+      label: "Untere Leiste",
+      run() {
+        let n = 0;
+        for (const el of qsa("ytm-pivot-bar-item-renderer")) {
+          const cls = [...el.querySelectorAll('.pivot-bar-item-tab, [class*="pivot"]')].map((x) => x.className).join(" ") + " " + el.className;
+          const hit = PIVOT.find(([re]) => re.test(cls));
+          if (!hit) continue;
+          if (el.getAttribute("data-ytx-mbpivot") !== hit[1]) el.setAttribute("data-ytx-mbpivot", hit[1]);
+          n++;
+        }
+        return n;
+      }
+    },
+    {
+      id: "mb.channelTabs",
+      label: "Kanal-Tabs",
+      pages: ["channel"],
+      run() {
+        let n = 0;
+        for (const el of qsa("ytm-browse yt-tab-shape")) {
+          const t = (el.getAttribute("tab-title") || el.textContent || "").trim();
+          if (/^shorts$/i.test(t)) {
+            el.setAttribute("data-ytx-mbtab", "shorts");
+            n++;
+          }
+        }
+        return n;
+      }
+    }
+  ];
+
+  // src/registry/mobile/look.js
+  var TOKEN_SCOPE3 = "html:root:root";
+  var LOOK_GROUPS3 = ["Farben", "Kacheln", "Allgemein"];
+  function normColor(v) {
+    const s = String(v || "").trim().toLowerCase().replace(/\s+/g, "");
+    let m = s.match(/^#([0-9a-f]{3})$/);
+    if (m) return `#${[...m[1]].map((c) => c + c).join("")}`;
+    if (/^#[0-9a-f]{6}$/.test(s)) return s;
+    m = s.match(/^rgba?\((\d+),(\d+),(\d+)(?:,([\d.]+))?\)$/);
+    if (!m) return null;
+    const hex = `#${[m[1], m[2], m[3]].map((x) => Number(x).toString(16).padStart(2, "0")).join("")}`;
+    const a = m[4] == null ? 1 : Number(m[4]);
+    return a >= 1 ? hex : `${hex}@${Math.round(a * 1e3) / 1e3}`;
+  }
+  function discoverTokens(vars, refs) {
+    const out = {};
+    const wanted = Object.entries(refs).map(([role, v]) => [role, normColor(v)]).filter(([, v]) => v);
+    for (const [name, raw] of vars) {
+      if (!/^--t[0-9a-f]{8,}$/.test(name)) continue;
+      const c = normColor(raw);
+      if (!c) continue;
+      const [hex, alpha] = c.split("@");
+      for (const [role, ref] of wanted) {
+        if (ref === c || role === "bg" && alpha && ref === hex) (out[role] ||= []).push({ name, alpha: alpha ? Number(alpha) : 1 });
+      }
+    }
+    return out;
+  }
+  var found = {};
+  function setDiscovered(map) {
+    found = map || {};
+  }
+  var COLOR_ROLES = ["bg", "raised", "menu", "text", "textSecondary", "accent"];
+  var colorControls3 = [
+    {
+      id: "bg",
+      label: "Hintergrund",
+      tokens: [],
+      extra: (v) => `html, body, ytm-mobile-topbar-renderer, ytm-mobile-topbar-renderer header, ytm-app .page-container { background-color: ${v} !important; }
+ytm-pivot-bar-renderer { background: color-mix(in srgb, ${v} 88%, transparent) !important; }`
+    },
+    { id: "raised", label: "Flächen & Karten", tokens: [] },
+    { id: "menu", label: "Menüs & Dialoge", tokens: [], extra: (v) => `ytm-app bottom-sheet-container [class*="BottomSheet"], .ytmBottomSheetRendererContainer, ytm-menu-popup-renderer { background-color: ${v} !important; }` },
+    { id: "text", label: "Text", tokens: [], extra: (v) => `ytm-app, .media-item-headline, ytm-app h1, ytm-app h2, ytm-app h3 { color: ${v} !important; }` },
+    { id: "textSecondary", label: "Text gedimmt", tokens: [], extra: (v) => `.ytmBadgeAndBylineRendererItemByline, ytm-badge-and-byline-renderer { color: ${v} !important; }` },
+    { id: "accent", label: "Akzent & Links", tokens: [] },
+    {
+      id: "progress",
+      label: "Fortschrittsbalken",
+      tokens: [],
+      extra: (v) => `#movie_player .ytp-play-progress, #movie_player .ytp-swatch-background-color, ytm-thumbnail-overlay-resume-playback-renderer [style*="width"], [class*="ResumePlayback"] [style*="width"] { background: ${v} !important; }`
+    }
+  ];
+  var themes3 = themes;
+  var controls3 = [
+    {
+      id: "titleSize",
+      label: "Titelgröße",
+      group: "Kacheln",
+      type: "range",
+      min: 11,
+      max: 22,
+      step: 1,
+      unit: "px",
+      placeholder: 14,
+      css: (v) => `.media-item-headline, .media-item-headline span { font-size: ${v}px !important; line-height: 1.3 !important; }`
+    },
+    {
+      id: "thumbSize",
+      label: "Vorschaubilder",
+      group: "Kacheln",
+      type: "select",
+      options: [["", "Groß (YouTube)"], ["compact", "Kompakt (Liste)"]],
+      css: () => `ytm-video-with-context-renderer ytm-media-item { display: flex !important; gap: 10px !important; align-items: flex-start !important; }
+ytm-video-with-context-renderer .media-item-thumbnail-container { width: 42% !important; flex: none !important; }
+ytm-video-with-context-renderer .media-item-details { flex: 1 !important; min-width: 0 !important; margin-top: 0 !important; }
+ytm-video-with-context-renderer .media-channel { display: none !important; }`
+    },
+    {
+      id: "radius",
+      label: "Ecken-Rundung",
+      group: "Kacheln",
+      type: "range",
+      min: 0,
+      max: 24,
+      step: 1,
+      unit: "px",
+      placeholder: 12,
+      css: (v) => `ytm-thumbnail-cover, ytm-thumbnail-cover img, .video-thumbnail-img { border-radius: ${v}px !important; }`
+    },
+    {
+      id: "font",
+      label: "Schrift",
+      group: "Allgemein",
+      type: "select",
+      options: [
+        ["", "YouTube (Roboto)"],
+        ['system-ui, -apple-system, "Segoe UI", sans-serif', "System"],
+        ['Georgia, "Times New Roman", serif', "Serif"],
+        ['ui-monospace, "JetBrains Mono", Consolas, monospace', "Monospace"]
+      ],
+      css: (v) => `ytm-app, ytm-app *:not(svg):not(path):not(c3-icon) { font-family: ${v} !important; }`
+    },
+    {
+      id: "dimOpacity",
+      label: "Stärke von „Dimmen“",
+      group: "Allgemein",
+      type: "range",
+      min: 5,
+      max: 80,
+      step: 5,
+      unit: "%",
+      placeholder: 30,
+      css: (v) => `:root { --ytx-dim-opacity: ${v / 100}; }`
+    }
+  ];
+  var controlById3 = Object.fromEntries([...controls3, ...colorControls3.map((c) => ({ ...c, type: "color", group: "Farben" }))].map((c) => [c.id, c]));
+  function extraCss3(colors) {
+    const decl = [];
+    for (const role of COLOR_ROLES) {
+      const v = colors[role];
+      if (!v) continue;
+      for (const t of found[role] || []) decl.push(`${t.name}: ${t.alpha < 1 ? `color-mix(in srgb, ${v} ${Math.round(t.alpha * 100)}%, transparent)` : v} !important;`);
+    }
+    const map = { bg: "base-background", raised: "raised-background", menu: "menu-background", text: "text-primary", textSecondary: "text-secondary", accent: "call-to-action" };
+    for (const [k, t] of Object.entries(map)) if (colors[k]) decl.push(`--yt-sys-color-baseline--${t}: ${colors[k]};`);
+    return decl.length ? `html:root:root { ${decl.join(" ")} }` : "";
+  }
+
+  // src/registry/mobile/paths.js
+  function activePageRoots2() {
+    const root = qs("ytm-app .page-container");
+    return root ? [root] : [document];
+  }
+  var CARD_SELECTORS2 = ["ytm-rich-item-renderer", "ytm-video-with-context-renderer", "ytm-compact-video-renderer", "ytm-shorts-lockup-view-model", "ytm-playlist-video-renderer", "yt-lockup-view-model"];
+  var CARD_PARENT2 = "ytm-rich-item-renderer, ytm-video-with-context-renderer, ytm-compact-video-renderer, ytm-playlist-video-renderer";
+  function parseHref2(href) {
+    if (!href) return {};
+    try {
+      const u = new URL(href, location.origin);
+      if (u.pathname.startsWith("/shorts/")) return { videoId: u.pathname.split("/")[2], isShort: true };
+      return { videoId: u.searchParams.get("v"), radio: u.searchParams.get("start_radio") === "1" };
+    } catch {
+      return {};
+    }
+  }
+  function readCard3(el) {
+    const a = qs('a[href^="/watch"], a[href^="/shorts/"], a[href^="/playlist"]', el);
+    const href = a?.getAttribute("href") || "";
+    const info2 = parseHref2(href);
+    const channelLink = qs('a[href^="/@"], a[href^="/channel/"]', el);
+    const lines2 = qsa(".ytmBadgeAndBylineRendererItemByline, ytm-badge-and-byline-renderer", el).map((x) => x.textContent.trim()).filter(Boolean);
+    const parts = lines2.flatMap((l) => l.split("•").map((s) => s.trim())).filter(Boolean);
+    const title = (qs('.media-item-headline, h3, [class*="Headline"], [class*="Title"]', el)?.textContent || a?.getAttribute("title") || a?.getAttribute("aria-label") || "").trim();
+    const badge2 = qs("ytm-thumbnail-overlay-time-status-renderer, badge-shape", el);
+    const live = badge2?.getAttribute("data-style") === "LIVE" || /live/i.test(badge2?.className || "");
+    const bar = qs('ytm-thumbnail-overlay-resume-playback-renderer [style*="width"], [class*="ResumePlayback"] [style*="width"], [class*="ProgressBarSegment"][style*="width"]', el);
+    let ageDays = null;
+    for (const p of parts) {
+      ageDays = parseAgeDays(p);
+      if (ageDays != null) break;
+    }
+    const isShort = !!info2.isShort || el.tagName === "YTM-SHORTS-LOCKUP-VIEW-MODEL";
+    return {
+      kind: href.startsWith("/playlist") ? "playlist" : info2.radio ? "mix" : "video",
+      videoId: info2.videoId || null,
+      title,
+      // erste zeile der byline ist der kanal, avatar link liefert das handle
+      channel: isShort ? "" : parts[0] || "",
+      channelUrl: channelLink?.getAttribute("href") || "",
+      channelId: "",
+      durationSec: parseDuration(badge2?.textContent || ""),
+      isShort,
+      live,
+      percent: bar ? firstInt(bar.style.width) : null,
+      ageDays
+    };
+  }
+  function channelPageInfo3() {
+    const m = location.pathname.match(/^\/(@[^/]+)/);
+    const id = (location.pathname.match(/^\/channel\/(UC[\w-]{22})/) || [])[1] || null;
+    if (!m && !id) return null;
+    const name = qs("ytm-browse yt-page-header-view-model h1, ytm-browse yt-page-header-renderer h1, ytm-browse .page-header-view-model-wiz__page-header-title")?.textContent.trim() || "";
+    return { id, handle: m ? decodeURIComponent(m[1]).toLowerCase() : null, name: name || (m ? decodeURIComponent(m[1]).slice(1) : "") };
+  }
+  function subscribedChannels3() {
+    return [];
+  }
+  function mainPlayer2() {
+    return qsa("#movie_player").find((p) => typeof p.getPlayerState === "function") || null;
+  }
+  function activePlayback3() {
+    const page = pageFromUrl(location.href);
+    if (page !== "watch" && page !== "shorts") return null;
+    const p = mainPlayer2();
+    if (!p) return null;
+    try {
+      const vd = p.getVideoData?.() || {};
+      if (!vd.video_id) return null;
+      const pr = p.getPlayerResponse?.();
+      const details = pr?.videoDetails?.videoId === vd.video_id ? pr.videoDetails : null;
+      return {
+        videoId: vd.video_id,
+        kind: page === "shorts" ? "short" : "video",
+        title: vd.title || details?.title || "",
+        channel: { id: details?.channelId || null, name: vd.author || details?.author || "" },
+        playing: p.getPlayerState() === 1,
+        ad: p.classList.contains("ad-showing"),
+        pos: p.getCurrentTime?.() || 0,
+        dur: p.getDuration?.() || 0,
+        live: !!vd.isLive
+      };
+    } catch {
+      return null;
+    }
+  }
+  function pauseActive3() {
+    try {
+      mainPlayer2()?.pauseVideo?.();
+    } catch {
+    }
+  }
+
+  // src/behaviors/mobile.js
+  var SHARED = ["shortsRedirect", "homeRedirect"];
+  var behaviors3 = behaviors.filter((b) => SHARED.includes(b.id));
+  var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
+
+  // src/appliers/vars.js
+  function buildVarsCss(vars, look = site.look) {
+    const theme = look.themes.find((t) => t.id === vars.theme) || look.themes[0];
+    const colors = { ...theme.values };
+    for (const c of look.colorControls) if (vars[c.id]) colors[c.id] = vars[c.id];
+    const out = [];
+    const decl = [];
+    for (const c of look.colorControls) {
+      const v = colors[c.id];
+      if (!v) continue;
+      for (const token of c.tokens) decl.push(`${token}: ${v} !important;`);
+      if (c.extra) out.push(c.extra(v));
+    }
+    if (decl.length) out.unshift(`${look.tokenScope} { ${decl.join(" ")} }`);
+    const extra = look.extraCss?.(colors);
+    if (extra) out.push(extra);
+    for (const c of look.controls) {
+      const v = vars[c.id];
+      if (v === void 0 || v === null || v === "") continue;
+      out.push(c.css(v));
+    }
+    return out.join("\n");
+  }
+  function applyVars(cfg) {
+    setCss("vars", buildVarsCss(cfg.vars));
+  }
+
+  // src/sites/mobile.js
+  var FILTER_PAGES2 = [
+    ["home", "Startseite"],
+    ["subscriptions", "Abos"],
+    ["search", "Suche"],
+    ["watch", "Empfehlungen auf Videoseite"],
+    ["channel", "Kanal"]
+  ];
+  function discoverColors() {
+    const html = document.documentElement;
+    const cs = getComputedStyle(html);
+    const bg = cs.backgroundColor;
+    if (!bg || bg === "rgba(0, 0, 0, 0)") return false;
+    const dark = html.hasAttribute("dark") || html.hasAttribute("darker-dark-theme");
+    const text = getComputedStyle(document.body).color;
+    const vars = [];
+    for (let i = 0; i < cs.length; i++) if (cs[i].startsWith("--t")) vars.push([cs[i], cs.getPropertyValue(cs[i])]);
+    const refs = dark ? { bg, text, textSecondary: "#aaaaaa", raised: "#212121", menu: "#282828", accent: "#3ea6ff" } : { bg, text, textSecondary: "#606060", accent: "#065fd4" };
+    const map = discoverTokens(vars, refs);
+    setDiscovered(map);
+    log.info(`mobil farben erkannt: ${Object.entries(map).map(([k, v]) => `${k} ${v.length}`).join(", ")}`);
+    applyVars(store.config);
+    return true;
+  }
+  var mobileSite = {
+    id: "mobile",
+    label: "YouTube mobil",
+    appHost: "ytm-app",
+    pageFromUrl,
+    videoIdFromUrl,
+    PAGE_LABELS,
+    targets: targets3,
+    GROUPS: GROUPS3,
+    targetById: targetById3,
+    anchors: anchors3,
+    tagRules: tagRules3,
+    tagAttrs: TAG_ATTRS2,
+    look: { colorControls: colorControls3, controls: controls3, themes: themes3, LOOK_GROUPS: LOOK_GROUPS3, controlById: controlById3, tokenScope: TOKEN_SCOPE3, extraCss: extraCss3 },
+    presets: { layoutPresets: [], presetById: {}, LAYOUT_PAGES: [], orderGroups: {}, topbarModes: [["", "Fixiert (YouTube)"]], topbarCss: {} },
+    behaviors: behaviors3,
+    behaviorById: behaviorById3,
+    features: [subGroups_default, watchtime_default],
+    filters: { pages: FILTER_PAGES2, CARD_SELECTORS: CARD_SELECTORS2, CARD_PARENT: CARD_PARENT2, readCard: readCard3, activePageRoots: activePageRoots2 },
+    channels: { channelRefOf, channelPageInfo: channelPageInfo3, subscribedChannels: subscribedChannels3 },
+    playback: { activePlayback: activePlayback3, pauseActive: pauseActive3 },
+    panelTabs: ["display", "look", "behavior", "filters", "features", "subGroups", "watchStats", "profiles", "diagnose"],
+    boot() {
+      let tries = 0;
+      const t = setInterval(() => {
+        if (discoverColors() || ++tries > 40) clearInterval(t);
+      }, 500);
+    }
+  };
+
   // src/sites/index.js
-  var sites = { youtube: youtubeSite, music: musicSite };
+  var sites = { youtube: youtubeSite, music: musicSite, mobile: mobileSite };
   var site = sites[SITE_ID];
 
   // src/core/nav.js
@@ -10340,33 +10968,6 @@ ${data2.source}` : ""].join("\n").trim();
     const t = site.targetById[id];
     if (!t) return 0;
     return t.sel.filter(validSelector).reduce((sum, s) => sum + qsa(s).length, 0);
-  }
-
-  // src/appliers/vars.js
-  function buildVarsCss(vars, look = site.look) {
-    const theme = look.themes.find((t) => t.id === vars.theme) || look.themes[0];
-    const colors = { ...theme.values };
-    for (const c of look.colorControls) if (vars[c.id]) colors[c.id] = vars[c.id];
-    const out = [];
-    const decl = [];
-    for (const c of look.colorControls) {
-      const v = colors[c.id];
-      if (!v) continue;
-      for (const token of c.tokens) decl.push(`${token}: ${v} !important;`);
-      if (c.extra) out.push(c.extra(v));
-    }
-    if (decl.length) out.unshift(`${look.tokenScope} { ${decl.join(" ")} }`);
-    const extra = look.extraCss?.(colors);
-    if (extra) out.push(extra);
-    for (const c of look.controls) {
-      const v = vars[c.id];
-      if (v === void 0 || v === null || v === "") continue;
-      out.push(c.css(v));
-    }
-    return out.join("\n");
-  }
-  function applyVars(cfg) {
-    setCss("vars", buildVarsCss(cfg.vars));
   }
 
   // src/appliers/layout.js
@@ -10835,6 +11436,20 @@ nav { flex: none; display: flex; flex-wrap: wrap; gap: 2px 2px; padding: 6px 8px
 nav button { flex: none; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--fg2); cursor: pointer; font: 500 12px/1.2 inherit; font-family: inherit; }
 nav button:hover { background: var(--hover); color: var(--fg); }
 nav button[aria-selected="true"] { background: var(--fg); color: var(--bg); }
+@media (pointer: coarse) {
+  .panel { font-size: 14px; }
+  nav button { padding: 9px 12px; font-size: 13px; }
+  .seg button { padding: 8px 10px; font-size: 12px; }
+  .switch { width: 44px; height: 26px; border-radius: 13px; }
+  .switch::after { width: 20px; height: 20px; }
+  .switch[aria-checked="true"]::after { transform: translateX(18px); }
+  .btn { padding: 8px 12px; font-size: 13px; }
+  .btn.tiny { padding: 6px 9px; }
+  .chip { padding: 7px 11px; font-size: 12px; }
+  .iconbtn { width: 38px; height: 38px; }
+  select, input[type="text"], input[type="number"], input[type="search"] { padding: 8px 10px; font-size: 14px; }
+  input[type="range"] { width: 110px; }
+}
 main { flex: 1 1 auto; min-height: 120px; overflow: auto; padding: 10px 12px 20px; }
 footer { flex: none; padding: 6px 12px 6px 12px; padding-right: 22px; border-top: 1px solid var(--line); color: var(--fg2); font-size: 11px; display: flex; justify-content: space-between; gap: 8px; }
 h3 { margin: 16px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--fg2); }
@@ -11105,8 +11720,8 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const cfg = app.store.config;
     const root = h("div");
     const update = (fn) => app.store.update(fn, "panel");
-    const { themes: themes3, colorControls: colorControls3, controls: controls3, LOOK_GROUPS: LOOK_GROUPS3 } = site.look;
-    const theme = themes3.find((t) => t.id === cfg.vars.theme) || themes3[0];
+    const { themes: themes4, colorControls: colorControls4, controls: controls4, LOOK_GROUPS: LOOK_GROUPS4 } = site.look;
+    const theme = themes4.find((t) => t.id === cfg.vars.theme) || themes4[0];
     const others = app.store.otherLooks();
     if (others.length) {
       root.append(
@@ -11129,18 +11744,18 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     }
     root.append(h("h3", { text: "Theme" }));
     root.append(
-      row("Farbschema", select(themes3.map((t) => [t.id, t.label]), cfg.vars.theme, (v) => {
+      row("Farbschema", select(themes4.map((t) => [t.id, t.label]), cfg.vars.theme, (v) => {
         update((c) => c.vars.theme = v);
         app.rerender();
       }), { note: `Einzelne Farben unten überschreiben das Schema. Gedacht für den dunklen Modus von ${site.label}` })
     );
     const colorsBody = h("div");
-    for (const c of colorControls3) {
+    for (const c of colorControls4) {
       colorsBody.append(row(c.label, color(cfg.vars[c.id], theme.values[c.id] || "#000000", (v) => update((x) => v ? x.vars[c.id] = v : delete x.vars[c.id]))));
     }
     root.append(colorsBody);
-    for (const group of LOOK_GROUPS3.filter((g) => g !== "Farben")) {
-      const items = controls3.filter((c) => c.group === group);
+    for (const group of LOOK_GROUPS4.filter((g) => g !== "Farben")) {
+      const items = controls4.filter((c) => c.group === group);
       if (!items.length) continue;
       root.append(h("h3", { text: group }));
       for (const c of items) {
@@ -11457,7 +12072,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     registerCheck2("core", "Grundlagen", "Grundlagen", () => {
       const c = capabilities();
       return [
-        { id: "core.polymer", label: `Polymer-Daten lesbar (${site.appHost})`, status: c.appFound ? c.polymerData ? "ok" : "fail" : "skip", detail: c.polymerData ? "ok" : "Script läuft vermutlich in isolierter Welt – @sandbox / @inject-into prüfen" },
+        { id: "core.polymer", label: `Polymer-Daten lesbar (${site.appHost})`, status: site.id === "mobile" ? "skip" : c.appFound ? c.polymerData ? "ok" : "fail" : "skip", detail: c.polymerData ? "ok" : "Script läuft vermutlich in isolierter Welt – @sandbox / @inject-into prüfen" },
         { id: "core.player", label: "Player-API", status: document.querySelector("#movie_player") ? c.playerApi ? "ok" : "fail" : "skip", detail: c.playerApi ? "getPlayerResponse verfügbar" : "Kein Player auf dieser Seite" },
         { id: "core.storage", label: "Speicher", status: c.gmStorage ? "ok" : "warn", detail: c.gmStorage ? `GM_setValue · Abgleich zwischen Tabs: ${app.store.syncMode === "gm" ? "live (YouTube und Music)" : "nur gleiche Seite"}` : "localStorage (Fallback): YouTube und Music speichern getrennt, Profile werden nicht geteilt" },
         { id: "core.nav", label: "Navigations-Events", status: app.nav.eventsSeen.size ? "ok" : "skip", detail: app.nav.eventsSeen.size ? Array.from(app.nav.eventsSeen).join(", ") : "Noch keine yt-navigate Events gesehen (normal direkt nach dem Laden)" },
@@ -12096,6 +12711,10 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     return { left: Math.round(left), top: Math.round(top2), width: Math.round(width), height: Math.round(height) };
   }
   function defaultRect(vw, vh) {
+    if (vw < 600) {
+      const top3 = Math.round(vh * 0.18);
+      return { left: GAP, top: top3, width: vw - 2 * GAP, height: vh - top3 - GAP };
+    }
     const width = Math.min(440, vw - 24);
     const top2 = Math.min(64, Math.max(GAP, vh - MIN_H - GAP));
     return { left: vw - width - 12, top: top2, width, height: vh - top2 - 12 };

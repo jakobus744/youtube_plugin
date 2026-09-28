@@ -1,4 +1,4 @@
-import { activePlayback, pauseActive } from '../../../registry/youtube/paths.js'
+import { site } from '../../../sites/index.js'
 import { pageWindow } from '../../../core/bridge.js'
 import { formatDuration } from '../../../core/format.js'
 import { listen } from '../../../core/lifecycle.js'
@@ -8,6 +8,10 @@ import { h, button } from '../../ui.js'
 
 // eigene schauzeit, lokal in indexeddb, mit tageslimit und pausen erinnerung
 // erinnert nur, blockiert nichts
+// player zugriff kommt aus der registry der seite
+
+const activePlayback = () => site.playback.activePlayback()
+const pauseActive = () => site.playback.pauseActive()
 
 let current = null
 
@@ -76,7 +80,9 @@ export default {
       },
       update: (node) => {
         const sec = todaySec()
-        const text = `Heute ${sec < 60 ? '0 min' : formatDuration(sec)}`
+        const t = sec < 60 ? '0 min' : formatDuration(sec)
+        // auf schmalen bildschirmen kurz halten
+        const text = innerWidth < 520 ? `⏱ ${t}` : `Heute ${t}`
         const label = node.querySelector('.ytx-label')
         if (label && label.textContent !== text) label.textContent = text
         const over = s.limitMinutes > 0 && sec >= s.limitMinutes * 60

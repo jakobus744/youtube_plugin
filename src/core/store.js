@@ -112,6 +112,17 @@ const MIGRATIONS = [
         }
       }
     }
+  ],
+  [
+    // mobil abschnitt fuer bestehende profile aus der vorlage
+    'mobile-section',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        if (!p.config || p.config.mobile) continue
+        const t = templateById[p.template] || templateById.aufgeraeumt
+        p.config.mobile = p.template === 'youtube' ? {} : t.config().mobile
+      }
+    }
   ]
 ]
 

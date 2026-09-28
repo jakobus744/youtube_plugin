@@ -462,7 +462,7 @@ export function registerCoreChecks(registerCheck, app) {
   registerCheck('core', 'Grundlagen', 'Grundlagen', () => {
     const c = capabilities()
     return [
-      { id: 'core.polymer', label: `Polymer-Daten lesbar (${site.appHost})`, status: c.appFound ? (c.polymerData ? 'ok' : 'fail') : 'skip', detail: c.polymerData ? 'ok' : 'Script läuft vermutlich in isolierter Welt – @sandbox / @inject-into prüfen' },
+      { id: 'core.polymer', label: `Polymer-Daten lesbar (${site.appHost})`, status: site.id === 'mobile' ? 'skip' : c.appFound ? (c.polymerData ? 'ok' : 'fail') : 'skip', detail: c.polymerData ? 'ok' : 'Script läuft vermutlich in isolierter Welt – @sandbox / @inject-into prüfen' },
       { id: 'core.player', label: 'Player-API', status: document.querySelector('#movie_player') ? (c.playerApi ? 'ok' : 'fail') : 'skip', detail: c.playerApi ? 'getPlayerResponse verfügbar' : 'Kein Player auf dieser Seite' },
       { id: 'core.storage', label: 'Speicher', status: c.gmStorage ? 'ok' : 'warn', detail: c.gmStorage ? `GM_setValue · Abgleich zwischen Tabs: ${app.store.syncMode === 'gm' ? 'live (YouTube und Music)' : 'nur gleiche Seite'}` : 'localStorage (Fallback): YouTube und Music speichern getrennt, Profile werden nicht geteilt' },
       { id: 'core.nav', label: 'Navigations-Events', status: app.nav.eventsSeen.size ? 'ok' : 'skip', detail: app.nav.eventsSeen.size ? Array.from(app.nav.eventsSeen).join(', ') : 'Noch keine yt-navigate Events gesehen (normal direkt nach dem Laden)' },

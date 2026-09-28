@@ -28,6 +28,20 @@ nav { flex: none; display: flex; flex-wrap: wrap; gap: 2px 2px; padding: 6px 8px
 nav button { flex: none; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--fg2); cursor: pointer; font: 500 12px/1.2 inherit; font-family: inherit; }
 nav button:hover { background: var(--hover); color: var(--fg); }
 nav button[aria-selected="true"] { background: var(--fg); color: var(--bg); }
+@media (pointer: coarse) {
+  .panel { font-size: 14px; }
+  nav button { padding: 9px 12px; font-size: 13px; }
+  .seg button { padding: 8px 10px; font-size: 12px; }
+  .switch { width: 44px; height: 26px; border-radius: 13px; }
+  .switch::after { width: 20px; height: 20px; }
+  .switch[aria-checked="true"]::after { transform: translateX(18px); }
+  .btn { padding: 8px 12px; font-size: 13px; }
+  .btn.tiny { padding: 6px 9px; }
+  .chip { padding: 7px 11px; font-size: 12px; }
+  .iconbtn { width: 38px; height: 38px; }
+  select, input[type="text"], input[type="number"], input[type="search"] { padding: 8px 10px; font-size: 14px; }
+  input[type="range"] { width: 110px; }
+}
 main { flex: 1 1 auto; min-height: 120px; overflow: auto; padding: 10px 12px 20px; }
 footer { flex: none; padding: 6px 12px 6px 12px; padding-right: 22px; border-top: 1px solid var(--line); color: var(--fg2); font-size: 11px; display: flex; justify-content: space-between; gap: 8px; }
 h3 { margin: 16px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--fg2); }

@@ -3,7 +3,7 @@
 // jeder abschnitt wird gegen die registry seiner seite bereinigt
 
 export const SCHEMA = 3
-export const SITE_KEYS = ['youtube', 'music']
+export const SITE_KEYS = ['youtube', 'music', 'mobile']
 
 export function defaultFilters() {
   return {

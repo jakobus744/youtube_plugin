@@ -94,3 +94,17 @@ test('wochenrueckblick: woche ab montag, neue kuenstler', () => {
   assert.equal(Math.round(r.skipRate * 100), 33)
   assert.equal(weeklyRecap(plays, last - 14 * DAY), null)
 })
+
+test('mobil: farbvariablen am wert erkennen', async () => {
+  const { normColor, discoverTokens } = await import('../src/registry/mobile/look.js')
+  assert.equal(normColor('rgb(15, 15, 15)'), '#0f0f0f')
+  assert.equal(normColor('#FFF'), '#ffffff')
+  assert.equal(normColor('rgba(15,15,15,0.7)'), '#0f0f0f@0.7')
+  assert.equal(normColor('transparent'), null)
+  const vars = [['--t3e41d7b17b187f69', '#0f0f0f'], ['--t5978da8d584b8fe9', 'rgba(15,15,15,0.7)'], ['--t1405e70a39276293', '#f1f1f1'], ['--t4a6da19e16bf221a', '#aaa'], ['--yt-light-wash-x', '0'], ['--t2d807bb79e75606d', '#3ea6ff'], ['--tffffffff00000000', '#123456']]
+  const map = discoverTokens(vars, { bg: 'rgb(15, 15, 15)', text: 'rgb(241, 241, 241)', textSecondary: '#aaaaaa', accent: '#3ea6ff' })
+  assert.deepEqual(map.bg, [{ name: '--t3e41d7b17b187f69', alpha: 1 }, { name: '--t5978da8d584b8fe9', alpha: 0.7 }])
+  assert.deepEqual(map.text.map((x) => x.name), ['--t1405e70a39276293'])
+  assert.deepEqual(map.textSecondary.map((x) => x.name), ['--t4a6da19e16bf221a'])
+  assert.equal(map.accent.length, 1)
+})

@@ -2,5 +2,5 @@
 // ausserhalb des browsers (tests) gilt youtube
 const host = typeof location !== 'undefined' ? location.hostname : ''
 
-export const SITE_ID = host === 'music.youtube.com' ? 'music' : 'youtube'
+export const SITE_ID = host === 'music.youtube.com' ? 'music' : host === 'm.youtube.com' ? 'mobile' : 'youtube'
 export const IS_MUSIC = SITE_ID === 'music'

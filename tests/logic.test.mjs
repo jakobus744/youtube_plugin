@@ -87,7 +87,7 @@ test('normalize wirft unbekanntes raus und prueft modi', () => {
 test('profile vorlagen sind gueltig', () => {
   for (const t of templates) {
     const raw = t.config()
-    for (const key of ['youtube', 'music']) {
+    for (const key of ['youtube', 'music', 'mobile']) {
       const cfg = normalize(raw[key], sites[key])
       assert.equal(Object.keys(cfg.display).length, Object.keys(raw[key].display || {}).length, `${t.id}/${key}: display eintraege verloren`)
       for (const [id, f] of Object.entries(raw[key].features || {})) assert.equal(cfg.features[id]?.enabled, f.enabled, `${t.id}/${key}: feature ${id} unbekannt`)
@@ -97,7 +97,7 @@ test('profile vorlagen sind gueltig', () => {
 
 test('registry ids eindeutig und modi gueltig', () => {
   const ids = new Set()
-  const fids = []
+  const manifests = new Set()
   for (const site of Object.values(sites)) {
     for (const t of site.targets) {
       assert.ok(!ids.has(t.id), `doppelte id ${t.id}`)
@@ -106,9 +106,10 @@ test('registry ids eindeutig und modi gueltig', () => {
       assert.ok(t.sel.length > 0)
       assert.ok(site.GROUPS.includes(t.group), `${t.id}: gruppe ${t.group} fehlt`)
     }
-    fids.push(...site.features.map((m) => m.id))
+    for (const m of site.features) manifests.add(m)
     for (const tab of site.panelTabs) assert.ok(typeof tab === 'string')
   }
+  const fids = [...manifests].map((m) => m.id)
   assert.equal(new Set(fids).size, fids.length)
 })
 

@@ -17,6 +17,11 @@ export function clampRect(r, vw, vh) {
 }
 
 export function defaultRect(vw, vh) {
+  // schmale bildschirme: blatt von unten ueber fast die ganze breite
+  if (vw < 600) {
+    const top = Math.round(vh * 0.18)
+    return { left: GAP, top, width: vw - 2 * GAP, height: vh - top - GAP }
+  }
   const width = Math.min(440, vw - 24)
   const top = Math.min(64, Math.max(GAP, vh - MIN_H - GAP))
   return { left: vw - width - 12, top, width, height: vh - top - 12 }

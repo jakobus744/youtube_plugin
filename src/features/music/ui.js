@@ -15,6 +15,14 @@ const PAGE_CSS = `
   font: 500 14px/36px Roboto, Arial, sans-serif; color: var(--ytmusic-text-primary, #fff); background: rgba(255,255,255,.1); }
 .ytx-m-pill:hover { background: rgba(255,255,255,.2); }
 .ytx-m-pill[data-badge]:after { content: attr(data-badge); margin-left: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; box-sizing: border-box; font-size: 11px; line-height: 18px; text-align: center; color: #fff; background: #e53935; }
+.ytx-m-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0 14px; scrollbar-width: none; }
+.ytx-m-chips::-webkit-scrollbar { display: none; }
+.ytx-m-chip { all: initial; box-sizing: border-box; flex: none; height: 32px; padding: 0 12px; border-radius: 8px; cursor: pointer; user-select: none; white-space: nowrap;
+  font: 500 14px/32px Roboto, Arial, sans-serif; color: var(--ytmusic-text-primary, #fff); background: rgba(255,255,255,.1); }
+.ytx-m-chip:hover { background: rgba(255,255,255,.2); }
+.ytx-m-chip[aria-pressed="true"] { color: #000; background: var(--ytmusic-text-primary, #fff); }
+.ytx-m-chip.ghost { background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hidden]) ytmusic-section-list-renderer > #header ytmusic-chip-cloud-renderer { display: none !important; }
 .ytx-m-info { all: initial; display: block; padding: 6px 16px; font: 400 12px/1.4 Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); }
 .ytx-m-info b { font-weight: 500; color: var(--ytmusic-text-primary, #fff); }
 .ytx-m-mark { all: initial; display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; font: 500 10px/16px Roboto, Arial, sans-serif; color: #fff; background: rgba(229,57,53,.85); vertical-align: middle; white-space: nowrap; }
@@ -31,6 +39,7 @@ ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
   .ytx-m-fab { display: flex; }
   .ytx-m-shelf { padding-inline: 16px; }
+  .ytx-m-chips { flex-wrap: nowrap; overflow-x: auto; }
 }
 `
 

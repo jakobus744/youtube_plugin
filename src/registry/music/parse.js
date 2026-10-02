@@ -167,7 +167,7 @@ export function parseShelves(data) {
 export function parseArtistPage(data, browseId = null) {
   const header = data?.header?.musicImmersiveHeaderRenderer || data?.header?.musicVisualHeaderRenderer || {}
   const shelves = parseShelves(data)
-  const artist = { id: browseId, name: runsText(header.title), channelId: header.subscriptionButton?.subscribeButtonRenderer?.channelId || null, topSongs: [], releases: [], videos: [], featuredOn: [], ownPlaylists: [], similar: [] }
+  const artist = { id: browseId, name: runsText(header.title), thumbnail: thumbOf(header), channelId: header.subscriptionButton?.subscribeButtonRenderer?.channelId || null, topSongs: [], releases: [], videos: [], featuredOn: [], ownPlaylists: [], similar: [] }
   for (const sh of shelves) {
     for (const it of sh.items) {
       if (it.type === 'song' && sh.kind === 'musicShelfRenderer') artist.topSongs.push(it)

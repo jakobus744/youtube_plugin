@@ -73,8 +73,9 @@ Musik-Vorlieben, Blocklisten, Verlauf und Favoriten sind profilunabhängig: dein
 ## YouTube Music in 60 Sekunden
 
 - **★ in der Playerleiste**: Song, Künstler oder Album favorisieren, „Mehr/Weniger davon“, Song ignorieren, Künstler blockieren. Auf Künstler-, Album- und Playlist-Seiten gibt es einen eigenen ★-Button.
-- **Mix** oben rechts: Für dich · Neu · Genre · Lange nicht gehört · Noch nie gehört · Ähnlich · Mehr von · Smart Radio · Reihenfolge. Regler **Bekannt ⟷ Entdecken**, Session-Preset (Fokus, Gym, Abends, Entdecken, Nur bekannte Musik). Jede Zeile zeigt, warum sie da ist, und hat ⋯ für Feedback. **„▶ Alles abspielen“** spielt den Mix in ytx-eigener Reihenfolge.
-- **Startseite**: Regal **„Für dich (ytx)“** mit „↻ Neu mischen“, „Mehr Neues“ und „YouTube-Vorschläge wechseln“ (wechselt YouTubes Stimmungen), darunter „Neu von deinen Künstlern“.
+- **Mix** oben rechts: Für dich · Neu · Genre · Lange nicht gehört · Noch nie gehört · Ähnlich · Mehr von · Smart Radio · Reihenfolge. Regler **Bekannt ⟷ Entdecken**, Session-Preset (Fokus, Gym, Abends, Entdecken, Nur bekannte Musik). Jeder Tab ist ein eigener Mix, eine Zeile „Berücksichtigt: …“ sagt, was gerade einfließt. „Für dich“ nimmt auf Wunsch zwei deiner Lieblingsgenres mit. Jede Zeile zeigt, warum sie da ist, und hat ⋯ für Feedback. **„▶ Alles abspielen“** spielt den Mix in ytx-eigener Reihenfolge.
+- **Startseite**: eigene Chips oben (Für dich, Noch nie gehört, Lange nicht gehört, Neu von deinen Künstlern und deine Lieblingsgenres, „+ Genre“ zum Ergänzen) statt YouTubes Stimmungs-Chips. Darunter das Regal zum gewählten Chip mit „↻ Neu mischen“, „Mehr Neues“ und „YouTube-Vorschläge wechseln“, dann „Neu von deinen Künstlern“. YouTubes Chips lassen sich unter Features › Mix wieder einblenden.
+- **Mediathek**: Regal **„Deine Favoriten (ytx)“** mit allen ★-Künstlern, -Songs, -Alben und -Playlists, filterbar, Lieblingssongs direkt abspielbar.
 - **Genres**: feste Auswahl mit Techno-, Hardstyle- und Hip-Hop-Varianten plus freie Eingabe.
 - **Warteschlange**: Gesamt- und Restdauer, Markierungen für blockierte, oft übersprungene und doppelte Titel, optional Auto-Skip (Tab **Musik**).
 - **Songtext**: Button „Songtext kopieren“ über dem Text.
@@ -85,7 +86,7 @@ Musik-Vorlieben, Blocklisten, Verlauf und Favoriten sind profilunabhängig: dein
 ## YouTube: Abo-Gruppen und Schauzeit
 
 - **Abo-Gruppen**: Gruppen wie „Tech“ oder „Musik“ im Tab **Abo-Gruppen** anlegen und Kanäle zuordnen, oder auf jeder Kanalseite über den Button **Gruppen**. Über dem Abo-Feed filtert eine Chip-Leiste nach Gruppe, dazu „Ohne Gruppe“.
-- **Schauzeit**: misst lokal, wie lange Videos wirklich laufen (Werbung und Pausen zählen nicht). „Heute: …“ oben rechts, Tageslimit mit sanfter Erinnerung (Standard 2 h, nach dem Limit alle 15 min), Pausen-Hinweis nach 60 min am Stück. Nichts wird blockiert, außer du schaltest „Beim Tageslimit Video anhalten“ ein. Statistik im Tab **Schauzeit**.
+- **Schauzeit**: misst lokal, wie lange Videos wirklich laufen (Werbung und Pausen zählen nicht). „Heute: …“ oben rechts, Tageslimit mit sanfter Erinnerung (Standard 2 h, nach dem Limit alle 15 min), Pausen-Hinweis nach 60 min am Stück. Nichts wird blockiert, außer du schaltest „Beim Tageslimit Video anhalten“ ein. Statistik und alle Einstellungen (Limit, Erinnerungen, Shorts, Aufbewahrung) im Tab **Schauzeit**.
 
 ---
 
@@ -140,7 +141,7 @@ ytx/
 │   │   └── music/               targets (33) · anchors · tags · look · presets · pages
 │   │                            player.js (Store, Player-API, Queue, Songtext, Navigation)
 │   │                            parse.js · initialData.js (Seitendaten sprachunabhängig)
-│   ├── appliers/                display · vars · layout · behavior · filters · filterLogic · features · tagger
+│   ├── appliers/                display · vars · hashTokens · layout · behavior · filters · filterLogic · features · tagger
 │   ├── behaviors/               youtube.js · music.js
 │   ├── features/
 │   │   ├── ui.js                gemeinsame Buttons, Menü, Toast
@@ -208,9 +209,10 @@ Getestet im eingebauten Chromium **ohne Anmeldung**, stumm geschaltet, Stand 15.
 | Verhalten | „Noch da?“ bestätigen, Premium-Dialoge schließen, Startseite umleiten | ⚠️ Dialoge im Test nicht aufgetreten |
 | Hörverlauf | Dauer, Prozent, komplett, Skip + Zeitpunkt, Wiederholung, Like, Kontext, Werbung ausgenommen | ✅ echte Wiedergabe + Unit-Tests |
 | Profil | Gewichte, früher Skip stärker, Halbwertszeit, Ausschlüsse | ✅ Unit-Tests |
-| Favoriten | ★ Playerleiste (Song/Künstler/Album), ★ Künstler/Album/Playlist-Seite, Gewicht | ✅ |
+| Favoriten | ★ Playerleiste (Song/Künstler/Album), ★ Künstler/Album/Playlist-Seite, Gewicht, Regal in der Mediathek | ✅ (Mediathek ohne Login geprüft) |
 | Neuerscheinungen | gedrosselter Hintergrund-Check, „neu“ vs. „dieses Jahr“, Startseiten-Regal, Badge | ✅ |
-| Mix-Fenster | Für dich, Genre (Deutschrap getestet), Smart Radio, Begründungen, Feedback-Menü | ✅ |
+| Mix-Fenster | Für dich, Genre (Deutschrap getestet), Smart Radio, Begründungen, Feedback-Menü, Zeile „Berücksichtigt“ | ✅ |
+| Startseiten-Chips | eigene Chips inkl. Lieblingsgenres, YouTube-Chips ausgeblendet | ✅ |
 | Mix-Fenster | Lange nicht gehört, Noch nie gehört, Ähnlich, Mehr von | ✅ Logik · mit echten Langzeitdaten ungetestet |
 | ytx-Reihenfolge | eigener Mix abspielen, Sprung am Songende, pausiert bei manueller Wahl | ✅ |
 | Smart Queue | Markierungen, Auto-Skip (blockierter Künstler getestet), Schutz gegen Sprungketten | ✅ |

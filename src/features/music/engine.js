@@ -70,6 +70,15 @@ async function seedArtists(profile, max = 8) {
   return out.slice(0, max)
 }
 
+function shuffled(list) {
+  const a = list.slice()
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
 function recentIds(profile, hours) {
   const since = Date.now() - hours * 3600 * 1000
   return new Set([...profile.songs.values()].filter((s) => s.lastPlayed > since).map((s) => s.videoId))
@@ -80,6 +89,12 @@ function recentIds(profile, hours) {
 async function forYou(ctx) {
   const { profile, b } = ctx
   const cands = []
+  // lieblingsgenres zuerst, sonst ist das abrufbudget schon weg
+  const genres = ctx.prefs.genres.inForYou ? shuffled(ctx.prefs.genres.favorites).slice(0, 2) : []
+  for (const genre of genres) {
+    const res = await b.get((o) => catalog.search(genre, o))
+    for (const t of res?.songs.slice(0, 8) || []) cands.push(toCandidate(t, { kind: 'genre', genre, weight: 0.8 }))
+  }
   const seeds = await seedArtists(profile, 8)
   const similarSeen = new Set(seeds.map((s) => s.id))
   let similarCount = 0

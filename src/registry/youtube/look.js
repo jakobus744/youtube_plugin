@@ -1,5 +1,9 @@
+import { hashTokenDecls } from '../../appliers/hashTokens.js'
+
 // look einstellungen
 // config speichert nur control ids nie youtube variablennamen
+
+const HASH_ROLES = ['bg', 'raised', 'menu', 'text', 'textSecondary', 'accent']
 
 const TOKEN = (name) => `--yt-sys-color-baseline--${name}`
 
@@ -11,7 +15,7 @@ export const LOOK_GROUPS = ['Farben', 'Dichte', 'Typografie', 'Thumbnails', 'But
 
 export const colorControls = [
   { id: 'bg', label: 'Hintergrund', tokens: [TOKEN('base-background'), '--yt-spec-base-background'], extra: (v) => `ytd-app, #masthead-container, ytd-masthead, #background.ytd-masthead, tp-yt-app-drawer #contentContainer, ytd-mini-guide-renderer { background-color: ${v} !important; }
-#frosted-glass, ytd-feed-filter-chip-bar-renderer #chips-wrapper, ytd-rich-grid-renderer > #header { background: ${v} !important; backdrop-filter: none !important; }` },
+#frosted-glass, ytd-feed-filter-chip-bar-renderer #chips-wrapper, ytd-rich-grid-renderer > #header, .ytItemSectionRendererStickyHeader, ytd-item-section-renderer[page-subtype="playlist"] > #header { background: ${v} !important; backdrop-filter: none !important; }` },
   { id: 'raised', label: 'Flächen & Karten', tokens: [TOKEN('raised-background'), '--yt-spec-raised-background'] },
   { id: 'menu', label: 'Menüs & Dialoge', tokens: [TOKEN('menu-background'), '--yt-spec-menu-background'] },
   { id: 'text', label: 'Text', tokens: [TOKEN('text-primary'), '--yt-spec-text-primary'] },
@@ -283,5 +287,7 @@ export const controlById = Object.fromEntries([...controls, ...colorControls.map
 
 // alles was nicht ueber tokens erreichbar ist
 export function extraCss(colors) {
-  return [searchboxCss(colors), cardTextCss(colors)].filter(Boolean).join('\n')
+  // zur laufzeit erkannte hash variablen, siehe appliers/hashTokens.js
+  const decl = hashTokenDecls(colors, HASH_ROLES)
+  return [decl.length && `${TOKEN_SCOPE} { ${decl.join(' ')} }`, searchboxCss(colors), cardTextCss(colors)].filter(Boolean).join('\n')
 }

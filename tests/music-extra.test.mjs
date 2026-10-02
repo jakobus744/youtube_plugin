@@ -90,3 +90,12 @@ test('radio verteilt kuenstler', async () => {
   const out = spreadArtists([t('1', 'A'), t('2', 'A'), t('3', 'A'), t('4', 'B'), t('5', 'C')]).map((x) => x.videoId)
   assert.deepEqual(out, ['1', '4', '2', '5', '3'])
 })
+
+test('lieblingsgenres in fuer dich: standard an, abschaltbar', () => {
+  assert.equal(defaultPrefs().genres.inForYou, true)
+  assert.equal(normalizePrefs({ genres: { favorites: ['Hard Techno', 'Hard Techno', ' '] } }).genres.inForYou, true)
+  const off = normalizePrefs({ genres: { favorites: ['Deutschrap'], inForYou: false } })
+  assert.equal(off.genres.inForYou, false)
+  assert.deepEqual(off.genres.favorites, ['Deutschrap'])
+  assert.deepEqual(normalizePrefs({ genres: { favorites: ['Hard Techno', 'Hard Techno', ' '] } }).genres.favorites, ['Hard Techno'])
+})

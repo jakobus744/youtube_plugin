@@ -272,37 +272,40 @@ export function filterTab(app) {
 // ---------- features ----------
 
 export function featuresTab(app) {
-  const cfg = app.store.config
   const root = h('div')
   const results = runChecks().filter((r) => r.id.startsWith('feature.'))
-  for (const m of app.features) {
-    const st = cfg.features[m.id]
-    const health = results.find((r) => r.id === `feature.${m.id}`)
-    const settings = h('div', { class: 'settings' })
-    const draw = () => {
-      settings.replaceChildren()
-      if (!app.store.config.features[m.id].enabled) return
-      for (const [key, def] of Object.entries(m.settings || {})) {
-        const value = app.store.config.features[m.id][key]
-        settings.append(row(def.label, settingControl(def, value, (v) => app.store.update((c) => (c.features[m.id][key] = v), 'panel')), { stack: def.type === 'multi' }))
-      }
-    }
-    const head = h(
-      'div',
-      { class: 'head' },
-      health ? h('span', { class: `dot ${health.status}`, title: health.detail }) : h('span', { class: 'dot' }),
-      h('span', { class: 'title', text: m.label }),
-      badge(m.stability),
-      toggle(st.enabled, (v) => {
-        app.store.update((c) => (c.features[m.id].enabled = v), 'panel')
-        draw()
-      })
-    )
-    const card = h('div', { class: 'card' }, head, h('div', { class: 'desc' }, m.description, health && h('div', { class: 'hint', text: health.detail })), settings)
-    draw()
-    root.append(card)
-  }
+  for (const m of app.features) root.append(featureCard(app, m, results.find((r) => r.id === `feature.${m.id}`)))
   return root
+}
+
+// karte mit schalter und einstellungen eines features, auch in eigenen tabs nutzbar
+export function featureCard(app, m, health = null, { title } = {}) {
+  if (typeof m === 'string') m = app.features.find((x) => x.id === m)
+  if (!m) return h('div')
+  const st = app.store.config.features[m.id]
+  const settings = h('div', { class: 'settings' })
+  const draw = () => {
+    settings.replaceChildren()
+    if (!app.store.config.features[m.id].enabled) return
+    for (const [key, def] of Object.entries(m.settings || {})) {
+      const value = app.store.config.features[m.id][key]
+      settings.append(row(def.label, settingControl(def, value, (v) => app.store.update((c) => (c.features[m.id][key] = v), 'panel')), { stack: def.type === 'multi' }))
+    }
+  }
+  const head = h(
+    'div',
+    { class: 'head' },
+    health ? h('span', { class: `dot ${health.status}`, title: health.detail }) : h('span', { class: 'dot' }),
+    h('span', { class: 'title', text: title || m.label }),
+    badge(m.stability),
+    toggle(st.enabled, (v) => {
+      app.store.update((c) => (c.features[m.id].enabled = v), 'panel')
+      draw()
+    })
+  )
+  const card = h('div', { class: 'card' }, head, h('div', { class: 'desc' }, m.description, health && h('div', { class: 'hint', text: health.detail })), settings)
+  draw()
+  return card
 }
 
 // ---------- profile & tasten ----------

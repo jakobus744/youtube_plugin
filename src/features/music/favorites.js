@@ -1,7 +1,11 @@
-import { currentTrack, currentBrowse } from '../../registry/music/player.js'
+import { currentTrack, currentBrowse, navigateEndpoint, endpoints } from '../../registry/music/player.js'
+import { h } from '../../core/dom.js'
+import { pageWindow } from '../../core/bridge.js'
+import { catalog } from './data/catalog.js'
+import { ytxQueue } from './ytxQueue.js'
 import { parseArtistPage, parseCollectionPage } from '../../registry/music/parse.js'
 import { music } from './runtime.js'
-import { iconButton } from './ui.js'
+import { iconButton, pill } from './ui.js'
 import { showMenu, toast } from '../ui.js'
 
 // favoriten fuer songs kuenstler alben und playlists mit eigenem gewicht
@@ -12,7 +16,7 @@ function pageSubject() {
   const id = b.browseId
   if (/^UC[\w-]{22}$/.test(id)) {
     const a = parseArtistPage(b.response, id)
-    return a.name ? { type: 'artist', id, name: a.name, thumbnail: '' } : null
+    return a.name ? { type: 'artist', id, name: a.name, thumbnail: a.thumbnail || '' } : null
   }
   if (/^MPREb_/.test(id)) {
     const c = parseCollectionPage(b.response, { browseId: id })
@@ -27,6 +31,96 @@ function pageSubject() {
 
 const TYPE_LABEL = { song: 'Song', artist: 'Künstler', album: 'Album', playlist: 'Playlist' }
 
+// ---------- regal in der mediathek ----------
+
+const LIB_TYPES = [['all', 'Alle'], ['artist', 'Künstler'], ['song', 'Songs'], ['album', 'Alben'], ['playlist', 'Playlists']]
+const C = { primary: 'var(--ytmusic-text-primary, #fff)', secondary: 'var(--ytmusic-text-secondary, #aaa)' }
+
+function openFav(f) {
+  if (f.type === 'artist') navigateEndpoint(endpoints.browse(f.id, null, 'ARTIST'))
+  else if (f.type === 'song') navigateEndpoint(endpoints.radio(f.id))
+  else if (f.type === 'album') navigateEndpoint(endpoints.browse(f.id, null, 'ALBUM'))
+  else if (f.type === 'playlist') navigateEndpoint(endpoints.browse(`VL${f.id}`, null, 'PLAYLIST'))
+}
+
+function favCard(f) {
+  const round = f.type === 'artist'
+  const sub = f.type === 'artist' ? 'Künstler' : [TYPE_LABEL[f.type], (f.artists || []).map((a) => a.name).join(', ')].filter(Boolean).join(' · ')
+  const img = f.thumbnail
+    ? h('img', { src: f.thumbnail, loading: 'lazy', alt: '', style: { width: '150px', height: '150px', borderRadius: round ? '50%' : '4px', objectFit: 'cover', background: 'rgba(255,255,255,.08)' } })
+    : h('div', { text: (f.name || '?').slice(0, 1).toUpperCase(), style: { width: '150px', height: '150px', borderRadius: round ? '50%' : '4px', background: 'rgba(255,255,255,.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', font: '500 48px Roboto, Arial, sans-serif', color: C.secondary } })
+  const card = h('div', { title: f.name, style: { flex: 'none', width: '150px', cursor: 'pointer', color: C.primary, font: '400 13px/1.35 Roboto, Arial, sans-serif', textAlign: round ? 'center' : 'left' } },
+    img,
+    h('div', { text: `${(f.weight ?? 1) > 1 ? '★ ' : ''}${f.name || f.id}`, style: { marginTop: '6px', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } }),
+    h('div', { text: sub, style: { color: C.secondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } })
+  )
+  card.addEventListener('click', (e) => {
+    e.preventDefault()
+    openFav(f)
+  })
+  return card
+}
+
+// kuenstler bild fehlt beim favorisieren oft, aus der (gecachten) kuenstlerseite nachholen
+const triedImages = new Set()
+async function fillArtistImages(list, node) {
+  let fetched = 0
+  for (const f of list) {
+    if (f.type !== 'artist' || f.thumbnail || !f.id || triedImages.has(f.id)) continue
+    triedImages.add(f.id)
+    let page = await catalog.artist(f.id, { cacheOnly: true }).catch(() => null)
+    if (!page?.thumbnail && fetched < 8) {
+      fetched++
+      page = await catalog.artist(f.id).catch(() => null)
+    }
+    if (!page?.thumbnail) continue
+    f.thumbnail = page.thumbnail
+    await music.db().put('favorites', { ...f }).catch(() => {})
+    node.__dirty = true
+  }
+}
+
+async function drawLibrary(node, ctx) {
+  if (node.__at && Date.now() - node.__at < 30 * 1000) return
+  node.__at = Date.now()
+  const all = (await music.favorites.all().catch(() => [])).sort((a, b) => (b.weight ?? 1) - (a.weight ?? 1) || (b.addedAt || 0) - (a.addedAt || 0))
+  const type = ctx.state.get('m.fav.libType', 'all')
+  const list = all.filter((f) => type === 'all' || f.type === type)
+  const title = h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', margin: '8px 0 12px' } }, h('div', { text: 'Deine Favoriten (ytx)', style: { font: '700 24px/1.3 Roboto, Arial, sans-serif', color: C.primary, marginRight: '8px' } }))
+  const songs = all.filter((f) => f.type === 'song')
+  if (songs.length) title.append(pill({ label: songs.length === 1 ? '▶ Lieblingssong abspielen' : `▶ ${songs.length} Lieblingssongs abspielen`, onClick: () => ytxQueue.play(songs.map((f) => ({ videoId: f.id, title: f.name, artists: f.artists || [], thumbnail: f.thumbnail || '' })), { title: 'Lieblingssongs' }) }))
+  title.append(pill({ label: 'Verwalten', title: 'Gewichte ändern und Favoriten entfernen im ytx-Panel', onClick: () => {
+    const panel = pageWindow.__ytx?.panel
+    panel?.open()
+    panel?.select('music')
+  } }))
+  const chips = h('div', { class: 'ytx-m-chips' }, ...LIB_TYPES.map(([id, label]) => {
+    const n = id === 'all' ? all.length : all.filter((f) => f.type === id).length
+    const c = h('button', { type: 'button', class: 'ytx-m-chip', 'aria-pressed': String(type === id), text: `${label} ${n}` })
+    c.addEventListener('click', (e) => {
+      e.preventDefault()
+      ctx.state.set('m.fav.libType', id)
+      node.__at = 0
+      drawLibrary(node, ctx)
+    })
+    return c
+  }))
+  if (!all.length) {
+    node.replaceChildren(title, h('div', { text: 'Noch keine Favoriten. ★ in der Playerleiste oder auf Künstler-, Album- und Playlist-Seiten antippen, dann stehen sie hier.', style: { color: C.secondary, font: '400 14px Roboto, Arial, sans-serif' } }))
+    return
+  }
+  const row = h('div', { style: { display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '6px' } }, ...list.map(favCard))
+  node.replaceChildren(title, chips, list.length ? row : h('div', { text: 'Keine Favoriten dieser Art.', style: { color: C.secondary, font: '400 14px Roboto, Arial, sans-serif' } }))
+  if (list.some((f) => f.type === 'artist' && !f.thumbnail && !triedImages.has(f.id))) {
+    await fillArtistImages(list, node)
+    if (node.__dirty) {
+      node.__dirty = false
+      node.__at = 0
+      drawLibrary(node, ctx)
+    }
+  }
+}
+
 export const favoritesFeature = {
   id: 'm.favorites',
   site: 'music',
@@ -38,7 +132,8 @@ export const favoritesFeature = {
   hotkeys: [['music.favorite', 'Aktuellen Song favorisieren', 'Alt+F']],
   settings: {
     barButton: { type: 'toggle', label: 'Stern in der Playerleiste', default: true },
-    pageButton: { type: 'toggle', label: 'Stern auf Künstler/Album/Playlist-Seiten', default: true }
+    pageButton: { type: 'toggle', label: 'Stern auf Künstler/Album/Playlist-Seiten', default: true },
+    libraryShelf: { type: 'toggle', label: 'Regal „Deine Favoriten (ytx)“ in der Mediathek', default: true }
   },
   setup(ctx) {
     let s = ctx.settings
@@ -127,7 +222,18 @@ export const favoritesFeature = {
       }
     })
 
+    state.lib = ctx.mount({
+      id: 'm.fav.library',
+      anchor: 'm.browse.top',
+      position: 'prepend',
+      when: () => s.libraryShelf && ctx.nav.page === 'library',
+      create: () => h('div', { class: 'ytx-m-shelf', style: { margin: '8px 0 28px' } }),
+      update: (node) => drawLibrary(node, ctx)
+    })
+
     const off = music.on('favorites', () => {
+      if (state.lib.node) state.lib.node.__at = 0
+      state.lib.refresh()
       if (state.bar.node) state.bar.node.__at = 0
       if (state.page.node) state.page.node.__at = 0
       state.bar.refresh()
@@ -144,17 +250,20 @@ export const favoritesFeature = {
         s = next
         state.bar.refresh()
         state.page.refresh()
+        state.lib.refresh()
       },
       onVideo() {
         state.bar.refresh()
       },
       onPage() {
         state.page.refresh()
+        state.lib.refresh()
       },
       dispose() {
         off()
         state.bar.destroy()
         state.page.destroy()
+        state.lib.destroy()
       },
       health() {
         if (s.barButton && !state.bar.ok) return { status: currentTrack() ? 'warn' : 'skip', detail: currentTrack() ? 'Playerleiste nicht gefunden' : 'Kein Titel aktiv' }

@@ -38,6 +38,10 @@ Kern-Module (`core/`, `appliers/`, `panel/`) lesen nur `site.*`. Kein Selektor, 
 10. **Erklärbare Empfehlungen.** Jeder Kandidat trägt Quellen (`favoriteArtist`, `similar`, `genre`, `featured`, `history`, `release`, `seed`). `rank()` mischt Relevanz, Passung zum Profil und den Regler Bekannt ⟷ Entdecken. Aus den Quellen entstehen die Begründungen.
 11. **Metadaten-Quellen als Schnittstelle.** `metadataProviders/` mit `local` (immer an) und `musicbrainz`, `lastfm`, `ollama` (aus, nur über `GM_xmlhttpRequest`). Ohne externe Dienste funktioniert alles.
 
+### Farben mit Hash-Namen
+
+YouTube benennt viele Farbvariablen nach einem Hash (`--t3e41d7b…`), am Rechner wie auf dem Handy. Die Namen wechseln mit jedem Build, Komponenten wie die feste Sortierleiste in Playlists oder der Chip-Streifen nutzen nur diese Variablen. `appliers/hashTokens.js` liest beim Start die Variablen am `html`-Element und ordnet sie über ihren Standardwert einer Rolle zu (Hintergrund, Text, Akzent …), transparente Varianten des Hintergrunds inklusive. Die Look-Registry überschreibt sie dann mit den Theme-Farben. Später geladenes CSS wird nach 4, 15 und 45 Sekunden nachgeholt.
+
 ## 3. Datenfluss Music
 
 ```

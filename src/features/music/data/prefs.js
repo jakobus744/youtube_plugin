@@ -30,7 +30,7 @@ export function defaultPrefs() {
     releases: { enabled: true, intervalHours: 24, maxArtists: 25, includeTopArtists: true, maxAgeDays: 60 },
     smartQueue: { autoSkip: false, skipBlocked: true, skipHighSkip: false, skipDuplicates: true, skipRecentlyPlayed: false, markOnly: false },
     providers: { local: { enabled: true }, musicbrainz: { enabled: false }, lastfm: { enabled: false, apiKey: '' }, ollama: { enabled: false, url: 'http://localhost:11434', model: '' } },
-    genres: { favorites: [] }
+    genres: { favorites: [], inForYou: true }
   }
 }
 
@@ -73,7 +73,10 @@ export function normalizePrefs(raw) {
       for (const k of Object.keys(d.providers[id])) if (k !== 'enabled' && typeof p[k] === 'string') d.providers[id][k] = p[k]
     }
   }
-  if (isObj(raw.genres)) d.genres.favorites = strList(raw.genres.favorites) || []
+  if (isObj(raw.genres)) {
+    d.genres.favorites = strList(raw.genres.favorites) || []
+    d.genres.inForYou = raw.genres.inForYou !== false
+  }
   return d
 }
 

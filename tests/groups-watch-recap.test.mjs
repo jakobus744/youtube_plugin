@@ -108,3 +108,16 @@ test('mobil: farbvariablen am wert erkennen', async () => {
   assert.deepEqual(map.textSecondary.map((x) => x.name), ['--t4a6da19e16bf221a'])
   assert.equal(map.accent.length, 1)
 })
+
+test('rechner: erkannte hash variablen landen im look css', async () => {
+  const { setDiscovered, hashTokenDecls } = await import('../src/appliers/hashTokens.js')
+  const { extraCss } = await import('../src/registry/youtube/look.js')
+  setDiscovered({ bg: [{ name: '--t3e41d7b17b187f69', alpha: 1 }, { name: '--ta889dfda9605a358', alpha: 0.8 }], text: [{ name: '--t1405e70a39276293', alpha: 1 }] })
+  const decl = hashTokenDecls({ bg: '#2e3440' }, ['bg', 'text'])
+  assert.deepEqual(decl, ['--t3e41d7b17b187f69: #2e3440 !important;', '--ta889dfda9605a358: color-mix(in srgb, #2e3440 80%, transparent) !important;'])
+  const css = extraCss({ bg: '#2e3440', text: '#eceff4' })
+  assert.match(css, /html:root:root, html:root:root \[dark\], html:root:root \[light\] \{ --t3e41d7b17b187f69: #2e3440 !important;/)
+  assert.match(css, /--t1405e70a39276293: #eceff4 !important;/)
+  setDiscovered({})
+  assert.doesNotMatch(extraCss({ bg: '#2e3440' }), /--t3e41/)
+})

@@ -9,6 +9,7 @@ import { behaviors, behaviorById } from '../behaviors/youtube.js'
 import { featureManifests } from '../features/youtube/index.js'
 import { templates } from '../profiles/youtube.js'
 import { initTimedtextCapture } from '../features/youtube/transcript/source.js'
+import { bootHashTokens } from './hashBoot.js'
 
 // alles was ytx ueber www.youtube.com wissen muss an einer stelle
 export const youtubeSite = {
@@ -35,5 +36,6 @@ export const youtubeSite = {
   panelTabs: ['display', 'look', 'layout', 'behavior', 'filters', 'features', 'subGroups', 'watchStats', 'profiles', 'diagnose'],
   boot() {
     initTimedtextCapture()
+    bootHashTokens(() => document.documentElement.hasAttribute('dark'), 'youtube')
   }
 }

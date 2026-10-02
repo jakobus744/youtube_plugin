@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.3.0
+// @version      0.3.1
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -29,7 +29,7 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.3.0",
+    version: "0.3.1",
     description: "YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen",
     private: true,
     type: "module",
@@ -913,13 +913,81 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
     }
   ];
 
+  // src/appliers/hashTokens.js
+  function normColor(v) {
+    const s = String(v || "").trim().toLowerCase().replace(/\s+/g, "");
+    let m = s.match(/^#([0-9a-f]{3})$/);
+    if (m) return `#${[...m[1]].map((c) => c + c).join("")}`;
+    if (/^#[0-9a-f]{6}$/.test(s)) return s;
+    m = s.match(/^rgba?\((\d+),(\d+),(\d+)(?:,([\d.]+))?\)$/);
+    if (!m) return null;
+    const hex = `#${[m[1], m[2], m[3]].map((x) => Number(x).toString(16).padStart(2, "0")).join("")}`;
+    const a = m[4] == null ? 1 : Number(m[4]);
+    return a >= 1 ? hex : `${hex}@${Math.round(a * 1e3) / 1e3}`;
+  }
+  function discoverTokens(vars, refs) {
+    const out = {};
+    const wanted = Object.entries(refs).map(([role, v]) => [role, normColor(v)]).filter(([, v]) => v);
+    for (const [name, raw] of vars) {
+      if (!/^--t[0-9a-f]{8,}$/.test(name)) continue;
+      const c = normColor(raw);
+      if (!c) continue;
+      const [hex, alpha] = c.split("@");
+      for (const [role, ref] of wanted) {
+        if (ref === c || role === "bg" && alpha && ref === hex) (out[role] ||= []).push({ name, alpha: alpha ? Number(alpha) : 1 });
+      }
+    }
+    return out;
+  }
+  var DARK_REFS = { bg: "#0f0f0f", text: "#f1f1f1", textSecondary: "#aaaaaa", raised: "#212121", menu: "#282828", accent: "#3ea6ff" };
+  var LIGHT_REFS = { bg: "#ffffff", text: "#0f0f0f", textSecondary: "#606060", accent: "#065fd4" };
+  var found = {};
+  var known = /* @__PURE__ */ new Set();
+  function scanPage(dark) {
+    const cs = getComputedStyle(document.documentElement);
+    const vars = [];
+    let total = 0;
+    for (let i = 0; i < cs.length; i++) {
+      const n = cs[i];
+      if (!n.startsWith("--t")) continue;
+      total++;
+      if (!known.has(n)) vars.push([n, cs.getPropertyValue(n)]);
+    }
+    if (!total) return -1;
+    const map = discoverTokens(vars, dark ? DARK_REFS : LIGHT_REFS);
+    let added = 0;
+    for (const [role, list] of Object.entries(map)) {
+      for (const t of list) {
+        ;
+        (found[role] ||= []).push(t);
+        known.add(t.name);
+        added++;
+      }
+    }
+    for (const [n] of vars) known.add(n);
+    return added;
+  }
+  function tokenCount() {
+    return Object.fromEntries(Object.entries(found).map(([k, v]) => [k, v.length]));
+  }
+  function hashTokenDecls(colors, roles) {
+    const decl = [];
+    for (const role of roles) {
+      const v = colors[role];
+      if (!v) continue;
+      for (const t of found[role] || []) decl.push(`${t.name}: ${t.alpha < 1 ? `color-mix(in srgb, ${v} ${Math.round(t.alpha * 100)}%, transparent)` : v} !important;`);
+    }
+    return decl;
+  }
+
   // src/registry/youtube/look.js
+  var HASH_ROLES = ["bg", "raised", "menu", "text", "textSecondary", "accent"];
   var TOKEN = (name) => `--yt-sys-color-baseline--${name}`;
   var TOKEN_SCOPE = "html:root:root, html:root:root [dark], html:root:root [light]";
   var LOOK_GROUPS = ["Farben", "Dichte", "Typografie", "Thumbnails", "Buttons", "Allgemein"];
   var colorControls = [
     { id: "bg", label: "Hintergrund", tokens: [TOKEN("base-background"), "--yt-spec-base-background"], extra: (v) => `ytd-app, #masthead-container, ytd-masthead, #background.ytd-masthead, tp-yt-app-drawer #contentContainer, ytd-mini-guide-renderer { background-color: ${v} !important; }
-#frosted-glass, ytd-feed-filter-chip-bar-renderer #chips-wrapper, ytd-rich-grid-renderer > #header { background: ${v} !important; backdrop-filter: none !important; }` },
+#frosted-glass, ytd-feed-filter-chip-bar-renderer #chips-wrapper, ytd-rich-grid-renderer > #header, .ytItemSectionRendererStickyHeader, ytd-item-section-renderer[page-subtype="playlist"] > #header { background: ${v} !important; backdrop-filter: none !important; }` },
     { id: "raised", label: "Flächen & Karten", tokens: [TOKEN("raised-background"), "--yt-spec-raised-background"] },
     { id: "menu", label: "Menüs & Dialoge", tokens: [TOKEN("menu-background"), "--yt-spec-menu-background"] },
     { id: "text", label: "Text", tokens: [TOKEN("text-primary"), "--yt-spec-text-primary"] },
@@ -1163,7 +1231,8 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
   ];
   var controlById = Object.fromEntries([...controls, ...colorControls.map((c) => ({ ...c, type: "color", group: "Farben" }))].map((c) => [c.id, c]));
   function extraCss(colors) {
-    return [searchboxCss(colors), cardTextCss(colors)].filter(Boolean).join("\n");
+    const decl = hashTokenDecls(colors, HASH_ROLES);
+    return [decl.length && `${TOKEN_SCOPE} { ${decl.join(" ")} }`, searchboxCss(colors), cardTextCss(colors)].filter(Boolean).join("\n");
   }
 
   // src/registry/youtube/presets.js
@@ -3508,8 +3577,8 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         for (const [gid, list] of Object.entries(src.layout.order)) {
           const g = presets.orderGroups[gid];
           if (!g) continue;
-          const known = new Set(g.items.map(([id]) => id));
-          const clean = strList(list).filter((id) => known.has(id));
+          const known2 = new Set(g.items.map(([id]) => id));
+          const clean = strList(list).filter((id) => known2.has(id));
           if (clean.length) cfg.layout.order[gid] = [...new Set(clean)];
         }
       }
@@ -5161,6 +5230,51 @@ ${chaptersText(true)}
   // src/features/youtube/index.js
   var featureManifests = [transcript_default, copyInfo, duration_default, search_default, sort_default, subGroups_default, watchtime_default, dimWatched_default, endsAt, publishDate, progressBadge, proxyButtons];
 
+  // src/appliers/vars.js
+  function buildVarsCss(vars, look = site.look) {
+    const theme = look.themes.find((t) => t.id === vars.theme) || look.themes[0];
+    const colors = { ...theme.values };
+    for (const c of look.colorControls) if (vars[c.id]) colors[c.id] = vars[c.id];
+    const out = [];
+    const decl = [];
+    for (const c of look.colorControls) {
+      const v = colors[c.id];
+      if (!v) continue;
+      for (const token of c.tokens) decl.push(`${token}: ${v} !important;`);
+      if (c.extra) out.push(c.extra(v));
+    }
+    if (decl.length) out.unshift(`${look.tokenScope} { ${decl.join(" ")} }`);
+    const extra = look.extraCss?.(colors);
+    if (extra) out.push(extra);
+    for (const c of look.controls) {
+      const v = vars[c.id];
+      if (v === void 0 || v === null || v === "") continue;
+      out.push(c.css(v));
+    }
+    return out.join("\n");
+  }
+  function applyVars(cfg) {
+    setCss("vars", buildVarsCss(cfg.vars));
+  }
+
+  // src/sites/hashBoot.js
+  function bootHashTokens(isDark, label) {
+    let tries = 0;
+    const scan = () => {
+      const added = scanPage(isDark());
+      if (added > 0) applyVars(store.config);
+      return added;
+    };
+    const t = setInterval(() => {
+      const added = scan();
+      if (added >= 0 || ++tries > 40) {
+        clearInterval(t);
+        log.info(`${label} farben erkannt: ${Object.entries(tokenCount()).map(([k, v]) => `${k} ${v}`).join(", ") || "keine"}`);
+        for (const ms of [4e3, 15e3, 45e3]) setTimeout(scan, ms);
+      }
+    }, 500);
+  }
+
   // src/sites/youtube.js
   var youtubeSite = {
     id: "youtube",
@@ -5186,6 +5300,7 @@ ${chaptersText(true)}
     panelTabs: ["display", "look", "layout", "behavior", "filters", "features", "subGroups", "watchStats", "profiles", "diagnose"],
     boot() {
       initTimedtextCapture();
+      bootHashTokens(() => document.documentElement.hasAttribute("dark"), "youtube");
     }
   };
 
@@ -5646,7 +5761,7 @@ ${chaptersText(true)}
   function parseArtistPage(data2, browseId = null) {
     const header = data2?.header?.musicImmersiveHeaderRenderer || data2?.header?.musicVisualHeaderRenderer || {};
     const shelves = parseShelves(data2);
-    const artist = { id: browseId, name: runsText2(header.title), channelId: header.subscriptionButton?.subscribeButtonRenderer?.channelId || null, topSongs: [], releases: [], videos: [], featuredOn: [], ownPlaylists: [], similar: [] };
+    const artist = { id: browseId, name: runsText2(header.title), thumbnail: thumbOf(header), channelId: header.subscriptionButton?.subscribeButtonRenderer?.channelId || null, topSongs: [], releases: [], videos: [], featuredOn: [], ownPlaylists: [], similar: [] };
     for (const sh of shelves) {
       for (const it of sh.items) {
         if (it.type === "song" && sh.kind === "musicShelfRenderer") artist.topSongs.push(it);
@@ -6891,7 +7006,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       releases: { enabled: true, intervalHours: 24, maxArtists: 25, includeTopArtists: true, maxAgeDays: 60 },
       smartQueue: { autoSkip: false, skipBlocked: true, skipHighSkip: false, skipDuplicates: true, skipRecentlyPlayed: false, markOnly: false },
       providers: { local: { enabled: true }, musicbrainz: { enabled: false }, lastfm: { enabled: false, apiKey: "" }, ollama: { enabled: false, url: "http://localhost:11434", model: "" } },
-      genres: { favorites: [] }
+      genres: { favorites: [], inForYou: true }
     };
   }
   function normalizePrefs(raw) {
@@ -6935,7 +7050,10 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         for (const k of Object.keys(d.providers[id])) if (k !== "enabled" && typeof p[k] === "string") d.providers[id][k] = p[k];
       }
     }
-    if (isObj4(raw.genres)) d.genres.favorites = strList2(raw.genres.favorites) || [];
+    if (isObj4(raw.genres)) {
+      d.genres.favorites = strList2(raw.genres.favorites) || [];
+      d.genres.inForYou = raw.genres.inForYou !== false;
+    }
     return d;
   }
   var SESSION_KEY = "ytx.music.session";
@@ -7362,6 +7480,273 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     }
   };
 
+  // src/core/pageData.js
+  function createPageLoader({ extract, cache: cache4, minIntervalMs = 1800, maxAgeMs = 24 * 3600 * 1e3 }) {
+    const stats2 = { requests: 0, cacheHits: 0, errors: 0, lastError: null, lastUrl: null, lastAt: 0, lastMs: 0, queued: 0, disabled: false };
+    const inflight = /* @__PURE__ */ new Map();
+    let chain = Promise.resolve();
+    let nextAllowed = 0;
+    let stopped = false;
+    async function fetchParsed(path) {
+      const wait = nextAllowed - Date.now();
+      if (wait > 0) await sleep(wait);
+      if (stopped) throw new Error("loader gestoppt");
+      nextAllowed = Date.now() + minIntervalMs;
+      const t0 = performance.now();
+      stats2.requests++;
+      stats2.lastUrl = path;
+      const res = await fetch(path, { credentials: "include", headers: { accept: "text/html" } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const html = await res.text();
+      const parsed = extract(html);
+      stats2.lastMs = Math.round(performance.now() - t0);
+      stats2.lastAt = Date.now();
+      if (!parsed) throw new Error("keine seitendaten im html");
+      return parsed;
+    }
+    async function load3(path, { maxAge = maxAgeMs, force = false, cacheOnly = false, transform = (x) => x } = {}) {
+      const key = `page:${path}`;
+      if (!force && cache4) {
+        try {
+          const hit = await cache4.get(key);
+          if (hit && (cacheOnly || Date.now() - hit.ts < maxAge)) {
+            stats2.cacheHits++;
+            return hit.value;
+          }
+        } catch {
+        }
+      }
+      if (cacheOnly) throw new Error("nicht im cache");
+      if (stats2.disabled) throw new Error("hintergrund laden deaktiviert");
+      if (inflight.has(key)) return inflight.get(key);
+      stats2.queued++;
+      const p = chain = chain.then(async () => {
+        try {
+          const value = transform(await fetchParsed(path));
+          if (cache4) await cache4.set(key, value).catch(() => {
+          });
+          return value;
+        } catch (e) {
+          stats2.errors++;
+          stats2.lastError = `${path}: ${e.message}`;
+          log.warn("pageData", stats2.lastError);
+          throw e;
+        } finally {
+          stats2.queued--;
+          inflight.delete(key);
+        }
+      });
+      inflight.set(key, p);
+      chain = p.catch(() => {
+      });
+      return p;
+    }
+    return {
+      stats: stats2,
+      load: load3,
+      stop() {
+        stopped = true;
+      }
+    };
+  }
+
+  // src/registry/music/initialData.js
+  var RE = /initialData\.push\(\{path: '((?:\\.|[^'])*)', params: JSON\.parse\('((?:\\.|[^'])*)'\), data: '((?:\\.|[^'])*)'\}\)/g;
+  var SIMPLE = { n: "\n", r: "\r", t: "	", b: "\b", f: "\f", v: "\v", 0: "\0" };
+  function unescapeJs(s) {
+    return s.replace(/\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|[\s\S])/g, (_, e) => {
+      if (e[0] === "x" && e.length === 3) return String.fromCharCode(parseInt(e.slice(1), 16));
+      if (e[0] === "u" && e.length === 5) return String.fromCharCode(parseInt(e.slice(1), 16));
+      return SIMPLE[e] ?? e;
+    });
+  }
+  function extractInitialData(html) {
+    const out = [];
+    RE.lastIndex = 0;
+    let m;
+    while (m = RE.exec(html)) {
+      try {
+        out.push({ path: unescapeJs(m[1]), params: JSON.parse(unescapeJs(m[2])), data: JSON.parse(unescapeJs(m[3])) });
+      } catch (e) {
+        out.push({ path: null, error: e.message });
+      }
+    }
+    return out;
+  }
+  function mainData(html) {
+    const blocks = extractInitialData(html);
+    const main = blocks.find((b) => b.path && b.path !== "/guide");
+    return main ? { path: main.path, params: main.params, data: main.data } : null;
+  }
+
+  // src/features/music/data/catalog.js
+  var HOUR = 3600 * 1e3;
+  var cache2 = {
+    async get(key) {
+      const r = await musicDb().get("cache", key);
+      return r ? { value: r.value, ts: r.ts } : null;
+    },
+    set(key, value) {
+      return musicDb().put("cache", { key, value, ts: Date.now() });
+    }
+  };
+  var loader = createPageLoader({ extract: mainData, cache: cache2, minIntervalMs: 2e3, maxAgeMs: 12 * HOUR });
+  var catalog = {
+    stats: loader.stats,
+    artist(id, opts = {}) {
+      return loader.load(`/channel/${encodeURIComponent(id)}`, { maxAge: 24 * HOUR, ...opts, transform: (m) => parseArtistPage(m.data, id) });
+    },
+    album(browseId, opts = {}) {
+      return loader.load(`/browse/${encodeURIComponent(browseId)}`, { maxAge: 7 * 24 * HOUR, ...opts, transform: (m) => parseCollectionPage(m.data, { ...m.params, browseId }) });
+    },
+    playlist(id, opts = {}) {
+      return loader.load(`/playlist?list=${encodeURIComponent(id)}`, { maxAge: 12 * HOUR, ...opts, transform: (m) => parseCollectionPage(m.data, { ...m.params, browseId: `VL${id}` }) });
+    },
+    search(query, opts = {}) {
+      return loader.load(`/search?q=${encodeURIComponent(query)}`, { maxAge: 24 * HOUR, ...opts, transform: (m) => parseSearchPage(m.data) });
+    },
+    moods(opts = {}) {
+      return loader.load("/moods_and_genres", { maxAge: 7 * 24 * HOUR, ...opts, transform: (m) => parseMoodsPage(m.data) });
+    },
+    async clearCache() {
+      await musicDb().clear("cache");
+    },
+    async cacheInfo() {
+      const db3 = musicDb();
+      const count = await db3.count("cache").catch(() => 0);
+      const newest = await db3.latest("cache", "ts", 1).catch(() => []);
+      return { count, newest: newest[0]?.ts || 0 };
+    }
+  };
+
+  // src/features/music/ytxQueue.js
+  var KEY2 = "ytx.music.queue";
+  var listeners = /* @__PURE__ */ new Set();
+  var q = load2();
+  var timer = null;
+  var prev = null;
+  var lastJumpAt = 0;
+  function load2() {
+    try {
+      const v = JSON.parse(sessionStorage.getItem(KEY2) || "null");
+      if (v && Array.isArray(v.items)) return v;
+    } catch {
+    }
+    return { items: [], index: -1, active: false, title: "", note: "" };
+  }
+  function save() {
+    try {
+      sessionStorage.setItem(KEY2, JSON.stringify(q));
+    } catch {
+    }
+    for (const fn of listeners) {
+      try {
+        fn(q);
+      } catch {
+      }
+    }
+  }
+  async function jump(i) {
+    const rules2 = music.rules();
+    while (i < q.items.length && blockReason(q.items[i], rules2)) i++;
+    if (i >= q.items.length) {
+      q.active = false;
+      q.note = "Ende erreicht";
+      save();
+      stopTimer();
+      return false;
+    }
+    q.index = i;
+    q.note = "";
+    lastJumpAt = Date.now();
+    save();
+    const want = q.items[i].videoId;
+    const ok = await navigateEndpoint(endpoints.play(want));
+    if (!ok) log.warn("ytx queue navigation fehlgeschlagen");
+    setTimeout(() => {
+      const p = playerApi();
+      try {
+        if (p && p.getVideoData?.().video_id === want && [-1, 5].includes(p.getPlayerState?.())) p.playVideo?.();
+      } catch {
+      }
+    }, 3e3);
+    return ok;
+  }
+  function tick() {
+    if (!q.active) return stopTimer();
+    const t = currentTrack();
+    if (!t || t.ad) return;
+    const want = q.items[q.index];
+    const now = Date.now();
+    if (!want) return;
+    if (t.videoId === want.videoId || t.counterpartVideoId === want.videoId) {
+      if (t.playing && t.dur > 5 && t.pos >= t.dur - 1.2 && now - lastJumpAt > 5e3) jump(q.index + 1);
+    } else if (now - lastJumpAt > 8e3) {
+      const next = q.items.findIndex((x, i) => i > q.index && (x.videoId === t.videoId || x.videoId === t.counterpartVideoId));
+      if (next > 0) {
+        q.index = next;
+        save();
+      } else if (prev && (prev.videoId === want.videoId || prev.counterpartVideoId === want.videoId) && prev.dur && prev.pos >= prev.dur - 6) {
+        jump(q.index + 1);
+      } else if (prev && prev.videoId !== t.videoId) {
+        q.active = false;
+        q.note = "Angehalten, weil du etwas anderes gewählt hast";
+        save();
+      }
+    }
+    prev = { videoId: t.videoId, counterpartVideoId: t.counterpartVideoId, pos: t.pos, dur: t.dur };
+  }
+  function startTimer() {
+    if (!timer) timer = setInterval(tick, 500);
+  }
+  function stopTimer() {
+    clearInterval(timer);
+    timer = null;
+  }
+  var ytxQueue = {
+    get state() {
+      return q;
+    },
+    on(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    async play(items, { start = 0, title = "" } = {}) {
+      q = { items: items.map((x) => ({ videoId: x.videoId, title: x.title, artists: x.artists || [], album: x.album || null, durationSec: x.durationSec || null, thumbnail: x.thumbnail || "", reasons: x.reasons || [] })), index: -1, active: true, title, note: "" };
+      prev = null;
+      startTimer();
+      return jump(start);
+    },
+    jumpTo(i) {
+      q.active = true;
+      startTimer();
+      return jump(i);
+    },
+    resume() {
+      if (!q.items.length) return;
+      q.active = true;
+      q.note = "";
+      save();
+      startTimer();
+    },
+    stop() {
+      q.active = false;
+      q.note = "Gestoppt";
+      save();
+      stopTimer();
+    },
+    clear() {
+      q = { items: [], index: -1, active: false, title: "", note: "" };
+      save();
+      stopTimer();
+    },
+    remaining() {
+      return q.items.slice(q.index + 1).reduce((s, x) => s + (x.durationSec || 0), 0);
+    }
+  };
+  if (q.active) startTimer();
+  onDispose(stopTimer);
+
   // src/features/music/ui.js
   var PAGE_CSS = `
 .ytx-m-iconbtn { all: initial; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; padding: 0 8px; border-radius: 18px; cursor: pointer; user-select: none;
@@ -7373,6 +7758,14 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   font: 500 14px/36px Roboto, Arial, sans-serif; color: var(--ytmusic-text-primary, #fff); background: rgba(255,255,255,.1); }
 .ytx-m-pill:hover { background: rgba(255,255,255,.2); }
 .ytx-m-pill[data-badge]:after { content: attr(data-badge); margin-left: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; box-sizing: border-box; font-size: 11px; line-height: 18px; text-align: center; color: #fff; background: #e53935; }
+.ytx-m-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0 14px; scrollbar-width: none; }
+.ytx-m-chips::-webkit-scrollbar { display: none; }
+.ytx-m-chip { all: initial; box-sizing: border-box; flex: none; height: 32px; padding: 0 12px; border-radius: 8px; cursor: pointer; user-select: none; white-space: nowrap;
+  font: 500 14px/32px Roboto, Arial, sans-serif; color: var(--ytmusic-text-primary, #fff); background: rgba(255,255,255,.1); }
+.ytx-m-chip:hover { background: rgba(255,255,255,.2); }
+.ytx-m-chip[aria-pressed="true"] { color: #000; background: var(--ytmusic-text-primary, #fff); }
+.ytx-m-chip.ghost { background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hidden]) ytmusic-section-list-renderer > #header ytmusic-chip-cloud-renderer { display: none !important; }
 .ytx-m-info { all: initial; display: block; padding: 6px 16px; font: 400 12px/1.4 Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); }
 .ytx-m-info b { font-weight: 500; color: var(--ytmusic-text-primary, #fff); }
 .ytx-m-mark { all: initial; display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; font: 500 10px/16px Roboto, Arial, sans-serif; color: #fff; background: rgba(229,57,53,.85); vertical-align: middle; white-space: nowrap; }
@@ -7389,6 +7782,7 @@ ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
   .ytx-m-fab { display: flex; }
   .ytx-m-shelf { padding-inline: 16px; }
+  .ytx-m-chips { flex-wrap: nowrap; overflow-x: auto; }
 }
 `;
   function initMusicUiCss() {
@@ -7557,7 +7951,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     const id = b.browseId;
     if (/^UC[\w-]{22}$/.test(id)) {
       const a = parseArtistPage(b.response, id);
-      return a.name ? { type: "artist", id, name: a.name, thumbnail: "" } : null;
+      return a.name ? { type: "artist", id, name: a.name, thumbnail: a.thumbnail || "" } : null;
     }
     if (/^MPREb_/.test(id)) {
       const c = parseCollectionPage(b.response, { browseId: id });
@@ -7570,6 +7964,89 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     return null;
   }
   var TYPE_LABEL = { song: "Song", artist: "Künstler", album: "Album", playlist: "Playlist" };
+  var LIB_TYPES = [["all", "Alle"], ["artist", "Künstler"], ["song", "Songs"], ["album", "Alben"], ["playlist", "Playlists"]];
+  var C4 = { primary: "var(--ytmusic-text-primary, #fff)", secondary: "var(--ytmusic-text-secondary, #aaa)" };
+  function openFav(f) {
+    if (f.type === "artist") navigateEndpoint(endpoints.browse(f.id, null, "ARTIST"));
+    else if (f.type === "song") navigateEndpoint(endpoints.radio(f.id));
+    else if (f.type === "album") navigateEndpoint(endpoints.browse(f.id, null, "ALBUM"));
+    else if (f.type === "playlist") navigateEndpoint(endpoints.browse(`VL${f.id}`, null, "PLAYLIST"));
+  }
+  function favCard(f) {
+    const round = f.type === "artist";
+    const sub = f.type === "artist" ? "Künstler" : [TYPE_LABEL[f.type], (f.artists || []).map((a) => a.name).join(", ")].filter(Boolean).join(" · ");
+    const img = f.thumbnail ? h("img", { src: f.thumbnail, loading: "lazy", alt: "", style: { width: "150px", height: "150px", borderRadius: round ? "50%" : "4px", objectFit: "cover", background: "rgba(255,255,255,.08)" } }) : h("div", { text: (f.name || "?").slice(0, 1).toUpperCase(), style: { width: "150px", height: "150px", borderRadius: round ? "50%" : "4px", background: "rgba(255,255,255,.08)", display: "flex", alignItems: "center", justifyContent: "center", font: "500 48px Roboto, Arial, sans-serif", color: C4.secondary } });
+    const card2 = h(
+      "div",
+      { title: f.name, style: { flex: "none", width: "150px", cursor: "pointer", color: C4.primary, font: "400 13px/1.35 Roboto, Arial, sans-serif", textAlign: round ? "center" : "left" } },
+      img,
+      h("div", { text: `${(f.weight ?? 1) > 1 ? "★ " : ""}${f.name || f.id}`, style: { marginTop: "6px", fontWeight: "500", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }),
+      h("div", { text: sub, style: { color: C4.secondary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } })
+    );
+    card2.addEventListener("click", (e) => {
+      e.preventDefault();
+      openFav(f);
+    });
+    return card2;
+  }
+  var triedImages = /* @__PURE__ */ new Set();
+  async function fillArtistImages(list, node) {
+    let fetched = 0;
+    for (const f of list) {
+      if (f.type !== "artist" || f.thumbnail || !f.id || triedImages.has(f.id)) continue;
+      triedImages.add(f.id);
+      let page = await catalog.artist(f.id, { cacheOnly: true }).catch(() => null);
+      if (!page?.thumbnail && fetched < 8) {
+        fetched++;
+        page = await catalog.artist(f.id).catch(() => null);
+      }
+      if (!page?.thumbnail) continue;
+      f.thumbnail = page.thumbnail;
+      await music.db().put("favorites", { ...f }).catch(() => {
+      });
+      node.__dirty = true;
+    }
+  }
+  async function drawLibrary(node, ctx) {
+    if (node.__at && Date.now() - node.__at < 30 * 1e3) return;
+    node.__at = Date.now();
+    const all = (await music.favorites.all().catch(() => [])).sort((a, b) => (b.weight ?? 1) - (a.weight ?? 1) || (b.addedAt || 0) - (a.addedAt || 0));
+    const type = ctx.state.get("m.fav.libType", "all");
+    const list = all.filter((f) => type === "all" || f.type === type);
+    const title = h("div", { style: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px", margin: "8px 0 12px" } }, h("div", { text: "Deine Favoriten (ytx)", style: { font: "700 24px/1.3 Roboto, Arial, sans-serif", color: C4.primary, marginRight: "8px" } }));
+    const songs = all.filter((f) => f.type === "song");
+    if (songs.length) title.append(pill({ label: songs.length === 1 ? "▶ Lieblingssong abspielen" : `▶ ${songs.length} Lieblingssongs abspielen`, onClick: () => ytxQueue.play(songs.map((f) => ({ videoId: f.id, title: f.name, artists: f.artists || [], thumbnail: f.thumbnail || "" })), { title: "Lieblingssongs" }) }));
+    title.append(pill({ label: "Verwalten", title: "Gewichte ändern und Favoriten entfernen im ytx-Panel", onClick: () => {
+      const panel = pageWindow.__ytx?.panel;
+      panel?.open();
+      panel?.select("music");
+    } }));
+    const chips2 = h("div", { class: "ytx-m-chips" }, ...LIB_TYPES.map(([id, label]) => {
+      const n = id === "all" ? all.length : all.filter((f) => f.type === id).length;
+      const c = h("button", { type: "button", class: "ytx-m-chip", "aria-pressed": String(type === id), text: `${label} ${n}` });
+      c.addEventListener("click", (e) => {
+        e.preventDefault();
+        ctx.state.set("m.fav.libType", id);
+        node.__at = 0;
+        drawLibrary(node, ctx);
+      });
+      return c;
+    }));
+    if (!all.length) {
+      node.replaceChildren(title, h("div", { text: "Noch keine Favoriten. ★ in der Playerleiste oder auf Künstler-, Album- und Playlist-Seiten antippen, dann stehen sie hier.", style: { color: C4.secondary, font: "400 14px Roboto, Arial, sans-serif" } }));
+      return;
+    }
+    const row2 = h("div", { style: { display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "6px" } }, ...list.map(favCard));
+    node.replaceChildren(title, chips2, list.length ? row2 : h("div", { text: "Keine Favoriten dieser Art.", style: { color: C4.secondary, font: "400 14px Roboto, Arial, sans-serif" } }));
+    if (list.some((f) => f.type === "artist" && !f.thumbnail && !triedImages.has(f.id))) {
+      await fillArtistImages(list, node);
+      if (node.__dirty) {
+        node.__dirty = false;
+        node.__at = 0;
+        drawLibrary(node, ctx);
+      }
+    }
+  }
   var favoritesFeature = {
     id: "m.favorites",
     site: "music",
@@ -7581,7 +8058,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     hotkeys: [["music.favorite", "Aktuellen Song favorisieren", "Alt+F"]],
     settings: {
       barButton: { type: "toggle", label: "Stern in der Playerleiste", default: true },
-      pageButton: { type: "toggle", label: "Stern auf Künstler/Album/Playlist-Seiten", default: true }
+      pageButton: { type: "toggle", label: "Stern auf Künstler/Album/Playlist-Seiten", default: true },
+      libraryShelf: { type: "toggle", label: "Regal „Deine Favoriten (ytx)“ in der Mediathek", default: true }
     },
     setup(ctx) {
       let s = ctx.settings;
@@ -7663,7 +8141,17 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           node.querySelector(".ytx-m-lbl").textContent = on ? `${TYPE_LABEL[subj.type]}-Favorit` : "Favorit";
         }
       });
+      state.lib = ctx.mount({
+        id: "m.fav.library",
+        anchor: "m.browse.top",
+        position: "prepend",
+        when: () => s.libraryShelf && ctx.nav.page === "library",
+        create: () => h("div", { class: "ytx-m-shelf", style: { margin: "8px 0 28px" } }),
+        update: (node) => drawLibrary(node, ctx)
+      });
       const off = music.on("favorites", () => {
+        if (state.lib.node) state.lib.node.__at = 0;
+        state.lib.refresh();
         if (state.bar.node) state.bar.node.__at = 0;
         if (state.page.node) state.page.node.__at = 0;
         state.bar.refresh();
@@ -7678,162 +8166,26 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           s = next;
           state.bar.refresh();
           state.page.refresh();
+          state.lib.refresh();
         },
         onVideo() {
           state.bar.refresh();
         },
         onPage() {
           state.page.refresh();
+          state.lib.refresh();
         },
         dispose() {
           off();
           state.bar.destroy();
           state.page.destroy();
+          state.lib.destroy();
         },
         health() {
           if (s.barButton && !state.bar.ok) return { status: currentTrack() ? "warn" : "skip", detail: currentTrack() ? "Playerleiste nicht gefunden" : "Kein Titel aktiv" };
           return { status: "ok", detail: `Stern ${state.bar.ok ? "in der Playerleiste" : ""}${state.page.ok ? " und auf der Seite" : ""}` };
         }
       };
-    }
-  };
-
-  // src/core/pageData.js
-  function createPageLoader({ extract, cache: cache4, minIntervalMs = 1800, maxAgeMs = 24 * 3600 * 1e3 }) {
-    const stats2 = { requests: 0, cacheHits: 0, errors: 0, lastError: null, lastUrl: null, lastAt: 0, lastMs: 0, queued: 0, disabled: false };
-    const inflight = /* @__PURE__ */ new Map();
-    let chain = Promise.resolve();
-    let nextAllowed = 0;
-    let stopped = false;
-    async function fetchParsed(path) {
-      const wait = nextAllowed - Date.now();
-      if (wait > 0) await sleep(wait);
-      if (stopped) throw new Error("loader gestoppt");
-      nextAllowed = Date.now() + minIntervalMs;
-      const t0 = performance.now();
-      stats2.requests++;
-      stats2.lastUrl = path;
-      const res = await fetch(path, { credentials: "include", headers: { accept: "text/html" } });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const html = await res.text();
-      const parsed = extract(html);
-      stats2.lastMs = Math.round(performance.now() - t0);
-      stats2.lastAt = Date.now();
-      if (!parsed) throw new Error("keine seitendaten im html");
-      return parsed;
-    }
-    async function load3(path, { maxAge = maxAgeMs, force = false, cacheOnly = false, transform = (x) => x } = {}) {
-      const key = `page:${path}`;
-      if (!force && cache4) {
-        try {
-          const hit = await cache4.get(key);
-          if (hit && (cacheOnly || Date.now() - hit.ts < maxAge)) {
-            stats2.cacheHits++;
-            return hit.value;
-          }
-        } catch {
-        }
-      }
-      if (cacheOnly) throw new Error("nicht im cache");
-      if (stats2.disabled) throw new Error("hintergrund laden deaktiviert");
-      if (inflight.has(key)) return inflight.get(key);
-      stats2.queued++;
-      const p = chain = chain.then(async () => {
-        try {
-          const value = transform(await fetchParsed(path));
-          if (cache4) await cache4.set(key, value).catch(() => {
-          });
-          return value;
-        } catch (e) {
-          stats2.errors++;
-          stats2.lastError = `${path}: ${e.message}`;
-          log.warn("pageData", stats2.lastError);
-          throw e;
-        } finally {
-          stats2.queued--;
-          inflight.delete(key);
-        }
-      });
-      inflight.set(key, p);
-      chain = p.catch(() => {
-      });
-      return p;
-    }
-    return {
-      stats: stats2,
-      load: load3,
-      stop() {
-        stopped = true;
-      }
-    };
-  }
-
-  // src/registry/music/initialData.js
-  var RE = /initialData\.push\(\{path: '((?:\\.|[^'])*)', params: JSON\.parse\('((?:\\.|[^'])*)'\), data: '((?:\\.|[^'])*)'\}\)/g;
-  var SIMPLE = { n: "\n", r: "\r", t: "	", b: "\b", f: "\f", v: "\v", 0: "\0" };
-  function unescapeJs(s) {
-    return s.replace(/\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|[\s\S])/g, (_, e) => {
-      if (e[0] === "x" && e.length === 3) return String.fromCharCode(parseInt(e.slice(1), 16));
-      if (e[0] === "u" && e.length === 5) return String.fromCharCode(parseInt(e.slice(1), 16));
-      return SIMPLE[e] ?? e;
-    });
-  }
-  function extractInitialData(html) {
-    const out = [];
-    RE.lastIndex = 0;
-    let m;
-    while (m = RE.exec(html)) {
-      try {
-        out.push({ path: unescapeJs(m[1]), params: JSON.parse(unescapeJs(m[2])), data: JSON.parse(unescapeJs(m[3])) });
-      } catch (e) {
-        out.push({ path: null, error: e.message });
-      }
-    }
-    return out;
-  }
-  function mainData(html) {
-    const blocks = extractInitialData(html);
-    const main = blocks.find((b) => b.path && b.path !== "/guide");
-    return main ? { path: main.path, params: main.params, data: main.data } : null;
-  }
-
-  // src/features/music/data/catalog.js
-  var HOUR = 3600 * 1e3;
-  var cache2 = {
-    async get(key) {
-      const r = await musicDb().get("cache", key);
-      return r ? { value: r.value, ts: r.ts } : null;
-    },
-    set(key, value) {
-      return musicDb().put("cache", { key, value, ts: Date.now() });
-    }
-  };
-  var loader = createPageLoader({ extract: mainData, cache: cache2, minIntervalMs: 2e3, maxAgeMs: 12 * HOUR });
-  var catalog = {
-    stats: loader.stats,
-    artist(id, opts = {}) {
-      return loader.load(`/channel/${encodeURIComponent(id)}`, { maxAge: 24 * HOUR, ...opts, transform: (m) => parseArtistPage(m.data, id) });
-    },
-    album(browseId, opts = {}) {
-      return loader.load(`/browse/${encodeURIComponent(browseId)}`, { maxAge: 7 * 24 * HOUR, ...opts, transform: (m) => parseCollectionPage(m.data, { ...m.params, browseId }) });
-    },
-    playlist(id, opts = {}) {
-      return loader.load(`/playlist?list=${encodeURIComponent(id)}`, { maxAge: 12 * HOUR, ...opts, transform: (m) => parseCollectionPage(m.data, { ...m.params, browseId: `VL${id}` }) });
-    },
-    search(query, opts = {}) {
-      return loader.load(`/search?q=${encodeURIComponent(query)}`, { maxAge: 24 * HOUR, ...opts, transform: (m) => parseSearchPage(m.data) });
-    },
-    moods(opts = {}) {
-      return loader.load("/moods_and_genres", { maxAge: 7 * 24 * HOUR, ...opts, transform: (m) => parseMoodsPage(m.data) });
-    },
-    async clearCache() {
-      await musicDb().clear("cache");
-    },
-    async cacheInfo() {
-      const db3 = musicDb();
-      const count = await db3.count("cache").catch(() => 0);
-      const newest = await db3.latest("cache", "ts", 1).catch(() => []);
-      return { count, newest: newest[0]?.ts || 0 };
     }
   };
 
@@ -7953,8 +8305,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       if (isExcluded(c, opts.excluded)) continue;
       if (opts.hideVersions.length && versionTags(c.title).some((t) => opts.hideVersions.includes(t))) continue;
       if (opts.onlyKnownArtists) {
-        const known = (c.artists || []).some((a) => profile.artistPlays(artistKey(a)) >= 2 || profile.artists.get(artistKey(a))?.favorite);
-        if (!known) continue;
+        const known2 = (c.artists || []).some((a) => profile.artistPlays(artistKey(a)) >= 2 || profile.artists.get(artistKey(a))?.favorite);
+        if (!known2) continue;
       }
       scored.push({ ...c, ...scoreCandidate(c, profile, opts) });
     }
@@ -8171,6 +8523,14 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     }
     return out.slice(0, max);
   }
+  function shuffled(list) {
+    const a = list.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
   function recentIds(profile, hours) {
     const since = Date.now() - hours * 3600 * 1e3;
     return new Set([...profile.songs.values()].filter((s) => s.lastPlayed > since).map((s) => s.videoId));
@@ -8178,6 +8538,11 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
   async function forYou(ctx) {
     const { profile, b } = ctx;
     const cands = [];
+    const genres = ctx.prefs.genres.inForYou ? shuffled(ctx.prefs.genres.favorites).slice(0, 2) : [];
+    for (const genre of genres) {
+      const res = await b.get((o) => catalog.search(genre, o));
+      for (const t of res?.songs.slice(0, 8) || []) cands.push(toCandidate(t, { kind: "genre", genre, weight: 0.8 }));
+    }
     const seeds = await seedArtists(profile, 8);
     const similarSeen = new Set(seeds.map((s) => s.id));
     let similarCount = 0;
@@ -8473,134 +8838,6 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
   ];
   var ALL_GENRES = GENRE_GROUPS.flatMap(([, list]) => list);
 
-  // src/features/music/ytxQueue.js
-  var KEY2 = "ytx.music.queue";
-  var listeners = /* @__PURE__ */ new Set();
-  var q = load2();
-  var timer = null;
-  var prev = null;
-  var lastJumpAt = 0;
-  function load2() {
-    try {
-      const v = JSON.parse(sessionStorage.getItem(KEY2) || "null");
-      if (v && Array.isArray(v.items)) return v;
-    } catch {
-    }
-    return { items: [], index: -1, active: false, title: "", note: "" };
-  }
-  function save() {
-    try {
-      sessionStorage.setItem(KEY2, JSON.stringify(q));
-    } catch {
-    }
-    for (const fn of listeners) {
-      try {
-        fn(q);
-      } catch {
-      }
-    }
-  }
-  async function jump(i) {
-    const rules2 = music.rules();
-    while (i < q.items.length && blockReason(q.items[i], rules2)) i++;
-    if (i >= q.items.length) {
-      q.active = false;
-      q.note = "Ende erreicht";
-      save();
-      stopTimer();
-      return false;
-    }
-    q.index = i;
-    q.note = "";
-    lastJumpAt = Date.now();
-    save();
-    const want = q.items[i].videoId;
-    const ok = await navigateEndpoint(endpoints.play(want));
-    if (!ok) log.warn("ytx queue navigation fehlgeschlagen");
-    setTimeout(() => {
-      const p = playerApi();
-      try {
-        if (p && p.getVideoData?.().video_id === want && [-1, 5].includes(p.getPlayerState?.())) p.playVideo?.();
-      } catch {
-      }
-    }, 3e3);
-    return ok;
-  }
-  function tick() {
-    if (!q.active) return stopTimer();
-    const t = currentTrack();
-    if (!t || t.ad) return;
-    const want = q.items[q.index];
-    const now = Date.now();
-    if (!want) return;
-    if (t.videoId === want.videoId || t.counterpartVideoId === want.videoId) {
-      if (t.playing && t.dur > 5 && t.pos >= t.dur - 1.2 && now - lastJumpAt > 5e3) jump(q.index + 1);
-    } else if (now - lastJumpAt > 8e3) {
-      const next = q.items.findIndex((x, i) => i > q.index && (x.videoId === t.videoId || x.videoId === t.counterpartVideoId));
-      if (next > 0) {
-        q.index = next;
-        save();
-      } else if (prev && (prev.videoId === want.videoId || prev.counterpartVideoId === want.videoId) && prev.dur && prev.pos >= prev.dur - 6) {
-        jump(q.index + 1);
-      } else if (prev && prev.videoId !== t.videoId) {
-        q.active = false;
-        q.note = "Angehalten, weil du etwas anderes gewählt hast";
-        save();
-      }
-    }
-    prev = { videoId: t.videoId, counterpartVideoId: t.counterpartVideoId, pos: t.pos, dur: t.dur };
-  }
-  function startTimer() {
-    if (!timer) timer = setInterval(tick, 500);
-  }
-  function stopTimer() {
-    clearInterval(timer);
-    timer = null;
-  }
-  var ytxQueue = {
-    get state() {
-      return q;
-    },
-    on(fn) {
-      listeners.add(fn);
-      return () => listeners.delete(fn);
-    },
-    async play(items, { start = 0, title = "" } = {}) {
-      q = { items: items.map((x) => ({ videoId: x.videoId, title: x.title, artists: x.artists || [], album: x.album || null, durationSec: x.durationSec || null, thumbnail: x.thumbnail || "", reasons: x.reasons || [] })), index: -1, active: true, title, note: "" };
-      prev = null;
-      startTimer();
-      return jump(start);
-    },
-    jumpTo(i) {
-      q.active = true;
-      startTimer();
-      return jump(i);
-    },
-    resume() {
-      if (!q.items.length) return;
-      q.active = true;
-      q.note = "";
-      save();
-      startTimer();
-    },
-    stop() {
-      q.active = false;
-      q.note = "Gestoppt";
-      save();
-      stopTimer();
-    },
-    clear() {
-      q = { items: [], index: -1, active: false, title: "", note: "" };
-      save();
-      stopTimer();
-    },
-    remaining() {
-      return q.items.slice(q.index + 1).reduce((s, x) => s + (x.durationSec || 0), 0);
-    }
-  };
-  if (q.active) startTimer();
-  onDispose(stopTimer);
-
   // src/features/music/hub.js
   var SHORT = { forYou: "Für dich", releases: "Neu", genre: "Genre", longAgo: "Lange nicht gehört", neverHeard: "Noch nie gehört", similar: "Ähnlich", moreFrom: "Mehr von", radio: "Smart Radio" };
   var TABS = [...MIXES.map(([id, label]) => [id, SHORT[id] || label, label]), ["queue", "Reihenfolge", "ytx-Reihenfolge"]];
@@ -8626,6 +8863,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     hotkeys: [["music.hub", "Mix-Fenster öffnen/schließen", "Alt+M"]],
     settings: {
       forYouShelf: { type: "toggle", label: "Regal „Für dich (ytx)“ mit Neu mischen auf der Startseite", default: true },
+      homeChips: { type: "toggle", label: "Eigene Chips über dem Regal (Für dich, Noch nie gehört, Lieblingsgenres …)", default: true },
+      hideYouTubeChips: { type: "toggle", label: "YouTubes Stimmungs-Chips (Entspannung, Party …) dafür ausblenden", default: true },
       homeShelf: { type: "toggle", label: "Regal „Neu von deinen Künstlern“ auf der Startseite", default: true },
       maxRequests: { type: "range", label: "Max. neue Seitenabrufe pro Mix", min: 2, max: 40, step: 1, default: 12 },
       explain: { type: "toggle", label: "Begründungen anzeigen", default: true }
@@ -8781,6 +9020,33 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         const reload = h("button", { class: "btn sec", type: "button", text: "↻", title: "Neu berechnen" });
         reload.addEventListener("click", () => load3(true, true));
         t.append(reload);
+        t.append(infoLine(prefs, session, disc));
+      }
+      function infoLine(prefs, session, disc) {
+        const favs = prefs.genres.favorites;
+        const a = currentArtist();
+        const what = {
+          forYou: `Deine ★-Künstler, meistgehörten Künstler, ähnliche Künstler und Lieblingssongs${prefs.genres.inForYou && favs.length ? `, dazu zwei deiner Lieblingsgenres (${favs.join(", ")})` : ""}`,
+          releases: "Neue Alben und Singles deiner ★-Künstler und meistgehörten Künstler",
+          genre: ui.genre ? `Nur das Genre „${ui.genre}“, deine bekannten Künstler daraus zuerst` : "Nur das gewählte Genre",
+          longAgo: "Deine Songs, die du früher gern gehört hast und seit über 45 Tagen nicht mehr",
+          neverHeard: "Wie „Für dich“, aber nur Songs und Künstler, die du noch nie gehört hast",
+          similar: a ? `Künstler ähnlich wie ${a.name}` : "Künstler ähnlich wie der aktuelle Künstler",
+          moreFrom: a ? `Hits und Alben von ${a.name}` : "Hits und Alben des aktuellen Künstlers",
+          radio: "Startpunkt aus dem Auswahlfeld, eigene Songs davon plus ähnliche Künstler"
+        }[ui.tab];
+        const parts = [what, `Regler ${Math.round(disc * 100)} von 100`];
+        if (session) parts.push(`Session ${SESSION_PRESETS.find((p) => p.id === session.presetId)?.label || session.presetId}: filtert ${(SESSION_PRESETS.find((p) => p.id === session.presetId)?.extraTerms || []).join(", ") || "nichts extra"}`);
+        const box = h("div", { class: "info", style: { flexBasis: "100%", fontSize: "12px", opacity: ".75", lineHeight: "1.4" } }, `Berücksichtigt: ${parts.join(" · ")}`);
+        if (ui.tab === "forYou" && favs.length) {
+          const cb = h("input", { type: "checkbox", checked: prefs.genres.inForYou, style: { verticalAlign: "middle", margin: "0 4px 0 10px" } });
+          cb.addEventListener("change", () => {
+            music.updatePrefs((p) => p.genres.inForYou = cb.checked);
+            load3(true, true);
+          });
+          box.append(h("label", { style: { whiteSpace: "nowrap", cursor: "pointer" } }, cb, "Lieblingsgenres einbeziehen"));
+        }
+        return box;
       }
       function mixArgs() {
         const disc = ui.discovery;
@@ -8802,7 +9068,9 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       }
       async function load3(redraw = false, force = false) {
         if (redraw) drawTools();
-        if (ui.tab === "queue") return render3();
+        const token = ++renderToken;
+        const tab = ui.tab;
+        if (tab === "queue") return render3();
         const args = mixArgs();
         const key = cacheKey(args);
         const hit = cache3.get(key);
@@ -8818,14 +9086,13 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           ui.result = { items: [], error: "Genre oder Stimmung oben eingeben, z. B. Deutschrap, Indie, Chill." };
           return drawBody();
         }
-        const token = ++renderToken;
         ui.loading = true;
         ui.result = null;
         drawBody("lädt …");
         const res = await buildMix(ui.tab === "radio" ? "radio" : ui.tab, args, { maxRequests: s.maxRequests, onProgress: (n, max) => token === renderToken && drawBody(`lädt Seiten … ${n}/${max}`) });
         if (token !== renderToken) return;
         ui.loading = false;
-        ui.result = res;
+        ui.result = { ...res, tab };
         if (!res.error) cache3.set(key, { at: Date.now(), result: res });
         drawBody();
         if (ui.tab === "releases") {
@@ -8871,7 +9138,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         main.replaceChildren();
         if (status) return main.append(h("div", { class: "status", text: status }));
         const r = ui.result;
-        if (!r) return;
+        if (!r || r.tab && r.tab !== ui.tab) return;
         if (r.error) return main.append(h("div", { class: "status err", text: r.error }));
         if (ui.tab === "releases" && r.releases?.length) {
           main.append(h("div", { class: "section-title", text: "Veröffentlichungen" }));
@@ -8924,7 +9191,10 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         if (!drawer.isOpen) return;
         drawTabs();
         drawTools();
-        if (ui.tab === "queue") return drawQueue();
+        if (ui.tab === "queue") {
+          ++renderToken;
+          return drawQueue();
+        }
         if (artistOverride && (ui.tab === "similar" || ui.tab === "moreFrom")) {
           const a = artistOverride;
           artistOverride = null;
@@ -8960,7 +9230,15 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         return card2;
       };
       const SHOWN = "m.hub.shown";
-      const home = { pool: null, poolAt: 0, step: 0, picked: [], loading: false, note: "" };
+      const home = { pool: null, poolAt: 0, step: 0, picked: [], loading: false, note: "", mode: ctx.state.get("m.hub.homeMode", "forYou") };
+      const HOME_MODES = [
+        ["forYou", "Für dich"],
+        ["neverHeard", "Noch nie gehört"],
+        ["longAgo", "Lange nicht gehört"],
+        ["releases", "Neu von deinen Künstlern"]
+      ];
+      const homeModes = () => [...HOME_MODES, ...music.prefs().genres.favorites.map((g) => [`genre:${g}`, g])];
+      const modeLabel = (id) => homeModes().find(([m]) => m === id)?.[1] || "Für dich";
       function pickFresh(items, n) {
         const shown = new Set(ctx.state.get(SHOWN, []));
         let pool = items.filter((i) => !shown.has(i.videoId));
@@ -8983,9 +9261,14 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       async function loadPool() {
         const base2 = music.effective().discovery;
         const discovery = Math.min(1, base2 + [0, 0.25, 0.5][home.step % 3]);
-        let res = await buildMix("forYou", { discovery }, { maxRequests: 8, limit: 80 });
+        const mode = homeModes().some(([m]) => m === home.mode) ? home.mode : "forYou";
         home.note = "";
-        if (!res.items?.length) {
+        let res;
+        if (mode.startsWith("genre:")) res = await buildMix("genre", { genre: mode.slice(6), discovery }, { maxRequests: 8, limit: 60 });
+        else res = await buildMix(mode, { discovery }, { maxRequests: 8, limit: 80 });
+        if (res.error) home.note = res.error;
+        home.poolMode = home.mode;
+        if (!res.items?.length && mode === "forYou") {
           const favs = music.prefs().genres.favorites;
           if (favs.length) {
             const genre = favs[Math.floor(Math.random() * favs.length)];
@@ -9002,7 +9285,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         drawForYou(target, true);
         try {
           const shownCount = ctx.state.get(SHOWN, []).length;
-          if (rebuild || !home.pool || Date.now() - home.poolAt > 30 * 60 * 1e3 || home.pool.length && shownCount >= home.pool.length * 0.6) {
+          if (rebuild || !home.pool || home.poolMode !== home.mode || Date.now() - home.poolAt > 30 * 60 * 1e3 || home.pool.length && shownCount >= home.pool.length * 0.6) {
             if (rebuild) home.step++;
             await loadPool();
           }
@@ -9026,7 +9309,31 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         ctx.state.set("m.hub.chipTurn", turn + 1);
         const target = chip.querySelector("a, button") || chip;
         target.click();
-        toast(`YouTube-Startseite: ${chip.textContent.trim()}`);
+        toast(`YouTube-Vorschläge darunter: ${chip.textContent.trim()}`);
+      }
+      function chipBar(target) {
+        const bar = h("div", { class: "ytx-m-chips" });
+        for (const [id, label] of homeModes()) {
+          const c = h("button", { type: "button", class: "ytx-m-chip", "aria-pressed": String(home.mode === id), text: label, title: home.mode === id ? "Nochmal klicken mischt neu" : "" });
+          c.addEventListener("click", (e) => {
+            e.preventDefault();
+            home.mode = id;
+            ctx.state.set("m.hub.homeMode", id);
+            shuffle(target);
+          });
+          bar.append(c);
+        }
+        const add2 = h("button", { type: "button", class: "ytx-m-chip ghost", title: "Im Mix-Fenster ein Genre wählen und mit ☆ merken, dann erscheint es hier", text: "+ Genre" });
+        add2.addEventListener("click", (e) => {
+          e.preventDefault();
+          ui.tab = "genre";
+          ctx.state.set("m.hub.tab", "genre");
+          ui.result = null;
+          drawer.open();
+          render3();
+        });
+        bar.append(add2);
+        return bar;
       }
       function drawForYou(target, force = false) {
         if (!target) return;
@@ -9040,17 +9347,18 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           shuffle(target);
           return;
         }
-        const mix = pill({ label: home.loading ? "mischt …" : "↻ Neu mischen", title: "Andere Vorschläge aus deinem Profil", onClick: () => shuffle(target) });
+        const mix = pill({ label: home.loading ? "mischt …" : "↻ Neu mischen", title: "Andere Vorschläge aus diesem Mix", onClick: () => shuffle(target) });
         const more = pill({ label: "Mehr Neues", title: "Neuen Pool holen, stärker in Richtung Entdecken", onClick: () => shuffle(target, true) });
         const yt = pill({ label: "YouTube-Vorschläge wechseln", title: "Wechselt durch YouTubes eigene Stimmungen, damit die Regale darunter anders werden", onClick: switchYouTube });
-        const play = pill({ label: "▶ Alle abspielen", onClick: () => home.picked.length && ytxQueue.play(home.picked, { title: "Für dich" }) });
+        const play = pill({ label: "▶ Alle abspielen", onClick: () => home.picked.length && ytxQueue.play(home.picked, { title: modeLabel(home.mode) }) });
         const row2 = shelfRow();
         for (const it of home.picked) {
           row2.append(shelfCard({ img: it.thumbnail, title: it.title, sub: `${it.artists.map((a) => a.name).join(", ")}${it.reasons?.[0] ? ` · ${it.reasons[0]}` : ""}`, onClick: () => navigateEndpoint(endpoints.radio(it.videoId)) }));
         }
-        const children = [shelfTitle("Für dich (ytx)", mix, more, yt, play)];
+        const children = [s.homeChips ? chipBar(target) : null, shelfTitle(`${modeLabel(home.mode)} (ytx)`, mix, more, yt, play)].filter(Boolean);
         if (home.note) children.push(h("div", { text: home.note, style: { color: T2.secondary, font: "400 13px Roboto, Arial, sans-serif", margin: "-8px 0 12px" } }));
         if (home.picked.length) children.push(row2);
+        else if (!home.loading && home.mode !== "forYou") children.push(h("div", { text: "Für diesen Mix gibt es gerade keine Titel. Probier einen anderen Chip.", style: { color: T2.secondary, font: "400 14px Roboto, Arial, sans-serif", marginBottom: "16px" } }));
         else if (!home.loading) children.push(h("div", { text: "Noch zu wenig Daten. Favorisiere ein paar Künstler (★ in der Playerleiste), merke dir Genres im Mix-Fenster oder hör ein paar Songs, dann erscheinen hier Vorschläge.", style: { color: T2.secondary, font: "400 14px Roboto, Arial, sans-serif", marginBottom: "16px" } }));
         target.replaceChildren(...children);
       }
@@ -9097,10 +9405,15 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           cache3.clear();
         }),
         music.on("favorites", () => cache3.clear()),
-        music.on("prefs", () => cache3.clear()),
+        music.on("prefs", () => {
+          cache3.clear();
+          if (shelf.node?.__forYou && !home.loading) drawForYou(shelf.node.__forYou, true);
+        }),
         music.on("session", () => drawer.isOpen && drawTools())
       ];
       updateBadge();
+      const chipsAttr = () => document.documentElement.toggleAttribute("data-ytx-mchips-off", !!(s.forYouShelf && s.homeChips && s.hideYouTubeChips));
+      chipsAttr();
       return {
         drawer,
         open: () => {
@@ -9109,6 +9422,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         },
         update(next) {
           s = next;
+          chipsAttr();
+          if (shelf.node?.__forYou) drawForYou(shelf.node.__forYou, true);
           shelf.refresh();
           render3();
         },
@@ -9120,6 +9435,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           for (const off of offs) off();
           btn2.destroy();
           fab.remove();
+          document.documentElement.removeAttribute("data-ytx-mchips-off");
           shelf.destroy();
           drawer.host.remove();
         },
@@ -9356,8 +9672,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     const blocked = rules2 && blockReason(track, rules2);
     if (blocked) return blocked;
     if (settings.onlyKnownArtists && profile) {
-      const known = (track.artists || []).some((a) => profile.artistPlays(artistKey(a)) >= 2 || profile.artists.get(artistKey(a))?.favorite);
-      if (!known) return { kind: "unknown", label: "Unbekannter Künstler (Session „Nur bekannte Musik“)" };
+      const known2 = (track.artists || []).some((a) => profile.artistPlays(artistKey(a)) >= 2 || profile.artists.get(artistKey(a))?.favorite);
+      if (!known2) return { kind: "unknown", label: "Unbekannter Künstler (Session „Nur bekannte Musik“)" };
     }
     if (settings.skipHighSkip && profile?.isHighSkip(track.videoId)) return { kind: "highSkip", label: "Oft übersprungen" };
     if (settings.skipDuplicates !== false && recentKeys) {
@@ -10372,35 +10688,6 @@ ${data2.source}` : ""].join("\n").trim();
   // src/registry/mobile/look.js
   var TOKEN_SCOPE3 = "html:root:root";
   var LOOK_GROUPS3 = ["Farben", "Kacheln", "Allgemein"];
-  function normColor(v) {
-    const s = String(v || "").trim().toLowerCase().replace(/\s+/g, "");
-    let m = s.match(/^#([0-9a-f]{3})$/);
-    if (m) return `#${[...m[1]].map((c) => c + c).join("")}`;
-    if (/^#[0-9a-f]{6}$/.test(s)) return s;
-    m = s.match(/^rgba?\((\d+),(\d+),(\d+)(?:,([\d.]+))?\)$/);
-    if (!m) return null;
-    const hex = `#${[m[1], m[2], m[3]].map((x) => Number(x).toString(16).padStart(2, "0")).join("")}`;
-    const a = m[4] == null ? 1 : Number(m[4]);
-    return a >= 1 ? hex : `${hex}@${Math.round(a * 1e3) / 1e3}`;
-  }
-  function discoverTokens(vars, refs) {
-    const out = {};
-    const wanted = Object.entries(refs).map(([role, v]) => [role, normColor(v)]).filter(([, v]) => v);
-    for (const [name, raw] of vars) {
-      if (!/^--t[0-9a-f]{8,}$/.test(name)) continue;
-      const c = normColor(raw);
-      if (!c) continue;
-      const [hex, alpha] = c.split("@");
-      for (const [role, ref] of wanted) {
-        if (ref === c || role === "bg" && alpha && ref === hex) (out[role] ||= []).push({ name, alpha: alpha ? Number(alpha) : 1 });
-      }
-    }
-    return out;
-  }
-  var found = {};
-  function setDiscovered(map) {
-    found = map || {};
-  }
   var COLOR_ROLES = ["bg", "raised", "menu", "text", "textSecondary", "accent"];
   var colorControls3 = [
     {
@@ -10487,12 +10774,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
   ];
   var controlById3 = Object.fromEntries([...controls3, ...colorControls3.map((c) => ({ ...c, type: "color", group: "Farben" }))].map((c) => [c.id, c]));
   function extraCss3(colors) {
-    const decl = [];
-    for (const role of COLOR_ROLES) {
-      const v = colors[role];
-      if (!v) continue;
-      for (const t of found[role] || []) decl.push(`${t.name}: ${t.alpha < 1 ? `color-mix(in srgb, ${v} ${Math.round(t.alpha * 100)}%, transparent)` : v} !important;`);
-    }
+    const decl = hashTokenDecls(colors, COLOR_ROLES);
     const map = { bg: "base-background", raised: "raised-background", menu: "menu-background", text: "text-primary", textSecondary: "text-secondary", accent: "call-to-action" };
     for (const [k, t] of Object.entries(map)) if (colors[k]) decl.push(`--yt-sys-color-baseline--${t}: ${colors[k]};`);
     return decl.length ? `html:root:root { ${decl.join(" ")} }` : "";
@@ -10597,33 +10879,6 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
   var behaviors3 = behaviors.filter((b) => SHARED.includes(b.id));
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
-  // src/appliers/vars.js
-  function buildVarsCss(vars, look = site.look) {
-    const theme = look.themes.find((t) => t.id === vars.theme) || look.themes[0];
-    const colors = { ...theme.values };
-    for (const c of look.colorControls) if (vars[c.id]) colors[c.id] = vars[c.id];
-    const out = [];
-    const decl = [];
-    for (const c of look.colorControls) {
-      const v = colors[c.id];
-      if (!v) continue;
-      for (const token of c.tokens) decl.push(`${token}: ${v} !important;`);
-      if (c.extra) out.push(c.extra(v));
-    }
-    if (decl.length) out.unshift(`${look.tokenScope} { ${decl.join(" ")} }`);
-    const extra = look.extraCss?.(colors);
-    if (extra) out.push(extra);
-    for (const c of look.controls) {
-      const v = vars[c.id];
-      if (v === void 0 || v === null || v === "") continue;
-      out.push(c.css(v));
-    }
-    return out.join("\n");
-  }
-  function applyVars(cfg) {
-    setCss("vars", buildVarsCss(cfg.vars));
-  }
-
   // src/sites/mobile.js
   var FILTER_PAGES2 = [
     ["home", "Startseite"],
@@ -10632,22 +10887,6 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     ["watch", "Empfehlungen auf Videoseite"],
     ["channel", "Kanal"]
   ];
-  function discoverColors() {
-    const html = document.documentElement;
-    const cs = getComputedStyle(html);
-    const bg = cs.backgroundColor;
-    if (!bg || bg === "rgba(0, 0, 0, 0)") return false;
-    const dark = html.hasAttribute("dark") || html.hasAttribute("darker-dark-theme");
-    const text = getComputedStyle(document.body).color;
-    const vars = [];
-    for (let i = 0; i < cs.length; i++) if (cs[i].startsWith("--t")) vars.push([cs[i], cs.getPropertyValue(cs[i])]);
-    const refs = dark ? { bg, text, textSecondary: "#aaaaaa", raised: "#212121", menu: "#282828", accent: "#3ea6ff" } : { bg, text, textSecondary: "#606060", accent: "#065fd4" };
-    const map = discoverTokens(vars, refs);
-    setDiscovered(map);
-    log.info(`mobil farben erkannt: ${Object.entries(map).map(([k, v]) => `${k} ${v.length}`).join(", ")}`);
-    applyVars(store.config);
-    return true;
-  }
   var mobileSite = {
     id: "mobile",
     label: "YouTube mobil",
@@ -10671,10 +10910,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     playback: { activePlayback: activePlayback3, pauseActive: pauseActive3 },
     panelTabs: ["display", "look", "behavior", "filters", "features", "subGroups", "watchStats", "profiles", "diagnose"],
     boot() {
-      let tries = 0;
-      const t = setInterval(() => {
-        if (discoverColors() || ++tries > 40) clearInterval(t);
-      }, 500);
+      bootHashTokens(() => document.documentElement.hasAttribute("dark") || document.documentElement.hasAttribute("darker-dark-theme"), "mobil");
     }
   };
 
@@ -11888,37 +12124,38 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     return root;
   }
   function featuresTab(app) {
-    const cfg = app.store.config;
     const root = h("div");
     const results = runChecks().filter((r) => r.id.startsWith("feature."));
-    for (const m of app.features) {
-      const st = cfg.features[m.id];
-      const health = results.find((r) => r.id === `feature.${m.id}`);
-      const settings = h("div", { class: "settings" });
-      const draw = () => {
-        settings.replaceChildren();
-        if (!app.store.config.features[m.id].enabled) return;
-        for (const [key, def] of Object.entries(m.settings || {})) {
-          const value = app.store.config.features[m.id][key];
-          settings.append(row(def.label, settingControl(def, value, (v) => app.store.update((c) => c.features[m.id][key] = v, "panel")), { stack: def.type === "multi" }));
-        }
-      };
-      const head = h(
-        "div",
-        { class: "head" },
-        health ? h("span", { class: `dot ${health.status}`, title: health.detail }) : h("span", { class: "dot" }),
-        h("span", { class: "title", text: m.label }),
-        badge(m.stability),
-        toggle(st.enabled, (v) => {
-          app.store.update((c) => c.features[m.id].enabled = v, "panel");
-          draw();
-        })
-      );
-      const card2 = h("div", { class: "card" }, head, h("div", { class: "desc" }, m.description, health && h("div", { class: "hint", text: health.detail })), settings);
-      draw();
-      root.append(card2);
-    }
+    for (const m of app.features) root.append(featureCard(app, m, results.find((r) => r.id === `feature.${m.id}`)));
     return root;
+  }
+  function featureCard(app, m, health = null, { title } = {}) {
+    if (typeof m === "string") m = app.features.find((x) => x.id === m);
+    if (!m) return h("div");
+    const st = app.store.config.features[m.id];
+    const settings = h("div", { class: "settings" });
+    const draw = () => {
+      settings.replaceChildren();
+      if (!app.store.config.features[m.id].enabled) return;
+      for (const [key, def] of Object.entries(m.settings || {})) {
+        const value = app.store.config.features[m.id][key];
+        settings.append(row(def.label, settingControl(def, value, (v) => app.store.update((c) => c.features[m.id][key] = v, "panel")), { stack: def.type === "multi" }));
+      }
+    };
+    const head = h(
+      "div",
+      { class: "head" },
+      health ? h("span", { class: `dot ${health.status}`, title: health.detail }) : h("span", { class: "dot" }),
+      h("span", { class: "title", text: title || m.label }),
+      badge(m.stability),
+      toggle(st.enabled, (v) => {
+        app.store.update((c) => c.features[m.id].enabled = v, "panel");
+        draw();
+      })
+    );
+    const card2 = h("div", { class: "card" }, head, h("div", { class: "desc" }, m.description, health && h("div", { class: "hint", text: health.detail })), settings);
+    draw();
+    return card2;
   }
   function profilesTab(app) {
     const root = h("div", { class: "profiles" });
@@ -12545,7 +12782,9 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const root = h("div");
     const data2 = groupsData();
     const enabled = app.store.config.features["subs.groups"]?.enabled;
-    if (!enabled) root.append(h("p", { class: "hint", text: "Feature „Abo-Gruppen“ ist aus. Einschalten unter Features, damit die Filterleiste im Abo-Feed erscheint." }));
+    root.append(h("p", { class: "hint", text: "Abo-Gruppen sortieren deine abonnierten Kanäle in eigene Themen, z. B. „Tech“, „Musik“ oder „Sport“. Im Abo-Feed erscheint dann oben eine Leiste mit diesen Gruppen: ein Klick zeigt nur noch Videos der Kanäle aus dieser Gruppe. Zuordnen geht hier unten oder auf jeder Kanalseite über den Button „Gruppen“. Alles bleibt lokal, YouTube merkt davon nichts." }));
+    root.append(featureCard(app, "subs.groups", null, { title: "Abo-Gruppen benutzen" }));
+    if (!enabled) return root;
     root.append(h("h3", { text: "Gruppen" }));
     for (const g of data2.groups) {
       const name = h("input", { type: "text", value: g.name });
@@ -12618,18 +12857,32 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     draw();
     return root;
   }
-  function bars2(list, max, labelFn) {
-    return h(
-      "div",
-      { style: { display: "flex", alignItems: "flex-end", gap: "4px", height: "80px", margin: "6px 0 2px" } },
-      ...list.map((x) => h("div", { title: `${labelFn(x)}: ${formatDuration(x.sec)}`, style: { flex: "1", minWidth: "6px", height: `${Math.max(2, x.sec / Math.max(1, max) * 80)}px`, background: "var(--accent)", borderRadius: "3px 3px 0 0", opacity: x.sec ? "1" : ".25" } }))
-    );
+  var WD = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  function bars2(list, limitSec) {
+    const top2 = Math.max(60, ...list.map((x) => x.sec));
+    const max = limitSec && limitSec <= top2 * 1.25 ? Math.max(top2, limitSec) : top2;
+    const H4 = 90;
+    const few = list.length <= 14;
+    const cols = list.map((x) => {
+      const d = /* @__PURE__ */ new Date(`${x.day}T12:00:00`);
+      const over = limitSec && x.sec > limitSec;
+      return h(
+        "div",
+        { title: `${x.day}: ${formatDuration(x.sec)}`, style: { flex: "1", minWidth: "6px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: "2px", height: `${H4 + (few ? 30 : 0)}px` } },
+        few && x.sec ? h("span", { text: `${Math.round(x.sec / 60)}m`, style: { fontSize: "10px", opacity: ".7", whiteSpace: "nowrap" } }) : null,
+        h("div", { style: { width: "100%", height: `${x.sec ? Math.max(3, x.sec / max * H4) : 2}px`, background: over ? "var(--danger, #e53935)" : "var(--accent)", borderRadius: "3px 3px 0 0", opacity: x.sec ? "1" : ".25" } }),
+        few ? h("span", { text: WD[d.getDay()], style: { fontSize: "10px", opacity: ".7" } }) : null
+      );
+    });
+    const wrap = h("div", { style: { position: "relative", display: "flex", alignItems: "flex-end", gap: "4px", margin: "6px 0 2px" } }, ...cols);
+    if (limitSec && limitSec <= max) wrap.append(h("div", { title: `Tageslimit ${formatDuration(limitSec)}`, style: { position: "absolute", left: 0, right: 0, bottom: `${limitSec / max * H4 + (few ? 16 : 0)}px`, borderTop: "1px dashed var(--danger, #e53935)", opacity: ".7", pointerEvents: "none" } }));
+    return wrap;
   }
   function watchStatsTab(app) {
     const root = h("div");
     const f = app.store.config.features["watch.time"];
     if (!f?.enabled) {
-      root.append(h("p", { class: "hint", text: "Feature „Schauzeit & Tageslimit“ ist aus. Einschalten unter Features." }));
+      root.append(h("p", { class: "hint", text: "Schauzeit ist aus. Unten einschalten, dann misst ytx lokal, wie lange Videos laufen." }));
     }
     const ranges = [["7", "7 Tage"], ["30", "30 Tage"], ["90", "90 Tage"]];
     app.ui.wtRange ||= "7";
@@ -12663,11 +12916,12 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
           h("span", null, h("b", { text: formatDuration(st.total) }), `in ${days} Tagen`),
           h("span", null, h("b", { text: st.total ? `${Math.round(st.shorts / st.total * 100)} %` : "0 %" }), "Shorts")
         ),
-        limit ? h("p", { class: "hint", text: `Tageslimit ${formatDuration(limit * 60)} · heute ${Math.min(999, Math.round(today / (limit * 60) * 100))} % · einstellbar unter Features › Schauzeit` }) : h("p", { class: "hint", text: "Kein Tageslimit gesetzt (Features › Schauzeit)" })
+        limit ? h("p", { class: "hint", text: `Tageslimit ${formatDuration(limit * 60)} · heute ${Math.min(999, Math.round(today / (limit * 60) * 100))} % · einstellbar unten` }) : h("p", { class: "hint", text: "Kein Tageslimit gesetzt (unten einstellbar)" })
       );
       const shown = st.byDay.slice(-Math.min(days, 31));
-      const max = Math.max(limit * 60, ...shown.map((x) => x.sec));
-      body.append(h("h3", { text: "Pro Tag" }), bars2(shown, max, (x) => x.day), h("div", { class: "hint", text: `${shown[0]?.day || ""} … heute` }));
+      const lim = limit * 60;
+      const over = lim && Math.max(...shown.map((x) => x.sec)) * 1.25 < lim;
+      body.append(h("h3", { text: "Pro Tag" }), bars2(shown, lim), h("div", { class: "hint", text: `${shown[0]?.day || ""} … heute${over ? ` · Limit ${formatDuration(lim)} liegt weit darüber` : lim ? " · gestrichelt: Tageslimit" : ""}` }));
       body.append(h("h3", { text: "Meiste Zeit bei" }));
       if (!st.topChannels.length) body.append(h("p", { class: "muted", text: "Noch keine Daten." }));
       st.topChannels.forEach((c, i) => body.append(h("div", { class: "row" }, h("div", { class: "label" }, `${i + 1}. ${c.name}`, h("small", { text: `${c.count} Videos` })), h("span", { class: "muted", text: formatDuration(c.sec) }))));
@@ -12675,6 +12929,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       st.topVideos.forEach((v) => body.append(h("div", { class: "row" }, h("div", { class: "label" }, v.title || v.videoId, h("small", { text: `${v.channel}${v.kind === "short" ? " · Short" : ""}` })), h("span", { class: "muted", text: formatDuration(v.sec) }))));
     };
     draw().catch((e) => body.replaceChildren(h("p", { class: "err", text: e.message })));
+    root.append(h("h3", { text: "Einstellungen" }), featureCard(app, "watch.time", null, { title: "Schauzeit & Tageslimit" }));
     root.append(h("h3", { text: "Daten" }), h(
       "div",
       { class: "btns" },

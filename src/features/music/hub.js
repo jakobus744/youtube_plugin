@@ -40,6 +40,8 @@ export const hubFeature = {
   hotkeys: [['music.hub', 'Mix-Fenster öffnen/schließen', 'Alt+M']],
   settings: {
     forYouShelf: { type: 'toggle', label: 'Regal „Für dich (ytx)“ mit Neu mischen auf der Startseite', default: true },
+    homeChips: { type: 'toggle', label: 'Eigene Chips über dem Regal (Für dich, Noch nie gehört, Lieblingsgenres …)', default: true },
+    hideYouTubeChips: { type: 'toggle', label: 'YouTubes Stimmungs-Chips (Entspannung, Party …) dafür ausblenden', default: true },
     homeShelf: { type: 'toggle', label: 'Regal „Neu von deinen Künstlern“ auf der Startseite', default: true },
     maxRequests: { type: 'range', label: 'Max. neue Seitenabrufe pro Mix', min: 2, max: 40, step: 1, default: 12 },
     explain: { type: 'toggle', label: 'Begründungen anzeigen', default: true }
@@ -203,6 +205,35 @@ export const hubFeature = {
       const reload = h('button', { class: 'btn sec', type: 'button', text: '↻' , title: 'Neu berechnen' })
       reload.addEventListener('click', () => load(true, true))
       t.append(reload)
+      t.append(infoLine(prefs, session, disc))
+    }
+
+    // eine zeile was dieser mix gerade beruecksichtigt
+    function infoLine(prefs, session, disc) {
+      const favs = prefs.genres.favorites
+      const a = currentArtist()
+      const what = {
+        forYou: `Deine ★-Künstler, meistgehörten Künstler, ähnliche Künstler und Lieblingssongs${prefs.genres.inForYou && favs.length ? `, dazu zwei deiner Lieblingsgenres (${favs.join(', ')})` : ''}`,
+        releases: 'Neue Alben und Singles deiner ★-Künstler und meistgehörten Künstler',
+        genre: ui.genre ? `Nur das Genre „${ui.genre}“, deine bekannten Künstler daraus zuerst` : 'Nur das gewählte Genre',
+        longAgo: 'Deine Songs, die du früher gern gehört hast und seit über 45 Tagen nicht mehr',
+        neverHeard: 'Wie „Für dich“, aber nur Songs und Künstler, die du noch nie gehört hast',
+        similar: a ? `Künstler ähnlich wie ${a.name}` : 'Künstler ähnlich wie der aktuelle Künstler',
+        moreFrom: a ? `Hits und Alben von ${a.name}` : 'Hits und Alben des aktuellen Künstlers',
+        radio: 'Startpunkt aus dem Auswahlfeld, eigene Songs davon plus ähnliche Künstler'
+      }[ui.tab]
+      const parts = [what, `Regler ${Math.round(disc * 100)} von 100`]
+      if (session) parts.push(`Session ${SESSION_PRESETS.find((p) => p.id === session.presetId)?.label || session.presetId}: filtert ${(SESSION_PRESETS.find((p) => p.id === session.presetId)?.extraTerms || []).join(', ') || 'nichts extra'}`)
+      const box = h('div', { class: 'info', style: { flexBasis: '100%', fontSize: '12px', opacity: '.75', lineHeight: '1.4' } }, `Berücksichtigt: ${parts.join(' · ')}`)
+      if (ui.tab === 'forYou' && favs.length) {
+        const cb = h('input', { type: 'checkbox', checked: prefs.genres.inForYou, style: { verticalAlign: 'middle', margin: '0 4px 0 10px' } })
+        cb.addEventListener('change', () => {
+          music.updatePrefs((p) => (p.genres.inForYou = cb.checked))
+          load(true, true)
+        })
+        box.append(h('label', { style: { whiteSpace: 'nowrap', cursor: 'pointer' } }, cb, 'Lieblingsgenres einbeziehen'))
+      }
+      return box
     }
 
     // ---------- inhalt ----------
@@ -229,7 +260,10 @@ export const hubFeature = {
 
     async function load(redraw = false, force = false) {
       if (redraw) drawTools()
-      if (ui.tab === 'queue') return render()
+      // jeder aufruf macht laufende mixe ungueltig, sonst ueberschreibt ein langsamer alter mix den neuen tab
+      const token = ++renderToken
+      const tab = ui.tab
+      if (tab === 'queue') return render()
       const args = mixArgs()
       const key = cacheKey(args)
       const hit = cache.get(key)
@@ -245,14 +279,13 @@ export const hubFeature = {
         ui.result = { items: [], error: 'Genre oder Stimmung oben eingeben, z. B. Deutschrap, Indie, Chill.' }
         return drawBody()
       }
-      const token = ++renderToken
       ui.loading = true
       ui.result = null
       drawBody('lädt …')
       const res = await buildMix(ui.tab === 'radio' ? 'radio' : ui.tab, args, { maxRequests: s.maxRequests, onProgress: (n, max) => token === renderToken && drawBody(`lädt Seiten … ${n}/${max}`) })
       if (token !== renderToken) return
       ui.loading = false
-      ui.result = res
+      ui.result = { ...res, tab }
       if (!res.error) cache.set(key, { at: Date.now(), result: res })
       drawBody()
       if (ui.tab === 'releases') {
@@ -302,7 +335,7 @@ export const hubFeature = {
       main.replaceChildren()
       if (status) return main.append(h('div', { class: 'status', text: status }))
       const r = ui.result
-      if (!r) return
+      if (!r || (r.tab && r.tab !== ui.tab)) return
       if (r.error) return main.append(h('div', { class: 'status err', text: r.error }))
       if (ui.tab === 'releases' && r.releases?.length) {
         main.append(h('div', { class: 'section-title', text: 'Veröffentlichungen' }))
@@ -358,7 +391,10 @@ export const hubFeature = {
       if (!drawer.isOpen) return
       drawTabs()
       drawTools()
-      if (ui.tab === 'queue') return drawQueue()
+      if (ui.tab === 'queue') {
+        ++renderToken
+        return drawQueue()
+      }
       if (artistOverride && (ui.tab === 'similar' || ui.tab === 'moreFrom')) {
         const a = artistOverride
         artistOverride = null
@@ -402,7 +438,17 @@ export const hubFeature = {
     // ---------- fuer dich (ytx) mit neu mischen ----------
 
     const SHOWN = 'm.hub.shown'
-    const home = { pool: null, poolAt: 0, step: 0, picked: [], loading: false, note: '' }
+    const home = { pool: null, poolAt: 0, step: 0, picked: [], loading: false, note: '', mode: ctx.state.get('m.hub.homeMode', 'forYou') }
+
+    // chips ueber dem regal, jeder chip ist ein eigener mix
+    const HOME_MODES = [
+      ['forYou', 'Für dich'],
+      ['neverHeard', 'Noch nie gehört'],
+      ['longAgo', 'Lange nicht gehört'],
+      ['releases', 'Neu von deinen Künstlern']
+    ]
+    const homeModes = () => [...HOME_MODES, ...music.prefs().genres.favorites.map((g) => [`genre:${g}`, g])]
+    const modeLabel = (id) => homeModes().find(([m]) => m === id)?.[1] || 'Für dich'
 
     // gewichteter zufall, vorne liegende passen besser, schon gezeigte kommen zuletzt dran
     function pickFresh(items, n) {
@@ -428,9 +474,14 @@ export const hubFeature = {
     async function loadPool() {
       const base = music.effective().discovery
       const discovery = Math.min(1, base + [0, 0.25, 0.5][home.step % 3])
-      let res = await buildMix('forYou', { discovery }, { maxRequests: 8, limit: 80 })
+      const mode = homeModes().some(([m]) => m === home.mode) ? home.mode : 'forYou'
       home.note = ''
-      if (!res.items?.length) {
+      let res
+      if (mode.startsWith('genre:')) res = await buildMix('genre', { genre: mode.slice(6), discovery }, { maxRequests: 8, limit: 60 })
+      else res = await buildMix(mode, { discovery }, { maxRequests: 8, limit: 80 })
+      if (res.error) home.note = res.error
+      home.poolMode = home.mode
+      if (!res.items?.length && mode === 'forYou') {
         const favs = music.prefs().genres.favorites
         if (favs.length) {
           const genre = favs[Math.floor(Math.random() * favs.length)]
@@ -448,8 +499,8 @@ export const hubFeature = {
       drawForYou(target, true)
       try {
         const shownCount = ctx.state.get(SHOWN, []).length
-        // oft gemischt oder mehr neues gewuenscht: neuen pool holen
-        if (rebuild || !home.pool || Date.now() - home.poolAt > 30 * 60 * 1000 || (home.pool.length && shownCount >= home.pool.length * 0.6)) {
+        // anderer chip, oft gemischt oder mehr neues gewuenscht: neuen pool holen
+        if (rebuild || !home.pool || home.poolMode !== home.mode || Date.now() - home.poolAt > 30 * 60 * 1000 || (home.pool.length && shownCount >= home.pool.length * 0.6)) {
           if (rebuild) home.step++
           await loadPool()
         }
@@ -474,7 +525,32 @@ export const hubFeature = {
       ctx.state.set('m.hub.chipTurn', turn + 1)
       const target = chip.querySelector('a, button') || chip
       target.click()
-      toast(`YouTube-Startseite: ${chip.textContent.trim()}`)
+      toast(`YouTube-Vorschläge darunter: ${chip.textContent.trim()}`)
+    }
+
+    function chipBar(target) {
+      const bar = h('div', { class: 'ytx-m-chips' })
+      for (const [id, label] of homeModes()) {
+        const c = h('button', { type: 'button', class: 'ytx-m-chip', 'aria-pressed': String(home.mode === id), text: label, title: home.mode === id ? 'Nochmal klicken mischt neu' : '' })
+        c.addEventListener('click', (e) => {
+          e.preventDefault()
+          home.mode = id
+          ctx.state.set('m.hub.homeMode', id)
+          shuffle(target)
+        })
+        bar.append(c)
+      }
+      const add = h('button', { type: 'button', class: 'ytx-m-chip ghost', title: 'Im Mix-Fenster ein Genre wählen und mit ☆ merken, dann erscheint es hier', text: '+ Genre' })
+      add.addEventListener('click', (e) => {
+        e.preventDefault()
+        ui.tab = 'genre'
+        ctx.state.set('m.hub.tab', 'genre')
+        ui.result = null
+        drawer.open()
+        render()
+      })
+      bar.append(add)
+      return bar
     }
 
     function drawForYou(target, force = false) {
@@ -489,17 +565,18 @@ export const hubFeature = {
         shuffle(target)
         return
       }
-      const mix = pill({ label: home.loading ? 'mischt …' : '↻ Neu mischen', title: 'Andere Vorschläge aus deinem Profil', onClick: () => shuffle(target) })
+      const mix = pill({ label: home.loading ? 'mischt …' : '↻ Neu mischen', title: 'Andere Vorschläge aus diesem Mix', onClick: () => shuffle(target) })
       const more = pill({ label: 'Mehr Neues', title: 'Neuen Pool holen, stärker in Richtung Entdecken', onClick: () => shuffle(target, true) })
       const yt = pill({ label: 'YouTube-Vorschläge wechseln', title: 'Wechselt durch YouTubes eigene Stimmungen, damit die Regale darunter anders werden', onClick: switchYouTube })
-      const play = pill({ label: '▶ Alle abspielen', onClick: () => home.picked.length && ytxQueue.play(home.picked, { title: 'Für dich' }) })
+      const play = pill({ label: '▶ Alle abspielen', onClick: () => home.picked.length && ytxQueue.play(home.picked, { title: modeLabel(home.mode) }) })
       const row = shelfRow()
       for (const it of home.picked) {
         row.append(shelfCard({ img: it.thumbnail, title: it.title, sub: `${it.artists.map((a) => a.name).join(', ')}${it.reasons?.[0] ? ` · ${it.reasons[0]}` : ''}`, onClick: () => navigateEndpoint(endpoints.radio(it.videoId)) }))
       }
-      const children = [shelfTitle('Für dich (ytx)', mix, more, yt, play)]
+      const children = [s.homeChips ? chipBar(target) : null, shelfTitle(`${modeLabel(home.mode)} (ytx)`, mix, more, yt, play)].filter(Boolean)
       if (home.note) children.push(h('div', { text: home.note, style: { color: T.secondary, font: '400 13px Roboto, Arial, sans-serif', margin: '-8px 0 12px' } }))
       if (home.picked.length) children.push(row)
+      else if (!home.loading && home.mode !== 'forYou') children.push(h('div', { text: 'Für diesen Mix gibt es gerade keine Titel. Probier einen anderen Chip.', style: { color: T.secondary, font: '400 14px Roboto, Arial, sans-serif', marginBottom: '16px' } }))
       else if (!home.loading) children.push(h('div', { text: 'Noch zu wenig Daten. Favorisiere ein paar Künstler (★ in der Playerleiste), merke dir Genres im Mix-Fenster oder hör ein paar Songs, dann erscheinen hier Vorschläge.', style: { color: T.secondary, font: '400 14px Roboto, Arial, sans-serif', marginBottom: '16px' } }))
       target.replaceChildren(...children)
     }
@@ -551,10 +628,17 @@ export const hubFeature = {
         cache.clear()
       }),
       music.on('favorites', () => cache.clear()),
-      music.on('prefs', () => cache.clear()),
+      music.on('prefs', () => {
+        cache.clear()
+        if (shelf.node?.__forYou && !home.loading) drawForYou(shelf.node.__forYou, true)
+      }),
       music.on('session', () => drawer.isOpen && drawTools())
     ]
     updateBadge()
+
+    // youtubes chips nur ausblenden wenn die eigenen wirklich da sind
+    const chipsAttr = () => document.documentElement.toggleAttribute('data-ytx-mchips-off', !!(s.forYouShelf && s.homeChips && s.hideYouTubeChips))
+    chipsAttr()
 
     return {
       drawer,
@@ -564,6 +648,8 @@ export const hubFeature = {
       },
       update(next) {
         s = next
+        chipsAttr()
+        if (shelf.node?.__forYou) drawForYou(shelf.node.__forYou, true)
         shelf.refresh()
         render()
       },
@@ -575,6 +661,7 @@ export const hubFeature = {
         for (const off of offs) off()
         btn.destroy()
         fab.remove()
+        document.documentElement.removeAttribute('data-ytx-mchips-off')
         shelf.destroy()
         drawer.host.remove()
       },

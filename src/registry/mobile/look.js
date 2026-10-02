@@ -1,4 +1,5 @@
 import { themes as ytThemes } from '../youtube/look.js'
+import { hashTokenDecls } from '../../appliers/hashTokens.js'
 
 // look fuer m.youtube.com
 // die mobilseite nennt ihre farbvariablen nach einem hash (--t3e41d7b…), die namen wechseln mit jedem build
@@ -8,45 +9,7 @@ export const TOKEN_SCOPE = 'html:root:root'
 
 export const LOOK_GROUPS = ['Farben', 'Kacheln', 'Allgemein']
 
-// farbe in vergleichbare form: #rrggbb oder rgba(r,g,b,a)
-export function normColor(v) {
-  const s = String(v || '').trim().toLowerCase().replace(/\s+/g, '')
-  let m = s.match(/^#([0-9a-f]{3})$/)
-  if (m) return `#${[...m[1]].map((c) => c + c).join('')}`
-  if (/^#[0-9a-f]{6}$/.test(s)) return s
-  m = s.match(/^rgba?\((\d+),(\d+),(\d+)(?:,([\d.]+))?\)$/)
-  if (!m) return null
-  const hex = `#${[m[1], m[2], m[3]].map((x) => Number(x).toString(16).padStart(2, '0')).join('')}`
-  const a = m[4] == null ? 1 : Number(m[4])
-  return a >= 1 ? hex : `${hex}@${Math.round(a * 1000) / 1000}`
-}
-
-// vars: [[name, wert]], refs: rolle -> farbe der seite
-// liefert rolle -> [{ name, alpha }], transparente varianten der grundfarbe werden mitgenommen
-export function discoverTokens(vars, refs) {
-  const out = {}
-  const wanted = Object.entries(refs).map(([role, v]) => [role, normColor(v)]).filter(([, v]) => v)
-  for (const [name, raw] of vars) {
-    if (!/^--t[0-9a-f]{8,}$/.test(name)) continue
-    const c = normColor(raw)
-    if (!c) continue
-    const [hex, alpha] = c.split('@')
-    for (const [role, ref] of wanted) {
-      if (ref === c || (role === 'bg' && alpha && ref === hex)) (out[role] ||= []).push({ name, alpha: alpha ? Number(alpha) : 1 })
-    }
-  }
-  return out
-}
-
-let found = {}
-
-export function setDiscovered(map) {
-  found = map || {}
-}
-
-export function discovered() {
-  return found
-}
+export { normColor, discoverTokens } from '../../appliers/hashTokens.js'
 
 const COLOR_ROLES = ['bg', 'raised', 'menu', 'text', 'textSecondary', 'accent']
 
@@ -141,12 +104,7 @@ export const controlById = Object.fromEntries([...controls, ...colorControls.map
 
 // erkannte hash variablen ueberschreiben, dazu die youtube tokens fuer ytx eigene elemente
 export function extraCss(colors) {
-  const decl = []
-  for (const role of COLOR_ROLES) {
-    const v = colors[role]
-    if (!v) continue
-    for (const t of found[role] || []) decl.push(`${t.name}: ${t.alpha < 1 ? `color-mix(in srgb, ${v} ${Math.round(t.alpha * 100)}%, transparent)` : v} !important;`)
-  }
+  const decl = hashTokenDecls(colors, COLOR_ROLES)
   const map = { bg: 'base-background', raised: 'raised-background', menu: 'menu-background', text: 'text-primary', textSecondary: 'text-secondary', accent: 'call-to-action' }
   for (const [k, t] of Object.entries(map)) if (colors[k]) decl.push(`--yt-sys-color-baseline--${t}: ${colors[k]};`)
   return decl.length ? `html:root:root { ${decl.join(' ')} }` : ''

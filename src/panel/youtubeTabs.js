@@ -1,6 +1,7 @@
 import { h } from '../core/dom.js'
 import { formatDuration } from '../core/format.js'
 import { row, toggle, btn } from './controls.js'
+import { featureCard } from './tabs.js'
 import { groupsData, updateGroups, addGroup, knownChannels } from '../features/youtube/subGroups/index.js'
 import { groupsOf, toggleChannel } from '../features/youtube/subGroups/logic.js'
 import { ytDb } from '../features/youtube/watchtime/db.js'
@@ -16,7 +17,9 @@ export function subGroupsTab(app) {
   const data = groupsData()
   const enabled = app.store.config.features['subs.groups']?.enabled
 
-  if (!enabled) root.append(h('p', { class: 'hint', text: 'Feature „Abo-Gruppen“ ist aus. Einschalten unter Features, damit die Filterleiste im Abo-Feed erscheint.' }))
+  root.append(h('p', { class: 'hint', text: 'Abo-Gruppen sortieren deine abonnierten Kanäle in eigene Themen, z. B. „Tech“, „Musik“ oder „Sport“. Im Abo-Feed erscheint dann oben eine Leiste mit diesen Gruppen: ein Klick zeigt nur noch Videos der Kanäle aus dieser Gruppe. Zuordnen geht hier unten oder auf jeder Kanalseite über den Button „Gruppen“. Alles bleibt lokal, YouTube merkt davon nichts.' }))
+  root.append(featureCard(app, 'subs.groups', null, { title: 'Abo-Gruppen benutzen' }))
+  if (!enabled) return root
 
   root.append(h('h3', { text: 'Gruppen' }))
   for (const g of data.groups) {
@@ -96,17 +99,32 @@ export function subGroupsTab(app) {
 
 // ---------- schauzeit ----------
 
-function bars(list, max, labelFn) {
-  return h('div', { style: { display: 'flex', alignItems: 'flex-end', gap: '4px', height: '80px', margin: '6px 0 2px' } },
-    ...list.map((x) => h('div', { title: `${labelFn(x)}: ${formatDuration(x.sec)}`, style: { flex: '1', minWidth: '6px', height: `${Math.max(2, (x.sec / Math.max(1, max)) * 80)}px`, background: 'var(--accent)', borderRadius: '3px 3px 0 0', opacity: x.sec ? '1' : '.25' } }))
-  )
+const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+
+function bars(list, limitSec) {
+  const top = Math.max(60, ...list.map((x) => x.sec))
+  const max = limitSec && limitSec <= top * 1.25 ? Math.max(top, limitSec) : top
+  const H = 90
+  const few = list.length <= 14
+  const cols = list.map((x) => {
+    const d = new Date(`${x.day}T12:00:00`)
+    const over = limitSec && x.sec > limitSec
+    return h('div', { title: `${x.day}: ${formatDuration(x.sec)}`, style: { flex: '1', minWidth: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', gap: '2px', height: `${H + (few ? 30 : 0)}px` } },
+      few && x.sec ? h('span', { text: `${Math.round(x.sec / 60)}m`, style: { fontSize: '10px', opacity: '.7', whiteSpace: 'nowrap' } }) : null,
+      h('div', { style: { width: '100%', height: `${x.sec ? Math.max(3, (x.sec / max) * H) : 2}px`, background: over ? 'var(--danger, #e53935)' : 'var(--accent)', borderRadius: '3px 3px 0 0', opacity: x.sec ? '1' : '.25' } }),
+      few ? h('span', { text: WD[d.getDay()], style: { fontSize: '10px', opacity: '.7' } }) : null
+    )
+  })
+  const wrap = h('div', { style: { position: 'relative', display: 'flex', alignItems: 'flex-end', gap: '4px', margin: '6px 0 2px' } }, ...cols)
+  if (limitSec && limitSec <= max) wrap.append(h('div', { title: `Tageslimit ${formatDuration(limitSec)}`, style: { position: 'absolute', left: 0, right: 0, bottom: `${(limitSec / max) * H + (few ? 16 : 0)}px`, borderTop: '1px dashed var(--danger, #e53935)', opacity: '.7', pointerEvents: 'none' } }))
+  return wrap
 }
 
 export function watchStatsTab(app) {
   const root = h('div')
   const f = app.store.config.features['watch.time']
   if (!f?.enabled) {
-    root.append(h('p', { class: 'hint', text: 'Feature „Schauzeit & Tageslimit“ ist aus. Einschalten unter Features.' }))
+    root.append(h('p', { class: 'hint', text: 'Schauzeit ist aus. Unten einschalten, dann misst ytx lokal, wie lange Videos laufen.' }))
   }
   const ranges = [['7', '7 Tage'], ['30', '30 Tage'], ['90', '90 Tage']]
   app.ui.wtRange ||= '7'
@@ -140,11 +158,12 @@ export function watchStatsTab(app) {
         h('span', null, h('b', { text: formatDuration(st.total) }), `in ${days} Tagen`),
         h('span', null, h('b', { text: st.total ? `${Math.round((st.shorts / st.total) * 100)} %` : '0 %' }), 'Shorts')
       ),
-      limit ? h('p', { class: 'hint', text: `Tageslimit ${formatDuration(limit * 60)} · heute ${Math.min(999, Math.round((today / (limit * 60)) * 100))} % · einstellbar unter Features › Schauzeit` }) : h('p', { class: 'hint', text: 'Kein Tageslimit gesetzt (Features › Schauzeit)' })
+      limit ? h('p', { class: 'hint', text: `Tageslimit ${formatDuration(limit * 60)} · heute ${Math.min(999, Math.round((today / (limit * 60)) * 100))} % · einstellbar unten` }) : h('p', { class: 'hint', text: 'Kein Tageslimit gesetzt (unten einstellbar)' })
     )
     const shown = st.byDay.slice(-Math.min(days, 31))
-    const max = Math.max(limit * 60, ...shown.map((x) => x.sec))
-    body.append(h('h3', { text: 'Pro Tag' }), bars(shown, max, (x) => x.day), h('div', { class: 'hint', text: `${shown[0]?.day || ''} … heute` }))
+    const lim = limit * 60
+    const over = lim && Math.max(...shown.map((x) => x.sec)) * 1.25 < lim
+    body.append(h('h3', { text: 'Pro Tag' }), bars(shown, lim), h('div', { class: 'hint', text: `${shown[0]?.day || ''} … heute${over ? ` · Limit ${formatDuration(lim)} liegt weit darüber` : lim ? ' · gestrichelt: Tageslimit' : ''}` }))
     body.append(h('h3', { text: 'Meiste Zeit bei' }))
     if (!st.topChannels.length) body.append(h('p', { class: 'muted', text: 'Noch keine Daten.' }))
     st.topChannels.forEach((c, i) => body.append(h('div', { class: 'row' }, h('div', { class: 'label' }, `${i + 1}. ${c.name}`, h('small', { text: `${c.count} Videos` })), h('span', { class: 'muted', text: formatDuration(c.sec) }))))
@@ -153,6 +172,7 @@ export function watchStatsTab(app) {
   }
   draw().catch((e) => body.replaceChildren(h('p', { class: 'err', text: e.message })))
 
+  root.append(h('h3', { text: 'Einstellungen' }), featureCard(app, 'watch.time', null, { title: 'Schauzeit & Tageslimit' }))
   root.append(h('h3', { text: 'Daten' }), h('div', { class: 'btns' },
     btn('Als Text kopieren', async () => {
       const days = Number(app.ui.wtRange)

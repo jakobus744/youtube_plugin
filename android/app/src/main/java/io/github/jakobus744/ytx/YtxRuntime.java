@@ -1,0 +1,62 @@
+package io.github.jakobus744.ytx;
+
+import android.content.Context;
+import android.util.Log;
+
+import org.json.JSONObject;
+import org.mozilla.geckoview.GeckoResult;
+import org.mozilla.geckoview.GeckoRuntime;
+import org.mozilla.geckoview.GeckoRuntimeSettings;
+import org.mozilla.geckoview.WebExtension;
+
+// eine gecko engine fuer beide icons, ytx als eingebaute erweiterung
+final class YtxRuntime {
+    private static final String TAG = "ytx";
+    static final String EXT_URI = "resource://android/assets/ytx/";
+    static final String EXT_ID = "ytx@jakobus744.github.io";
+
+    interface Listener {
+        void onTheme(String bg, String host);
+        void onUpdated(String version);
+    }
+
+    private static GeckoRuntime runtime;
+    private static Listener listener;
+
+    private YtxRuntime() {}
+
+    static synchronized GeckoRuntime get(Context ctx) {
+        if (runtime != null) return runtime;
+        GeckoRuntimeSettings settings = new GeckoRuntimeSettings.Builder()
+                .consoleOutput(BuildConfig.DEBUG)
+                .aboutConfigEnabled(false)
+                .build();
+        runtime = GeckoRuntime.create(ctx.getApplicationContext(), settings);
+        runtime.getWebExtensionController()
+                .ensureBuiltIn(EXT_URI, EXT_ID)
+                .accept(YtxRuntime::onExtension, e -> Log.e(TAG, "erweiterung nicht installiert", e));
+        return runtime;
+    }
+
+    // die zuletzt sichtbare activity bekommt farbe und update hinweise
+    static void setListener(Listener l) {
+        listener = l;
+    }
+
+    private static void onExtension(WebExtension ext) {
+        if (ext == null) return;
+        ext.setMessageDelegate(new WebExtension.MessageDelegate() {
+            @Override
+            public GeckoResult<Object> onMessage(String nativeApp, Object message, WebExtension.MessageSender sender) {
+                if (!(message instanceof JSONObject)) return null;
+                JSONObject m = (JSONObject) message;
+                Listener l = listener;
+                if (l == null) return null;
+                String t = m.optString("t");
+                if ("theme".equals(t)) l.onTheme(m.optString("bg"), m.optString("host"));
+                else if ("updated".equals(t)) l.onUpdated(m.optString("version"));
+                return null;
+            }
+        }, "ytx");
+    }
+}

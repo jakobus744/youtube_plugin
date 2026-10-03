@@ -1,0 +1,31 @@
+{
+  "manifest_version": 2,
+  "name": "ytx",
+  "version": "1.0",
+  "description": "ytx userscript als eingebaute erweiterung der ytx app",
+  "browser_specific_settings": {
+    "gecko": { "id": "ytx@jakobus744.github.io" }
+  },
+  "permissions": [
+    "storage",
+    "unlimitedStorage",
+    "webRequest",
+    "webRequestBlocking",
+    "nativeMessaging",
+    "geckoViewAddons",
+    "*://*.youtube.com/*",
+    "https://raw.githubusercontent.com/*",
+    "https://musicbrainz.org/*",
+    "https://ws.audioscrobbler.com/*"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*", "https://m.youtube.com/*", "https://music.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

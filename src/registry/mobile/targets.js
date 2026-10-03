@@ -31,6 +31,14 @@ export const targets = [
     note: 'Navigation dann über Logo, Suche und Zurück'
   },
   {
+    id: 'mb.top.openApp',
+    label: '„Open App“ oben (abgemeldet)',
+    group: 'Navigation',
+    modes: SH,
+    sel: ['ytm-mobile-topbar-renderer ytm-button-renderer.icon-avatar_logged_out', 'ytm-mobile-topbar-renderer .mobile-topbar-header-sign-in-button'],
+    note: 'Anmelden geht weiter über den Tab „Mein YouTube“'
+  },
+  {
     id: 'mb.top.cast',
     label: 'Cast-Button oben',
     group: 'Navigation',

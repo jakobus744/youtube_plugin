@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- lange auf das icon druecken -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="subs"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_subs">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.jakobus744.ytx"
+            android:targetClass="io.github.jakobus744.ytx.MainActivity"
+            android:data="https://m.youtube.com/feed/subscriptions" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="later"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/shortcut_later">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.jakobus744.ytx"
+            android:targetClass="io.github.jakobus744.ytx.MainActivity"
+            android:data="https://m.youtube.com/playlist?list=WL" />
+    </shortcut>
+    <shortcut
+        android:shortcutId="music"
+        android:enabled="true"
+        android:icon="@mipmap/ic_music"
+        android:shortcutShortLabel="@string/music_name">
+        <intent
+            android:action="android.intent.action.VIEW"
+            android:targetPackage="io.github.jakobus744.ytx"
+            android:targetClass="io.github.jakobus744.ytx.MusicActivity"
+            android:data="https://music.youtube.com/" />
+    </shortcut>
+</shortcuts>

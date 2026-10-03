@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ytx</string>
+    <string name="music_name">ytx Music</string>
+    <string name="shortcut_subs">Abos</string>
+    <string name="shortcut_later">Später ansehen</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="share">Teilen</string>
+    <string name="crashed">Seite abgestürzt, wird neu geladen</string>
+    <string name="updated">ytx %1$s geladen, gilt ab dem nächsten Seitenwechsel</string>
+    <string name="no_app">Keine App für diesen Link gefunden</string>
+</resources>

@@ -6,6 +6,7 @@ const C = 'collapse'
 const tidyDisplay = {
   'mb.pivot.shorts': H,
   'mb.pivot.create': H,
+  'mb.top.openApp': H,
   'mb.home.shorts': H,
   'mb.home.nudge': H,
   'mb.watch.shorts': H,

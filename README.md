@@ -31,6 +31,28 @@ Startprofil ist **„Aufgeräumt“**. **„YouTube (Original)“** schaltet auf
 2. `chrome://extensions` → Tampermonkey → Details → **„Zugriff auf Datei-URLs zulassen“**.
 3. `npm run dev`, speichern, Seite neu laden.
 
+### Android: eigene ytx-App
+
+Eine richtige App mit zwei Icons, **ytx** (YouTube) und **ytx Music**, ohne Firefox und ohne Browserleiste. Drin steckt die Firefox-Engine (GeckoView), ytx ist fest eingebaut.
+
+**Installieren**
+1. Am Rechner `npm run apk` ausführen. Die fertige Datei liegt in `android/apk/ytx-<version>.apk` (nicht im Git, rund 95 MB).
+2. Die APK aufs Handy bringen, z. B. über den Nextcloud-Ordner, und antippen. Beim ersten Mal fragt Android, ob die Nextcloud- oder Dateien-App Apps installieren darf: erlauben.
+3. **ytx** öffnen, bei YouTube anmelden (Tab „Mein YouTube“). **ytx Music** nutzt dieselbe Anmeldung.
+
+**Was die App kann**
+- Zwei getrennte Einträge in der App-Übersicht, YouTube und Music laufen nebeneinander.
+- Lange auf das Icon drücken: **Abos**, **Später ansehen**, **ytx Music**.
+- YouTube-Links aus anderen Apps (WhatsApp, Teilen-Menü) öffnen sich in ytx. Fremde Links gehen an den normalen Browser.
+- Statusleiste in der Farbe der Seite, also auch im ytx-Theme. Vollbild bei Videos, Zurück-Taste, Teilen über das Android-Menü.
+- Profile, Einstellungen und Verlauf gelten gemeinsam für YouTube und Music in der App (getrennt von Firefox).
+
+**Updates**
+- **ytx selbst** aktualisiert sich wie bei Violentmonkey: Die App schaut alle 6 Stunden nach einer neueren `dist/ytx.user.js` auf GitHub und lädt sie. Sie gilt ab dem nächsten Seitenwechsel.
+- **Die App** (Engine, Icons) braucht nur bei Änderungen am `android`-Ordner eine neue APK. Einfach drüber installieren, die Daten bleiben. Immer auf demselben Rechner bauen, denn die App ist mit dessen Schlüssel signiert.
+
+**Technik**: `android/app/src/main/assets/ytx/` ist eine eingebaute Erweiterung. Sie stellt die GM-Funktionen bereit (Speicher, Live-Abgleich, Anfragen, Zwischenablage) und entfernt auf YouTube die Content-Security-Policy, weil ytx sonst nicht in die Seite darf. Bauen braucht Android SDK und JDK 17, Build-Dateien landen in `%LOCALAPPDATA%/ytx-android-build`, nicht in Nextcloud.
+
 ### Android: Firefox + Violentmonkey
 
 1. **Firefox** aus dem Play Store installieren.

@@ -1,0 +1,11 @@
+plugins {
+    id 'com.android.application' version '9.2.1' apply false
+}
+
+// build ordner ausserhalb von nextcloud, sonst werden hunderte mb synchronisiert
+def localData = System.getenv('LOCALAPPDATA')
+if (localData) {
+    allprojects {
+        layout.buildDirectory = new File(localData, "ytx-android-build/${project.name}")
+    }
+}

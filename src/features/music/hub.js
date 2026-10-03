@@ -80,7 +80,9 @@ export const hubFeature = {
       e.stopPropagation()
       toggle()
     })
-    document.body.append(fab)
+    // in der app startet ytx so frueh, dass body noch fehlen kann
+    if (document.body) document.body.append(fab)
+    else document.addEventListener('DOMContentLoaded', () => fab.isConnected || document.body.append(fab), { once: true })
     function toggle() {
       drawer.toggle()
       if (drawer.isOpen) render()

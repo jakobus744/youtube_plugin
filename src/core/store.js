@@ -123,6 +123,17 @@ const MIGRATIONS = [
         p.config.mobile = p.template === 'youtube' ? {} : t.config().mobile
       }
     }
+  ],
+  [
+    'mobile-open-app-hidden',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        const m = p.config?.mobile
+        if (!m || p.template === 'youtube') continue
+        m.display ||= {}
+        if (!('mb.top.openApp' in m.display)) m.display['mb.top.openApp'] = 'hide'
+      }
+    }
   ]
 ]
 

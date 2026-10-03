@@ -1,0 +1,76 @@
+plugins {
+    id 'com.android.application'
+}
+
+// app version folgt der ytx version aus package.json
+def ytxVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../package.json')).version
+def parts = ytxVersion.tokenize('.').collect { it.replaceAll(/\D.*/, '') as int }
+def ytxCode = parts[0] * 10000 + parts[1] * 100 + parts[2]
+
+def bundle = rootProject.file('../dist/ytx.user.js')
+def genAssets = layout.buildDirectory.dir('generated/ytxAssets')
+
+android {
+    namespace 'io.github.jakobus744.ytx'
+    compileSdk {
+        version = release(37) { minorApiLevel = 1 }
+    }
+
+    defaultConfig {
+        applicationId 'io.github.jakobus744.ytx'
+        minSdk 26
+        targetSdk 35
+        versionCode ytxCode
+        versionName ytxVersion
+        // nur 64 bit arm, haelt die apk klein und passt fuer alle aktuellen handys
+        // fuer den emulator: -Pabi=x86_64
+        ndk { abiFilters((project.findProperty('abi') ?: 'arm64-v8a') as String) }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // privat verteilt, der debug schluessel dieses rechners reicht und bleibt fuer updates gleich
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures { buildConfig true }
+
+    // engine bibliotheken komprimiert packen, sonst ist die apk ueber 190 mb gross
+    packaging {
+        jniLibs { useLegacyPackaging = true }
+    }
+
+    sourceSets {
+        main { assets.srcDirs += [genAssets] }
+    }
+}
+
+dependencies {
+    implementation 'org.mozilla.geckoview:geckoview:157.0.20260924084938'
+}
+
+// das userscript aus dist kommt als datei in die eingebaute erweiterung
+def copyYtx = tasks.register('copyYtx', Copy) {
+    from bundle
+    into genAssets.map { it.dir('ytx') }
+    doFirst {
+        if (!bundle.exists()) throw new GradleException('dist/ytx.user.js fehlt, zuerst im ytx ordner "npm run build" ausfuehren')
+    }
+}
+tasks.named('preBuild') { dependsOn copyYtx }
+
+// fertige apk mit version im namen nach android/apk legen
+tasks.register('apk', Copy) {
+    dependsOn 'assembleRelease'
+    from layout.buildDirectory.dir('outputs/apk/release')
+    include '*.apk'
+    into rootProject.file('apk')
+    rename { "ytx-${ytxVersion}.apk" }
+}

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#0F0F0F</color>
+    <color name="accent">#B388FF</color>
+    <color name="icon_bg">#17121F</color>
+    <color name="icon_ytx">#8B5CF6</color>
+    <color name="icon_music">#FF4F7B</color>
+</resources>

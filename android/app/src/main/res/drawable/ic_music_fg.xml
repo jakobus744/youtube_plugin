@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- kreis mit note -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="@color/icon_music"
+        android:pathData="M54,31 A23,23 0 1 1 53.99,31 Z" />
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M51,40 H55 V60.5 A6,5.5 0 1 1 51,55.3 Z M55,40 L64,43 V48 L55,45 Z" />
+</vector>

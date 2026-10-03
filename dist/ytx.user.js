@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.3.1
+// @version      0.3.2
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -29,7 +29,7 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.3.1",
+    version: "0.3.2",
     description: "YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen",
     private: true,
     type: "module",
@@ -37,7 +37,8 @@
       build: "node build.mjs",
       dev: "node build.mjs --watch",
       serve: "node tools/serve.mjs",
-      test: 'node --test "tests/*.test.mjs"'
+      test: 'node --test "tests/*.test.mjs"',
+      apk: "node build.mjs && cd android && .\\gradlew.bat --no-daemon apk"
     },
     devDependencies: {
       esbuild: "^0.25.0"
@@ -3807,6 +3808,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
   var tidyDisplay3 = {
     "mb.pivot.shorts": H3,
     "mb.pivot.create": H3,
+    "mb.top.openApp": H3,
     "mb.home.shorts": H3,
     "mb.home.nudge": H3,
     "mb.watch.shorts": H3,
@@ -3967,6 +3969,17 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
           if (!p.config || p.config.mobile) continue;
           const t = templateById2[p.template] || templateById2.aufgeraeumt;
           p.config.mobile = p.template === "youtube" ? {} : t.config().mobile;
+        }
+      }
+    ],
+    [
+      "mobile-open-app-hidden",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.mobile;
+          if (!m || p.template === "youtube") continue;
+          m.display ||= {};
+          if (!("mb.top.openApp" in m.display)) m.display["mb.top.openApp"] = "hide";
         }
       }
     ]
@@ -5258,15 +5271,21 @@ ${chaptersText(true)}
   }
 
   // src/sites/hashBoot.js
-  function bootHashTokens(isDark, label) {
+  function bootHashTokens(isDark, label, onMode) {
     let tries = 0;
+    let dark = null;
     const scan = () => {
-      const added = scanPage(isDark());
+      if (dark === null) {
+        dark = !!isDark();
+        onMode?.(dark);
+      }
+      const added = scanPage(dark);
       if (added > 0) applyVars(store.config);
       return added;
     };
     const t = setInterval(() => {
       const added = scan();
+      if (added < 0) dark = null;
       if (added >= 0 || ++tries > 40) {
         clearInterval(t);
         log.info(`${label} farben erkannt: ${Object.entries(tokenCount()).map(([k, v]) => `${k} ${v}`).join(", ") || "keine"}`);
@@ -8898,7 +8917,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         e.stopPropagation();
         toggle2();
       });
-      document.body.append(fab);
+      if (document.body) document.body.append(fab);
+      else document.addEventListener("DOMContentLoaded", () => fab.isConnected || document.body.append(fab), { once: true });
       function toggle2() {
         drawer.toggle();
         if (drawer.isOpen) render3();
@@ -10475,6 +10495,14 @@ ${data2.source}` : ""].join("\n").trim();
       note: "Navigation dann über Logo, Suche und Zurück"
     },
     {
+      id: "mb.top.openApp",
+      label: "„Open App“ oben (abgemeldet)",
+      group: "Navigation",
+      modes: SH,
+      sel: ["ytm-mobile-topbar-renderer ytm-button-renderer.icon-avatar_logged_out", "ytm-mobile-topbar-renderer .mobile-topbar-header-sign-in-button"],
+      note: "Anmelden geht weiter über den Tab „Mein YouTube“"
+    },
+    {
       id: "mb.top.cast",
       label: "Cast-Button oben",
       group: "Navigation",
@@ -10880,6 +10908,21 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/mobile.js
+  var BASE_TOKENS = `html {
+  --yt-sys-color-baseline--base-background: #fff; --yt-sys-color-baseline--raised-background: #fff; --yt-sys-color-baseline--menu-background: #fff;
+  --yt-sys-color-baseline--text-primary: #0f0f0f; --yt-sys-color-baseline--text-secondary: #606060; --yt-sys-color-baseline--call-to-action: #065fd4;
+  --yt-sys-color-baseline--tonal-background: rgba(0,0,0,.05); --yt-sys-color-baseline--mono-tonal-hover: rgba(0,0,0,.1); --yt-sys-color-baseline--outline: rgba(0,0,0,.1);
+  --yt-sys-color-baseline--additive-background: rgba(0,0,0,.05); --yt-sys-color-baseline--text-primary-inverse: #fff;
+}
+html[data-ytx-dark] {
+  --yt-sys-color-baseline--base-background: #0f0f0f; --yt-sys-color-baseline--raised-background: #212121; --yt-sys-color-baseline--menu-background: #282828;
+  --yt-sys-color-baseline--text-primary: #f1f1f1; --yt-sys-color-baseline--text-secondary: #aaa; --yt-sys-color-baseline--call-to-action: #3ea6ff;
+  --yt-sys-color-baseline--tonal-background: rgba(255,255,255,.1); --yt-sys-color-baseline--mono-tonal-hover: rgba(255,255,255,.2); --yt-sys-color-baseline--outline: rgba(255,255,255,.2);
+  --yt-sys-color-baseline--additive-background: rgba(255,255,255,.1); --yt-sys-color-baseline--text-primary-inverse: #0f0f0f;
+}
+/* die kopfleiste ist auf der videoseite auch im hellen modus dunkel, knoepfe folgen ihrer schriftfarbe und schrumpfen nicht */
+ytm-mobile-topbar-renderer [data-ytx-mount] { flex: none !important; }
+ytm-mobile-topbar-renderer .ytx-btn { color: inherit !important; background: color-mix(in srgb, currentColor 12%, transparent) !important; }`;
   var FILTER_PAGES2 = [
     ["home", "Startseite"],
     ["subscriptions", "Abos"],
@@ -10887,6 +10930,12 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     ["watch", "Empfehlungen auf Videoseite"],
     ["channel", "Kanal"]
   ];
+  function pageIsDark() {
+    const m = getComputedStyle(document.documentElement).color.match(/\d+/g);
+    if (!m) return true;
+    const [r, g, b] = m.map(Number);
+    return 0.299 * r + 0.587 * g + 0.114 * b > 128;
+  }
   var mobileSite = {
     id: "mobile",
     label: "YouTube mobil",
@@ -10910,7 +10959,8 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     playback: { activePlayback: activePlayback3, pauseActive: pauseActive3 },
     panelTabs: ["display", "look", "behavior", "filters", "features", "subGroups", "watchStats", "profiles", "diagnose"],
     boot() {
-      bootHashTokens(() => document.documentElement.hasAttribute("dark") || document.documentElement.hasAttribute("darker-dark-theme"), "mobil");
+      setCss("mobile.baseTokens", BASE_TOKENS);
+      bootHashTokens(pageIsDark, "mobil", (dark) => document.documentElement.toggleAttribute("data-ytx-dark", dark));
     }
   };
 

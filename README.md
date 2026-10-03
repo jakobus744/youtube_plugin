@@ -61,7 +61,7 @@ Eine richtige App mit zwei Icons, **ytx** (YouTube) und **ytx Music**, ohne Fire
 4. **m.youtube.com** öffnen und anmelden. Oben erscheinen **ytx** (Panel) und **⏱** (Schauzeit heute).
 5. Für ein App-Gefühl: Menü ⋮ → **Zum Startbildschirm hinzufügen**. Das Icon öffnet YouTube direkt.
 
-Auf dem Handy ist das Panel ein Blatt von unten, die Bedienelemente sind größer. Auf YouTube Music liegt „Mix“ als runder Knopf unten rechts.
+Auf dem Handy ist das Panel ein Blatt von unten, die Bedienelemente sind größer. Auf YouTube Music führen die Chips auf der Startseite zu den Mixen.
 
 Mobil gibt es: Ausblenden (Shorts-Tab, Shorts-Regale, Werbung, Empfehlungen, Kommentar-Vorschau …), Themes und Farben, Filter (Kanäle, Stichwörter, Shorts, Dauer, Alter), Abo-Gruppen, Schauzeit mit Tageslimit, Shorts-Umleitung. Profile und Daten liegen pro Gerät, zum Übertragen **Profile › Export/Import** nutzen.
 
@@ -95,11 +95,11 @@ Musik-Vorlieben, Blocklisten, Verlauf und Favoriten sind profilunabhängig: dein
 ## YouTube Music in 60 Sekunden
 
 - **★ in der Playerleiste**: Song, Künstler oder Album favorisieren, „Mehr/Weniger davon“, Song ignorieren, Künstler blockieren. Auf Künstler-, Album- und Playlist-Seiten gibt es einen eigenen ★-Button.
-- **Mix** oben rechts: Für dich · Neu · Genre · Lange nicht gehört · Noch nie gehört · Ähnlich · Mehr von · Smart Radio · Reihenfolge. Regler **Bekannt ⟷ Entdecken**, Session-Preset (Fokus, Gym, Abends, Entdecken, Nur bekannte Musik). Jeder Tab ist ein eigener Mix, eine Zeile „Berücksichtigt: …“ sagt, was gerade einfließt. „Für dich“ nimmt auf Wunsch zwei deiner Lieblingsgenres mit. Jede Zeile zeigt, warum sie da ist, und hat ⋯ für Feedback. **„▶ Alles abspielen“** spielt den Mix in ytx-eigener Reihenfolge.
-- **Startseite**: eigene Chips oben (Für dich, Noch nie gehört, Lange nicht gehört, Neu von deinen Künstlern und deine Lieblingsgenres, „+ Genre“ zum Ergänzen) statt YouTubes Stimmungs-Chips. Darunter das Regal zum gewählten Chip mit „↻ Neu mischen“, „Mehr Neues“ und „YouTube-Vorschläge wechseln“, dann „Neu von deinen Künstlern“. YouTubes Chips lassen sich unter Features › Mix wieder einblenden.
+- **Mix-Fenster** (über ⋯ › Alle Mixe, Panel › Musik oder Alt+M): Für dich · Neu · Genre · Lange nicht gehört · Noch nie gehört · Ähnlich · Mehr von · Smart Radio · Reihenfolge. Regler **Bekannt ⟷ Entdecken**, Session-Preset (Fokus, Gym, Abends, Entdecken, Nur bekannte Musik). Jeder Tab ist ein eigener Mix, eine Zeile „Berücksichtigt: …“ sagt, was gerade einfließt. „Für dich“ nimmt auf Wunsch zwei deiner Lieblingsgenres mit. Jede Zeile zeigt, warum sie da ist, und hat ⋯ für Feedback. **„▶ Alles abspielen“** spielt den Mix in ytx-eigener Reihenfolge.
+- **Startseite**: eigene Chips oben (Für dich, Noch nie gehört, Lange nicht gehört, Neu mit Zähler und deine Lieblingsgenres, „+ Genre“ zum Ergänzen) statt YouTubes Stimmungs-Chips. Darunter das Regal zum gewählten Chip. Nochmal auf den Chip tippen oder ↻ mischt neu, ▶ spielt alles, ⋯ hat „Mehr Neues“, YouTube-Vorschläge wechseln und das Mix-Fenster. Ein eigener Mix-Knopf oben rechts lässt sich unter Features › Mix einschalten, YouTubes Chips ebenso.
 - **Mediathek**: Regal **„Deine Favoriten (ytx)“** mit allen ★-Künstlern, -Songs, -Alben und -Playlists, filterbar, Lieblingssongs direkt abspielbar.
 - **Genres**: feste Auswahl mit Techno-, Hardstyle- und Hip-Hop-Varianten plus freie Eingabe.
-- **Warteschlange**: Gesamt- und Restdauer, Markierungen für blockierte, oft übersprungene und doppelte Titel, optional Auto-Skip (Tab **Musik**).
+- **Warteschlange**: Gesamt- und Restdauer, dezente Markierungen für blockierte (z. B. „remix“ aus der Blockliste), oft übersprungene und doppelte Titel, optional Auto-Skip (Tab **Musik**).
 - **Songtext**: Button „Songtext kopieren“ über dem Text.
 - **Verlauf & Daten**: Pausieren, Einträge löschen, Künstler/Songs vom Profil ausschließen, Aufbewahrungsdauer, Export/Import als JSON.
 - **Statistik**: Hörzeit, Top-Songs/-Künstler/-Alben, Skip-Quote, Wochen/Monate, Tageszeit, Wochentag, als Text kopierbar.

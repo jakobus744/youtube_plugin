@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.3.2
+// @version      0.3.3
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -29,7 +29,7 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.3.2",
+    version: "0.3.3",
     description: "YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen",
     private: true,
     type: "module",
@@ -7787,19 +7787,15 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
 html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hidden]) ytmusic-section-list-renderer > #header ytmusic-chip-cloud-renderer { display: none !important; }
 .ytx-m-info { all: initial; display: block; padding: 6px 16px; font: 400 12px/1.4 Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); }
 .ytx-m-info b { font-weight: 500; color: var(--ytmusic-text-primary, #fff); }
-.ytx-m-mark { all: initial; display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; font: 500 10px/16px Roboto, Arial, sans-serif; color: #fff; background: rgba(229,57,53,.85); vertical-align: middle; white-space: nowrap; }
-.ytx-m-mark[data-kind="highSkip"] { background: rgba(255,152,0,.85); }
-.ytx-m-mark[data-kind="duplicate"], .ytx-m-mark[data-kind="recent"] { background: rgba(120,120,120,.85); }
+/* markierung in der warteschlange: eine farbe fuer alle gruende, nur so breit wie der text, auch wenn youtube die zeile als raster baut */
+.ytx-m-mark { all: initial; display: inline-block; width: max-content; max-width: 100%; justify-self: start; align-self: flex-start; flex: none; margin: 2px 0 0 6px; padding: 0 6px; border-radius: 4px;
+  font: 500 10px/15px Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); border: 1px solid currentColor; opacity: .8; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 ytmusic-player-queue-item[data-ytx-skip] { opacity: .55; }
 ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 .ytx-m-bar-btns { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; }
-.ytx-m-fab { all: initial; display: none; position: fixed; z-index: 2150; right: 16px; bottom: 150px; width: 52px; height: 52px; border-radius: 26px; align-items: center; justify-content: center; cursor: pointer;
-  font: 700 13px Roboto, Arial, sans-serif; color: #000; background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.45); }
-.ytx-m-fab[data-badge]:after { content: attr(data-badge); position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; box-sizing: border-box; font-size: 11px; line-height: 18px; text-align: center; color: #fff; background: #e53935; }
 @media (max-width: 600px) {
   ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
-  .ytx-m-fab { display: flex; }
   .ytx-m-shelf { padding-inline: 16px; }
   .ytx-m-chips { flex-wrap: nowrap; overflow-x: auto; }
 }
@@ -8876,15 +8872,15 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     site: "music",
     label: "Mix-Fenster (Für dich, Neu, Genre, Smart Radio)",
     group: "Entdecken",
-    description: "Eigene Empfehlungen aus deinem lokalen Profil und YouTube-Music-Seiten, jeweils mit Begründung und Feedback-Knöpfen. Button „Mix“ oben rechts",
+    description: "Eigene Empfehlungen aus deinem lokalen Profil und YouTube-Music-Seiten, jeweils mit Begründung und Feedback-Knöpfen. Auf der Startseite über die Chips, das Mix-Fenster über ⋯ › Alle Mixe oder Alt+M",
     stability: "mittel",
     anchors: ["top.buttons", "m.browse.top"],
     hotkeys: [["music.hub", "Mix-Fenster öffnen/schließen", "Alt+M"]],
     settings: {
-      forYouShelf: { type: "toggle", label: "Regal „Für dich (ytx)“ mit Neu mischen auf der Startseite", default: true },
-      homeChips: { type: "toggle", label: "Eigene Chips über dem Regal (Für dich, Noch nie gehört, Lieblingsgenres …)", default: true },
+      forYouShelf: { type: "toggle", label: "Mix-Regal mit Chips auf der Startseite", default: true },
       hideYouTubeChips: { type: "toggle", label: "YouTubes Stimmungs-Chips (Entspannung, Party …) dafür ausblenden", default: true },
       homeShelf: { type: "toggle", label: "Regal „Neu von deinen Künstlern“ auf der Startseite", default: true },
+      navButton: { type: "toggle", label: "Zusätzlich Knopf „Mix“ oben rechts", default: false },
       maxRequests: { type: "range", label: "Max. neue Seitenabrufe pro Mix", min: 2, max: 40, step: 1, default: 12 },
       explain: { type: "toggle", label: "Begründungen anzeigen", default: true }
     },
@@ -8896,29 +8892,23 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       const drawer = createDrawer({ title: "ytx Mix" });
       const updateBadge = async () => {
         badge2 = await music.releases.unseenCount().catch(() => 0);
-        for (const node of [btn2.node, fab]) {
-          if (!node) continue;
-          if (badge2) node.setAttribute("data-badge", String(badge2));
-          else node.removeAttribute("data-badge");
+        if (btn2.node) {
+          if (badge2) btn2.node.setAttribute("data-badge", String(badge2));
+          else btn2.node.removeAttribute("data-badge");
         }
+        if (shelf?.node?.__forYou && !home.loading) drawForYou(shelf.node.__forYou, true);
       };
       const btn2 = ctx.mount({
         id: "m.hub.button",
         anchor: "top.buttons",
         position: "prepend",
+        when: () => s.navButton,
         create: () => {
           const b = pill({ label: "Mix", title: "ytx Mix (Alt+M)", onClick: () => toggle2() });
           b.style.margin = "0 8px";
           return b;
         }
       });
-      const fab = h("button", { type: "button", class: "ytx-m-fab", title: "ytx Mix", "data-ytx-own": "", text: "Mix" });
-      fab.addEventListener("click", (e) => {
-        e.stopPropagation();
-        toggle2();
-      });
-      if (document.body) document.body.append(fab);
-      else document.addEventListener("DOMContentLoaded", () => fab.isConnected || document.body.append(fab), { once: true });
       function toggle2() {
         drawer.toggle();
         if (drawer.isOpen) render3();
@@ -8961,20 +8951,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         });
         t.append(sel);
         if (ui.tab === "genre") {
-          const pick2 = h(
-            "select",
-            { title: "Genre wählen" },
-            h("option", { value: "", text: "Genre wählen …", selected: !ALL_GENRES.includes(ui.genre) }),
-            ...GENRE_GROUPS.map(([group, list]) => h("optgroup", { label: group }, ...list.map((g) => h("option", { value: g, text: g, selected: g === ui.genre }))))
-          );
-          pick2.addEventListener("change", () => {
-            if (!pick2.value) return;
-            ui.genre = pick2.value;
-            ctx.state.set("m.hub.genre", ui.genre);
-            load3(true);
-          });
-          const input = h("input", { type: "search", placeholder: "oder frei eingeben", value: ALL_GENRES.includes(ui.genre) ? "" : ui.genre, list: "ytx-genres" });
-          const dl = h("datalist", { id: "ytx-genres" });
+          const input = h("input", { type: "search", placeholder: "Genre wählen oder eingeben", value: ui.genre, list: "ytx-genres", title: "Genre oder Stimmung, z. B. Hard Techno, Deutschrap, Chill" });
+          const dl = h("datalist", { id: "ytx-genres" }, ...ALL_GENRES.map((g) => h("option", { value: g })));
           catalog.moods().then((m) => dl.replaceChildren(...[.../* @__PURE__ */ new Set([...ALL_GENRES, ...m.genres.map((g) => g.name), ...m.moods.map((g) => g.name)])].map((g) => h("option", { value: g })))).catch(() => {
           });
           input.addEventListener("change", () => {
@@ -8983,7 +8961,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
             ctx.state.set("m.hub.genre", ui.genre);
             load3(true);
           });
-          t.append(pick2, input, dl);
+          t.append(input, dl);
           const favs = prefs.genres.favorites;
           if (ui.genre) {
             const on = favs.includes(ui.genre);
@@ -9252,13 +9230,13 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       const SHOWN = "m.hub.shown";
       const home = { pool: null, poolAt: 0, step: 0, picked: [], loading: false, note: "", mode: ctx.state.get("m.hub.homeMode", "forYou") };
       const HOME_MODES = [
-        ["forYou", "Für dich"],
-        ["neverHeard", "Noch nie gehört"],
-        ["longAgo", "Lange nicht gehört"],
-        ["releases", "Neu von deinen Künstlern"]
+        ["forYou", "Für dich", "Für dich"],
+        ["neverHeard", "Noch nie gehört", "Noch nie gehört"],
+        ["longAgo", "Lange nicht gehört", "Lange nicht gehört"],
+        ["releases", "Neu", "Neu von deinen Künstlern"]
       ];
-      const homeModes = () => [...HOME_MODES, ...music.prefs().genres.favorites.map((g) => [`genre:${g}`, g])];
-      const modeLabel = (id) => homeModes().find(([m]) => m === id)?.[1] || "Für dich";
+      const homeModes = () => [...HOME_MODES, ...music.prefs().genres.favorites.map((g) => [`genre:${g}`, g, g])];
+      const modeLabel = (id) => homeModes().find(([m]) => m === id)?.[2] || "Für dich";
       function pickFresh(items, n) {
         const shown = new Set(ctx.state.get(SHOWN, []));
         let pool = items.filter((i) => !shown.has(i.videoId));
@@ -9331,10 +9309,23 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         target.click();
         toast(`YouTube-Vorschläge darunter: ${chip.textContent.trim()}`);
       }
+      function openInDrawer(mode) {
+        if (mode?.startsWith("genre:")) {
+          ui.tab = "genre";
+          ui.genre = mode.slice(6);
+          ctx.state.set("m.hub.genre", ui.genre);
+        } else if (mode) ui.tab = mode;
+        ctx.state.set("m.hub.tab", ui.tab);
+        ui.result = null;
+        drawer.open();
+        render3();
+      }
       function chipBar(target) {
         const bar = h("div", { class: "ytx-m-chips" });
         for (const [id, label] of homeModes()) {
-          const c = h("button", { type: "button", class: "ytx-m-chip", "aria-pressed": String(home.mode === id), text: label, title: home.mode === id ? "Nochmal klicken mischt neu" : "" });
+          const on = home.mode === id;
+          const text = id === "releases" && badge2 ? `${label} · ${badge2}` : label;
+          const c = h("button", { type: "button", class: "ytx-m-chip", "aria-pressed": String(on), text, title: on ? "Nochmal tippen mischt neu" : "" });
           c.addEventListener("click", (e) => {
             e.preventDefault();
             home.mode = id;
@@ -9343,17 +9334,27 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           });
           bar.append(c);
         }
-        const add2 = h("button", { type: "button", class: "ytx-m-chip ghost", title: "Im Mix-Fenster ein Genre wählen und mit ☆ merken, dann erscheint es hier", text: "+ Genre" });
+        const add2 = h("button", { type: "button", class: "ytx-m-chip ghost", title: "Genre wählen und mit ☆ merken, dann steht es hier als Chip", text: "+ Genre" });
         add2.addEventListener("click", (e) => {
           e.preventDefault();
-          ui.tab = "genre";
-          ctx.state.set("m.hub.tab", "genre");
-          ui.result = null;
-          drawer.open();
-          render3();
+          openInDrawer("genre");
         });
         bar.append(add2);
         return bar;
+      }
+      function moreMenu(anchor, target) {
+        showMenu(anchor, [
+          { label: "Mehr Neues", sub: "neu holen, stärker Richtung Entdecken", run: () => shuffle(target, true) },
+          { label: "YouTube-Vorschläge darunter wechseln", run: switchYouTube },
+          { sep: true },
+          { label: "Im Mix-Fenster öffnen", sub: "ganze Liste", run: () => openInDrawer(home.mode) },
+          { label: "Alle Mixe", sub: "Smart Radio, Ähnlich, Mehr von · Alt+M", run: () => openInDrawer(null) },
+          { label: "Einstellungen", run: () => {
+            const panel = pageWindow.__ytx?.panel;
+            panel?.open();
+            panel?.select("features");
+          } }
+        ]);
       }
       function drawForYou(target, force = false) {
         if (!target) return;
@@ -9367,19 +9368,27 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           shuffle(target);
           return;
         }
-        const mix = pill({ label: home.loading ? "mischt …" : "↻ Neu mischen", title: "Andere Vorschläge aus diesem Mix", onClick: () => shuffle(target) });
-        const more = pill({ label: "Mehr Neues", title: "Neuen Pool holen, stärker in Richtung Entdecken", onClick: () => shuffle(target, true) });
-        const yt = pill({ label: "YouTube-Vorschläge wechseln", title: "Wechselt durch YouTubes eigene Stimmungen, damit die Regale darunter anders werden", onClick: switchYouTube });
-        const play = pill({ label: "▶ Alle abspielen", onClick: () => home.picked.length && ytxQueue.play(home.picked, { title: modeLabel(home.mode) }) });
+        const mix = iconButton({ icon: home.loading ? "…" : "↻", title: "Neu mischen", onClick: () => shuffle(target) });
+        const play = iconButton({ icon: "▶", title: "Alle abspielen", onClick: () => home.picked.length && ytxQueue.play(home.picked, { title: modeLabel(home.mode) }) });
+        const more = iconButton({ icon: "⋯", title: "Mehr", onClick: (e, b) => moreMenu(b, target) });
+        const head = h(
+          "div",
+          { style: { display: "flex", alignItems: "center", gap: "4px", margin: "4px 0 12px" } },
+          h("div", { text: modeLabel(home.mode), style: { flex: "1", minWidth: "0", font: "700 24px/1.3 Roboto, Arial, sans-serif", color: T2.primary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }),
+          mix,
+          play,
+          more
+        );
         const row2 = shelfRow();
         for (const it of home.picked) {
           row2.append(shelfCard({ img: it.thumbnail, title: it.title, sub: `${it.artists.map((a) => a.name).join(", ")}${it.reasons?.[0] ? ` · ${it.reasons[0]}` : ""}`, onClick: () => navigateEndpoint(endpoints.radio(it.videoId)) }));
         }
-        const children = [s.homeChips ? chipBar(target) : null, shelfTitle(`${modeLabel(home.mode)} (ytx)`, mix, more, yt, play)].filter(Boolean);
-        if (home.note) children.push(h("div", { text: home.note, style: { color: T2.secondary, font: "400 13px Roboto, Arial, sans-serif", margin: "-8px 0 12px" } }));
+        const children = [chipBar(target), head];
+        const hint = (text) => h("div", { text, style: { color: T2.secondary, font: "400 14px Roboto, Arial, sans-serif", margin: "0 0 16px" } });
+        if (home.note) children.push(hint(home.note));
         if (home.picked.length) children.push(row2);
-        else if (!home.loading && home.mode !== "forYou") children.push(h("div", { text: "Für diesen Mix gibt es gerade keine Titel. Probier einen anderen Chip.", style: { color: T2.secondary, font: "400 14px Roboto, Arial, sans-serif", marginBottom: "16px" } }));
-        else if (!home.loading) children.push(h("div", { text: "Noch zu wenig Daten. Favorisiere ein paar Künstler (★ in der Playerleiste), merke dir Genres im Mix-Fenster oder hör ein paar Songs, dann erscheinen hier Vorschläge.", style: { color: T2.secondary, font: "400 14px Roboto, Arial, sans-serif", marginBottom: "16px" } }));
+        else if (!home.loading && home.mode !== "forYou") children.push(hint("Für diesen Mix gibt es gerade keine Titel. Probier einen anderen Chip."));
+        else if (!home.loading) children.push(hint("Noch zu wenig Daten. Favorisiere ein paar Künstler (★ in der Playerleiste), merke dir Genres oder hör ein paar Songs, dann erscheinen hier Vorschläge."));
         target.replaceChildren(...children);
       }
       async function drawReleases(node) {
@@ -9432,7 +9441,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         music.on("session", () => drawer.isOpen && drawTools())
       ];
       updateBadge();
-      const chipsAttr = () => document.documentElement.toggleAttribute("data-ytx-mchips-off", !!(s.forYouShelf && s.homeChips && s.hideYouTubeChips));
+      const chipsAttr = () => document.documentElement.toggleAttribute("data-ytx-mchips-off", !!(s.forYouShelf && s.hideYouTubeChips));
       chipsAttr();
       return {
         drawer,
@@ -9443,6 +9452,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         update(next) {
           s = next;
           chipsAttr();
+          btn2.refresh();
           if (shelf.node?.__forYou) drawForYou(shelf.node.__forYou, true);
           shelf.refresh();
           render3();
@@ -9454,13 +9464,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           offQueue();
           for (const off of offs) off();
           btn2.destroy();
-          fab.remove();
           document.documentElement.removeAttribute("data-ytx-mchips-off");
           shelf.destroy();
           drawer.host.remove();
         },
         health() {
-          if (!btn2.ok) return { status: "warn", detail: "Kopfzeile für den Mix-Button nicht gefunden" };
+          if (s.navButton && !btn2.ok) return { status: "warn", detail: "Kopfzeile für den Mix-Button nicht gefunden" };
           const r = ui.result;
           return { status: r?.errors?.length ? "warn" : "ok", detail: `Button da${badge2 ? ` · ${badge2} neue Veröffentlichungen` : ""}${r ? ` · letzter Mix ${r.items?.length || 0} Titel, ${r.requests} Abrufe${r.errors?.length ? `, Fehler: ${r.errors[0]}` : ""}` : ""}` };
         }
@@ -12469,6 +12478,12 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const p = music.prefs();
     const root = h("div");
     const session = music.session();
+    root.append(h("div", { class: "btns" }, btn("Mix-Fenster öffnen", () => {
+      const hub = pageWindow.__ytx?.feature?.("m.hub");
+      if (!hub) return app.flash("Feature „Mix-Fenster“ ist aus");
+      pageWindow.__ytx.panel?.close();
+      hub.open();
+    }, "primary")));
     root.append(h("h3", { text: "Entdecken" }));
     root.append(
       row("Bekannt ⟷ Entdecken", range({ min: 0, max: 100, step: 5, unit: "", placeholder: 50 }, Math.round(p.discovery * 100), (v) => up((x) => x.discovery = v == null ? 0.5 : v / 100)), { note: "0 = fast nur Bekanntes, 100 = passende, aber neue Künstler" }),

@@ -1,4 +1,5 @@
 import { h } from '../core/dom.js'
+import { pageWindow } from '../core/bridge.js'
 import { formatDuration } from '../core/format.js'
 import { row, badge, toggle, select, range, number, lines, chips, btn, textarea } from './controls.js'
 import { music } from '../features/music/runtime.js'
@@ -42,6 +43,14 @@ export function musicTab(app) {
   const p = music.prefs()
   const root = h('div')
   const session = music.session()
+
+  // mix fenster ohne eigenen knopf in der kopfzeile, auch auf dem handy erreichbar
+  root.append(h('div', { class: 'btns' }, btn('Mix-Fenster öffnen', () => {
+    const hub = pageWindow.__ytx?.feature?.('m.hub')
+    if (!hub) return app.flash('Feature „Mix-Fenster“ ist aus')
+    pageWindow.__ytx.panel?.close()
+    hub.open()
+  }, 'primary')))
 
   root.append(h('h3', { text: 'Entdecken' }))
   root.append(

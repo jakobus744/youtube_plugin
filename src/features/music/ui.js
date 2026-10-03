@@ -25,19 +25,15 @@ const PAGE_CSS = `
 html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hidden]) ytmusic-section-list-renderer > #header ytmusic-chip-cloud-renderer { display: none !important; }
 .ytx-m-info { all: initial; display: block; padding: 6px 16px; font: 400 12px/1.4 Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); }
 .ytx-m-info b { font-weight: 500; color: var(--ytmusic-text-primary, #fff); }
-.ytx-m-mark { all: initial; display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; font: 500 10px/16px Roboto, Arial, sans-serif; color: #fff; background: rgba(229,57,53,.85); vertical-align: middle; white-space: nowrap; }
-.ytx-m-mark[data-kind="highSkip"] { background: rgba(255,152,0,.85); }
-.ytx-m-mark[data-kind="duplicate"], .ytx-m-mark[data-kind="recent"] { background: rgba(120,120,120,.85); }
+/* markierung in der warteschlange: eine farbe fuer alle gruende, nur so breit wie der text, auch wenn youtube die zeile als raster baut */
+.ytx-m-mark { all: initial; display: inline-block; width: max-content; max-width: 100%; justify-self: start; align-self: flex-start; flex: none; margin: 2px 0 0 6px; padding: 0 6px; border-radius: 4px;
+  font: 500 10px/15px Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); border: 1px solid currentColor; opacity: .8; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 ytmusic-player-queue-item[data-ytx-skip] { opacity: .55; }
 ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 .ytx-m-bar-btns { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; }
-.ytx-m-fab { all: initial; display: none; position: fixed; z-index: 2150; right: 16px; bottom: 150px; width: 52px; height: 52px; border-radius: 26px; align-items: center; justify-content: center; cursor: pointer;
-  font: 700 13px Roboto, Arial, sans-serif; color: #000; background: #fff; box-shadow: 0 4px 16px rgba(0,0,0,.45); }
-.ytx-m-fab[data-badge]:after { content: attr(data-badge); position: absolute; top: -2px; right: -2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; box-sizing: border-box; font-size: 11px; line-height: 18px; text-align: center; color: #fff; background: #e53935; }
 @media (max-width: 600px) {
   ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
-  .ytx-m-fab { display: flex; }
   .ytx-m-shelf { padding-inline: 16px; }
   .ytx-m-chips { flex-wrap: nowrap; overflow-x: auto; }
 }

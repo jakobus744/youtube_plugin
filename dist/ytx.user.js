@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.3.4
+// @version      0.3.5
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -29,7 +29,7 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.3.4",
+    version: "0.3.5",
     description: "YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen",
     private: true,
     type: "module",
@@ -1507,7 +1507,9 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
   var videoMenu = {
     popup: "ytd-popup-container tp-yt-iron-dropdown",
     lists: ["ytd-popup-container ytd-menu-popup-renderer tp-yt-paper-listbox#items", "ytd-popup-container yt-sheet-view-model yt-list-view-model", "ytd-popup-container yt-list-view-model"],
-    watchOwn: "ytd-watch-metadata"
+    watchOwn: "ytd-watch-metadata",
+    // dazu die eintraege der playlist neben dem video
+    cards: [...CARD_SELECTORS, "ytd-playlist-panel-video-renderer"].join(", ")
   };
   function parseHref(href) {
     if (!href) return {};
@@ -2996,7 +2998,7 @@ ${s.text}
         for (const old of qsa(".ytx-menu-item")) old.remove();
         menuFor = null;
         if (!s.placement.includes("menu")) return;
-        const card2 = t.closest(CARD_SELECTORS.join(", "));
+        const card2 = t.closest(videoMenu.cards);
         let videoId = null;
         if (card2) {
           const c = readCard(card2);
@@ -7907,6 +7909,16 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
 .ytx-m-chip:hover { background: rgba(255,255,255,.2); }
 .ytx-m-chip[aria-pressed="true"] { color: #000; background: var(--ytmusic-text-primary, #fff); }
 .ytx-m-chip.ghost { background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+/* mediathek reiter scrollen mit der seite weg statt oben ueber dem inhalt zu kleben */
+html[data-ytx-page="library"] ytmusic-tabs { position: relative !important; top: auto !important; }
+.ytx-m-pick { margin: -6px 0 8px; padding: 12px 12px 0; border-radius: 12px; background: rgba(255,255,255,.05); }
+.ytx-m-pick .ytx-m-chips { align-items: center; padding-bottom: 12px; }
+.ytx-m-pick-label { all: initial; flex: none; min-width: 96px; font: 400 13px/32px Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); }
+.ytx-m-input { all: initial; box-sizing: border-box; flex: none; width: 200px; height: 32px; padding: 0 12px; border-radius: 8px; font: 400 14px/32px Roboto, Arial, sans-serif;
+  color: var(--ytmusic-text-primary, #fff); background: rgba(255,255,255,.1); }
+.ytx-m-input:focus { box-shadow: inset 0 0 0 1px var(--ytmusic-text-primary, #fff); }
+.ytx-m-spin > span:first-child { display: inline-block; animation: ytx-m-spin 1s linear infinite; }
+@keyframes ytx-m-spin { to { transform: rotate(360deg); } }
 html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hidden]) ytmusic-section-list-renderer > #header ytmusic-chip-cloud-renderer { display: none !important; }
 .ytx-m-info { all: initial; display: block; padding: 6px 16px; font: 400 12px/1.4 Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); }
 .ytx-m-info b { font-weight: 500; color: var(--ytmusic-text-primary, #fff); }
@@ -8990,6 +9002,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     ["Weitere", ["Pop", "Deutschpop", "Indie", "Rock", "Metal", "Punk", "Reggaeton", "Afrobeats", "Schlager", "Jazz", "Klassik", "Soundtrack"]]
   ];
   var ALL_GENRES = GENRE_GROUPS.flatMap(([, list]) => list);
+  function suggestGenres(favorites = [], { extra = [], limit = 10 } = {}) {
+    const have = new Set(favorites.map((g) => g.toLowerCase()));
+    const near = GENRE_GROUPS.filter(([, list]) => list.some((g) => have.has(g.toLowerCase()))).flatMap(([, list]) => list);
+    const spread = GENRE_GROUPS.flatMap(([, list]) => list.slice(0, 2));
+    return [.../* @__PURE__ */ new Set([...extra, ...near, ...spread])].filter((g) => g && !have.has(g.toLowerCase())).slice(0, limit);
+  }
 
   // src/features/music/hub.js
   var SHORT = { forYou: "Für dich", releases: "Neu", genre: "Genre", longAgo: "Lange nicht gehört", neverHeard: "Noch nie gehört", similar: "Ähnlich", moreFrom: "Mehr von", radio: "Smart Radio" };
@@ -9366,7 +9384,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         return card2;
       };
       const SHOWN = "m.hub.shown";
-      const home = { pool: null, poolAt: 0, step: 0, turns: 0, picked: [], loading: false, note: "", mode: ctx.state.get("m.hub.homeMode", "forYou") };
+      const home = { pool: null, poolAt: 0, step: 0, turns: 0, picked: [], loading: false, picking: false, note: "", mode: ctx.state.get("m.hub.homeMode", "forYou") };
       const HOME_MODES = [
         ["forYou", "Für dich", "Für dich"],
         ["neverHeard", "Noch nie gehört", "Noch nie gehört"],
@@ -9474,13 +9492,51 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           });
           bar.append(c);
         }
-        const add2 = h("button", { type: "button", class: "ytx-m-chip ghost", title: "Genre wählen und mit ☆ merken, dann steht es hier als Chip", text: "+ Genre" });
+        const add2 = h("button", { type: "button", class: "ytx-m-chip ghost", "aria-expanded": String(home.picking), title: "Genres als Chips hinzufügen oder entfernen", text: home.picking ? "✓ Fertig" : "+ Genre" });
         add2.addEventListener("click", (e) => {
           e.preventDefault();
-          openInDrawer("genre");
+          home.picking = !home.picking;
+          drawForYou(target, true);
         });
         bar.append(add2);
         return bar;
+      }
+      function genrePicker(target) {
+        const favs = music.prefs().genres.favorites;
+        const setFavs = (fn) => music.updatePrefs((p) => p.genres.favorites = fn(p.genres.favorites));
+        const add2 = (g) => {
+          g = g.trim();
+          if (g && !favs.some((x) => x.toLowerCase() === g.toLowerCase())) setFavs((list) => [...list, g]);
+        };
+        const remove = (g) => {
+          setFavs((list) => list.filter((x) => x !== g));
+          if (home.mode === `genre:${g}`) {
+            home.mode = "forYou";
+            ctx.state.set("m.hub.homeMode", "forYou");
+            shuffle(target);
+          }
+        };
+        const chip = (text, title, run2, ghost = false) => {
+          const c = h("button", { type: "button", class: ghost ? "ytx-m-chip ghost" : "ytx-m-chip", text, title });
+          c.addEventListener("click", (e) => {
+            e.preventDefault();
+            run2();
+          });
+          return c;
+        };
+        const input = h("input", { type: "search", class: "ytx-m-input", placeholder: "Anderes Genre eingeben", list: "ytx-genres-home" });
+        const dl = h("datalist", { id: "ytx-genres-home" }, ...ALL_GENRES.map((g) => h("option", { value: g })));
+        catalog.moods().then((m) => dl.replaceChildren(...[.../* @__PURE__ */ new Set([...ALL_GENRES, ...m.genres.map((g) => g.name)])].map((g) => h("option", { value: g })))).catch(() => {
+        });
+        input.addEventListener("change", () => add2(input.value));
+        const label = (text) => h("span", { class: "ytx-m-pick-label", text });
+        const last2 = ctx.state.get("m.hub.genre", "");
+        return h(
+          "div",
+          { class: "ytx-m-pick" },
+          favs.length ? h("div", { class: "ytx-m-chips" }, label("Deine Genres"), ...favs.map((g) => chip(`${g} ×`, "Entfernen", () => remove(g)))) : null,
+          h("div", { class: "ytx-m-chips" }, label("Vorschläge"), ...suggestGenres(favs, { extra: last2 ? [last2] : [] }).map((g) => chip(`+ ${g}`, "Als Chip hinzufügen", () => add2(g), true)), input, dl)
+        );
       }
       function moreMenu(anchor, target) {
         showMenu(anchor, [
@@ -9508,7 +9564,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           shuffle(target);
           return;
         }
-        const mix = iconButton({ icon: home.loading ? "…" : "↻", title: "Neu mischen", onClick: () => shuffle(target) });
+        const mix = iconButton({ icon: "↻", title: home.loading ? "Mischt …" : "Neu mischen", onClick: () => shuffle(target) });
+        mix.classList.toggle("ytx-m-spin", home.loading);
         const play = iconButton({ icon: "▶", title: "Alle abspielen", onClick: () => home.picked.length && ytxQueue.play(home.picked, { title: modeLabel(home.mode) }) });
         const more = iconButton({ icon: "⋯", title: "Mehr", onClick: (e, b) => moreMenu(b, target) });
         const head = h(
@@ -9523,7 +9580,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         for (const it of home.picked) {
           row2.append(shelfCard({ img: it.thumbnail, title: it.title, sub: `${it.artists.map((a) => a.name).join(", ")}${it.reasons?.[0] ? ` · ${it.reasons[0]}` : ""}`, onClick: () => navigateEndpoint(endpoints.radio(it.videoId)) }));
         }
-        const children = [chipBar(target), head];
+        const children = [chipBar(target), home.picking ? genrePicker(target) : null, head].filter(Boolean);
         const hint = (text) => h("div", { text, style: { color: T2.secondary, font: "400 14px Roboto, Arial, sans-serif", margin: "0 0 16px" } });
         if (home.note) children.push(hint(home.note));
         if (home.picked.length) children.push(row2);

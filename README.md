@@ -96,9 +96,9 @@ Musik-Vorlieben, Blocklisten, Verlauf und Favoriten sind profilunabhängig: dein
 
 - **★ in der Playerleiste**: Song, Künstler oder Album favorisieren, „Mehr/Weniger davon“, Song ignorieren, Künstler blockieren. Auf Künstler-, Album- und Playlist-Seiten gibt es einen eigenen ★-Button.
 - **Mix-Fenster** (über ⋯ › Alle Mixe, Panel › Musik oder Alt+M): Für dich · Neu · Genre · Lange nicht gehört · Noch nie gehört · Ähnlich · Mehr von · Smart Radio · Reihenfolge. Regler **Bekannt ⟷ Entdecken**, Session-Preset (Fokus, Gym, Abends, Entdecken, Nur bekannte Musik). Jeder Tab ist ein eigener Mix, eine Zeile „Berücksichtigt: …“ sagt, was gerade einfließt. „Für dich“ nimmt auf Wunsch zwei deiner Lieblingsgenres mit. Jede Zeile zeigt, warum sie da ist, und hat ⋯ für Feedback. **„▶ Alles abspielen“** spielt den Mix in ytx-eigener Reihenfolge.
-- **Startseite**: eigene Chips oben (Für dich, Noch nie gehört, Lange nicht gehört, Neu mit Zähler und deine Lieblingsgenres, „+ Genre“ zum Ergänzen) statt YouTubes Stimmungs-Chips. Darunter das Regal zum gewählten Chip. Nochmal auf den Chip tippen oder ↻ mischt neu (jedes dritte Mal mit anderen Startkünstlern), ▶ spielt alles, ⋯ hat „Mehr Neues“, YouTube-Vorschläge wechseln und das Mix-Fenster. Ein eigener Mix-Knopf oben rechts lässt sich unter Features › Mix einschalten, YouTubes Chips ebenso.
+- **Startseite**: eigene Chips oben (Für dich, Noch nie gehört, Lange nicht gehört, Neu mit Zähler und deine Lieblingsgenres, „+ Genre“ öffnet direkt darunter eine Auswahl mit passenden Vorschlägen zu deinen Genres, freier Eingabe und × zum Entfernen) statt YouTubes Stimmungs-Chips. Darunter das Regal zum gewählten Chip. Nochmal auf den Chip tippen oder ↻ mischt neu (jedes dritte Mal mit anderen Startkünstlern), ▶ spielt alles, ⋯ hat „Mehr Neues“, YouTube-Vorschläge wechseln und das Mix-Fenster. Ein eigener Mix-Knopf oben rechts lässt sich unter Features › Mix einschalten, YouTubes Chips ebenso.
 - **Neu von deinen Künstlern**: Neuerscheinungen deiner ★-Künstler und von Künstlern, die du oft zu Ende hörst oder geliked hast. Ein Song, der nur einmal im Autoplay lief, reicht nicht.
-- **Mediathek**: Regal **„Deine Favoriten (ytx)“** mit allen ★-Künstlern, -Songs, -Alben und -Playlists, filterbar, Lieblingssongs direkt abspielbar.
+- **Mediathek**: Regal **„Deine Favoriten (ytx)“** mit allen ★-Künstlern, -Songs, -Alben und -Playlists, filterbar, Lieblingssongs direkt abspielbar. Die Reiter Mediathek/Downloads scrollen mit weg, statt über dem Inhalt zu kleben.
 - **Genres**: feste Auswahl mit Techno-, Hardstyle- und Hip-Hop-Varianten plus freie Eingabe.
 - **Warteschlange**: Gesamt- und Restdauer, dezente Markierungen für blockierte (z. B. „remix“ aus der Blockliste), oft übersprungene und doppelte Titel, optional Auto-Skip (Tab **Musik**).
 - **Songtext**: Button „Songtext kopieren“ über dem Text.
@@ -213,7 +213,7 @@ Getestet im eingebauten Chromium **ohne Anmeldung**, stumm geschaltet, Stand 15.
 | Verhalten | Shorts → Video, Startseite umleiten, Autoplay aus, Experiment-Flags | ✅ |
 | Verhalten | Qualität, Geschwindigkeit, Pause im Hintergrund, Kanal-Trailer | ⚠️ ungetestet |
 | Filter | Kanal, Positivliste, Stichwort, Regex, Shorts, Live, Dauer, Alter | ✅ · Gesehen ⚠️ Login |
-| Transkript | 5 Formate, Spurwahl, Kapitel, Zitieren, Eintrag im Drei-Punkte-Menü jeder Videokachel (öffnet das Video und kopiert) | ✅ · Panel-Fallback ⚠️ |
+| Transkript | 5 Formate, Spurwahl, Kapitel, Zitieren, Eintrag im Drei-Punkte-Menü jeder Videokachel und der Playlist neben dem Video (öffnet das Video und kopiert) | ✅ · Panel-Fallback ⚠️ |
 | Playlist | Dauer gesamt/übrig, Sortieren, Suche nach Titel/Kanal (Seite + Panel neben dem Video) | ✅ · Später ansehen, gesehene dimmen ⚠️ Login |
 | Video | Endzeit, Datum, Kopieren-Menü, Proxy-Buttons | ✅ |
 | Mobil (m.youtube.com) | Start, Farberkennung, Themes, 21 Ausblend-Ziele, Kanal-/Shorts-Filter, Panel als Blatt, Gruppen-Button auf der Kanalseite, Schauzeit-Erkennung | ✅ in Handy-Emulation (Chromium), ⚠️ Firefox Android selbst und Login ungetestet |

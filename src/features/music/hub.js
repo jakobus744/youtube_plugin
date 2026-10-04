@@ -8,7 +8,7 @@ import { buildMix, checkReleases, releaseCheckRunning, followedReleases, unseenR
 import { MIXES } from './mixes.js'
 import { catalog } from './data/catalog.js'
 import { SESSION_PRESETS } from './logic/sessions.js'
-import { ALL_GENRES } from './logic/genres.js'
+import { ALL_GENRES, suggestGenres } from './logic/genres.js'
 import { ytxQueue } from './ytxQueue.js'
 import { createDrawer, trackRow, pill, iconButton } from './ui.js'
 import { toast, showMenu } from '../ui.js'
@@ -422,7 +422,7 @@ export const hubFeature = {
     // ---------- fuer dich (ytx) mit neu mischen ----------
 
     const SHOWN = 'm.hub.shown'
-    const home = { pool: null, poolAt: 0, step: 0, turns: 0, picked: [], loading: false, note: '', mode: ctx.state.get('m.hub.homeMode', 'forYou') }
+    const home = { pool: null, poolAt: 0, step: 0, turns: 0, picked: [], loading: false, picking: false, note: '', mode: ctx.state.get('m.hub.homeMode', 'forYou') }
 
     // chips ueber dem regal, jeder chip ist ein eigener mix: [id, chip, ueberschrift]
     // neue mixe hier eintragen, engine.js baut sie
@@ -542,13 +542,49 @@ export const hubFeature = {
         })
         bar.append(c)
       }
-      const add = h('button', { type: 'button', class: 'ytx-m-chip ghost', title: 'Genre wählen und mit ☆ merken, dann steht es hier als Chip', text: '+ Genre' })
+      const add = h('button', { type: 'button', class: 'ytx-m-chip ghost', 'aria-expanded': String(home.picking), title: 'Genres als Chips hinzufügen oder entfernen', text: home.picking ? '✓ Fertig' : '+ Genre' })
       add.addEventListener('click', (e) => {
         e.preventDefault()
-        openInDrawer('genre')
+        home.picking = !home.picking
+        drawForYou(target, true)
       })
       bar.append(add)
       return bar
+    }
+
+    // genres direkt auf der startseite merken oder entfernen, vorschlaege passend zu den schon gemerkten
+    function genrePicker(target) {
+      const favs = music.prefs().genres.favorites
+      const setFavs = (fn) => music.updatePrefs((p) => (p.genres.favorites = fn(p.genres.favorites)))
+      const add = (g) => {
+        g = g.trim()
+        if (g && !favs.some((x) => x.toLowerCase() === g.toLowerCase())) setFavs((list) => [...list, g])
+      }
+      const remove = (g) => {
+        setFavs((list) => list.filter((x) => x !== g))
+        if (home.mode === `genre:${g}`) {
+          home.mode = 'forYou'
+          ctx.state.set('m.hub.homeMode', 'forYou')
+          shuffle(target)
+        }
+      }
+      const chip = (text, title, run, ghost = false) => {
+        const c = h('button', { type: 'button', class: ghost ? 'ytx-m-chip ghost' : 'ytx-m-chip', text, title })
+        c.addEventListener('click', (e) => {
+          e.preventDefault()
+          run()
+        })
+        return c
+      }
+      const input = h('input', { type: 'search', class: 'ytx-m-input', placeholder: 'Anderes Genre eingeben', list: 'ytx-genres-home' })
+      const dl = h('datalist', { id: 'ytx-genres-home' }, ...ALL_GENRES.map((g) => h('option', { value: g })))
+      catalog.moods().then((m) => dl.replaceChildren(...[...new Set([...ALL_GENRES, ...m.genres.map((g) => g.name)])].map((g) => h('option', { value: g })))).catch(() => {})
+      input.addEventListener('change', () => add(input.value))
+      const label = (text) => h('span', { class: 'ytx-m-pick-label', text })
+      const last = ctx.state.get('m.hub.genre', '')
+      return h('div', { class: 'ytx-m-pick' },
+        favs.length ? h('div', { class: 'ytx-m-chips' }, label('Deine Genres'), ...favs.map((g) => chip(`${g} ×`, 'Entfernen', () => remove(g)))) : null,
+        h('div', { class: 'ytx-m-chips' }, label('Vorschläge'), ...suggestGenres(favs, { extra: last ? [last] : [] }).map((g) => chip(`+ ${g}`, 'Als Chip hinzufügen', () => add(g), true)), input, dl))
     }
 
     function moreMenu(anchor, target) {
@@ -578,7 +614,8 @@ export const hubFeature = {
         shuffle(target)
         return
       }
-      const mix = iconButton({ icon: home.loading ? '…' : '↻', title: 'Neu mischen', onClick: () => shuffle(target) })
+      const mix = iconButton({ icon: '↻', title: home.loading ? 'Mischt …' : 'Neu mischen', onClick: () => shuffle(target) })
+      mix.classList.toggle('ytx-m-spin', home.loading)
       const play = iconButton({ icon: '▶', title: 'Alle abspielen', onClick: () => home.picked.length && ytxQueue.play(home.picked, { title: modeLabel(home.mode) }) })
       const more = iconButton({ icon: '⋯', title: 'Mehr', onClick: (e, b) => moreMenu(b, target) })
       const head = h('div', { style: { display: 'flex', alignItems: 'center', gap: '4px', margin: '4px 0 12px' } },
@@ -588,7 +625,7 @@ export const hubFeature = {
       for (const it of home.picked) {
         row.append(shelfCard({ img: it.thumbnail, title: it.title, sub: `${it.artists.map((a) => a.name).join(', ')}${it.reasons?.[0] ? ` · ${it.reasons[0]}` : ''}`, onClick: () => navigateEndpoint(endpoints.radio(it.videoId)) }))
       }
-      const children = [chipBar(target), head]
+      const children = [chipBar(target), home.picking ? genrePicker(target) : null, head].filter(Boolean)
       const hint = (text) => h('div', { text, style: { color: T.secondary, font: '400 14px Roboto, Arial, sans-serif', margin: '0 0 16px' } })
       if (home.note) children.push(hint(home.note))
       if (home.picked.length) children.push(row)

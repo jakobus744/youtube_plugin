@@ -6,6 +6,7 @@ import { normalizePrefs, defaultPrefs } from '../src/features/music/data/prefs.j
 import { pageFromUrl, videoIdFromUrl, browseIdFromUrl } from '../src/registry/music/pages.js'
 import { shelfKind, chipKind } from '../src/registry/music/tags.js'
 import { parseShelves } from '../src/registry/music/parse.js'
+import { suggestGenres } from '../src/features/music/logic/genres.js'
 
 const fixture = (name) => JSON.parse(readFileSync(new URL(`./fixtures/music/${name}.json`, import.meta.url), 'utf8'))
 
@@ -98,4 +99,12 @@ test('lieblingsgenres in fuer dich: standard an, abschaltbar', () => {
   assert.equal(off.genres.inForYou, false)
   assert.deepEqual(off.genres.favorites, ['Deutschrap'])
   assert.deepEqual(normalizePrefs({ genres: { favorites: ['Hard Techno', 'Hard Techno', ' '] } }).genres.favorites, ['Hard Techno'])
+})
+
+test('suggestGenres: erst passende gruppe, nie schon gemerkte', () => {
+  const s = suggestGenres(['Hard Techno'], { limit: 5 })
+  assert.equal(s.length, 5)
+  assert.ok(s.includes('Techno'))
+  assert.ok(!s.includes('Hard Techno'))
+  assert.deepEqual(suggestGenres([], { extra: ['Chill'], limit: 2 }), ['Chill', 'Techno'])
 })

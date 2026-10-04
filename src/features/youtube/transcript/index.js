@@ -1,6 +1,6 @@
 import { listTracks, pickTrack, fetchTrack, sourceStats, hasToken } from './source.js'
 import { parseJson3, cleanSegments, toParagraphs, render, stats, FORMAT_LABELS, videoLink } from './formats.js'
-import { watch, videoMenu, CARD_SELECTORS, readCard } from '../../../registry/youtube/paths.js'
+import { watch, videoMenu, readCard } from '../../../registry/youtube/paths.js'
 import { splitButton, button, showMenu, toast, setButtonBusy, textDialog } from '../../ui.js'
 import { clock } from '../../../core/format.js'
 import { player } from '../../../core/bridge.js'
@@ -263,7 +263,7 @@ export default {
       for (const old of qsa('.ytx-menu-item')) old.remove()
       menuFor = null
       if (!s.placement.includes('menu')) return
-      const card = t.closest(CARD_SELECTORS.join(', '))
+      const card = t.closest(videoMenu.cards)
       let videoId = null
       if (card) {
         const c = readCard(card)

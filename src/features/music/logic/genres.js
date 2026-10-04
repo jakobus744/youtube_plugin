@@ -10,3 +10,11 @@ export const GENRE_GROUPS = [
 ]
 
 export const ALL_GENRES = GENRE_GROUPS.flatMap(([, list]) => list)
+
+// vorschlaege zum hinzufuegen: erst genres aus den gruppen die du schon magst, dann je zwei aus jeder gruppe
+export function suggestGenres(favorites = [], { extra = [], limit = 10 } = {}) {
+  const have = new Set(favorites.map((g) => g.toLowerCase()))
+  const near = GENRE_GROUPS.filter(([, list]) => list.some((g) => have.has(g.toLowerCase()))).flatMap(([, list]) => list)
+  const spread = GENRE_GROUPS.flatMap(([, list]) => list.slice(0, 2))
+  return [...new Set([...extra, ...near, ...spread])].filter((g) => g && !have.has(g.toLowerCase())).slice(0, limit)
+}

@@ -24,6 +24,16 @@ const PAGE_CSS = `
 .ytx-m-chip:hover { background: rgba(255,255,255,.2); }
 .ytx-m-chip[aria-pressed="true"] { color: #000; background: var(--ytmusic-text-primary, #fff); }
 .ytx-m-chip.ghost { background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+/* mediathek reiter scrollen mit der seite weg statt oben ueber dem inhalt zu kleben */
+html[data-ytx-page="library"] ytmusic-tabs { position: relative !important; top: auto !important; }
+.ytx-m-pick { margin: -6px 0 8px; padding: 12px 12px 0; border-radius: 12px; background: rgba(255,255,255,.05); }
+.ytx-m-pick .ytx-m-chips { align-items: center; padding-bottom: 12px; }
+.ytx-m-pick-label { all: initial; flex: none; min-width: 96px; font: 400 13px/32px Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); }
+.ytx-m-input { all: initial; box-sizing: border-box; flex: none; width: 200px; height: 32px; padding: 0 12px; border-radius: 8px; font: 400 14px/32px Roboto, Arial, sans-serif;
+  color: var(--ytmusic-text-primary, #fff); background: rgba(255,255,255,.1); }
+.ytx-m-input:focus { box-shadow: inset 0 0 0 1px var(--ytmusic-text-primary, #fff); }
+.ytx-m-spin > span:first-child { display: inline-block; animation: ytx-m-spin 1s linear infinite; }
+@keyframes ytx-m-spin { to { transform: rotate(360deg); } }
 html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hidden]) ytmusic-section-list-renderer > #header ytmusic-chip-cloud-renderer { display: none !important; }
 .ytx-m-info { all: initial; display: block; padding: 6px 16px; font: 400 12px/1.4 Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); }
 .ytx-m-info b { font-weight: 500; color: var(--ytmusic-text-primary, #fff); }

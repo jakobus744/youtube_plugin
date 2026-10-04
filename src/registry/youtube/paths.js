@@ -30,7 +30,9 @@ export const CARD_PARENT = 'ytd-rich-item-renderer, ytd-video-renderer, ytd-comp
 export const videoMenu = {
   popup: 'ytd-popup-container tp-yt-iron-dropdown',
   lists: ['ytd-popup-container ytd-menu-popup-renderer tp-yt-paper-listbox#items', 'ytd-popup-container yt-sheet-view-model yt-list-view-model', 'ytd-popup-container yt-list-view-model'],
-  watchOwn: 'ytd-watch-metadata'
+  watchOwn: 'ytd-watch-metadata',
+  // dazu die eintraege der playlist neben dem video
+  cards: [...CARD_SELECTORS, 'ytd-playlist-panel-video-renderer'].join(', ')
 }
 
 function parseHref(href) {

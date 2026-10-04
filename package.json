@@ -1,6 +1,6 @@
 {
   "name": "ytx",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen",
   "private": true,
   "type": "module",

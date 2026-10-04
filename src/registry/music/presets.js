@@ -57,5 +57,5 @@ export const topbarModes = [
 ]
 
 export const topbarCss = {
-  autohide: `html[data-ytx-scrolled-down] ytmusic-nav-bar, html[data-ytx-scrolled-down] ytmusic-app-layout #nav-bar-background { transform: translateY(-100%) !important; } ytmusic-nav-bar, ytmusic-app-layout #nav-bar-background { transition: transform .2s ease !important; }`
+  autohide: `html[data-ytx-scrolled-down] ytmusic-nav-bar, html[data-ytx-scrolled-down] ytmusic-app-layout #nav-bar-background { transform: translateY(-100%) !important; } html[data-ytx-scrolled-down] ytmusic-app-layout #nav-bar-divider { opacity: 0 !important; } ytmusic-nav-bar, ytmusic-app-layout #nav-bar-background { transition: transform .2s ease !important; }`
 }

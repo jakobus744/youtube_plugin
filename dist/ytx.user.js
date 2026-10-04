@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.3.5
+// @version      0.3.6
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -29,7 +29,7 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.3.5",
+    version: "0.3.6",
     description: "YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen",
     private: true,
     type: "module",
@@ -6419,7 +6419,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     ["autohide", "Beim Runterscrollen ausblenden"]
   ];
   var topbarCss2 = {
-    autohide: `html[data-ytx-scrolled-down] ytmusic-nav-bar, html[data-ytx-scrolled-down] ytmusic-app-layout #nav-bar-background { transform: translateY(-100%) !important; } ytmusic-nav-bar, ytmusic-app-layout #nav-bar-background { transition: transform .2s ease !important; }`
+    autohide: `html[data-ytx-scrolled-down] ytmusic-nav-bar, html[data-ytx-scrolled-down] ytmusic-app-layout #nav-bar-background { transform: translateY(-100%) !important; } html[data-ytx-scrolled-down] ytmusic-app-layout #nav-bar-divider { opacity: 0 !important; } ytmusic-nav-bar, ytmusic-app-layout #nav-bar-background { transition: transform .2s ease !important; }`
   };
 
   // src/registry/music/pages.js
@@ -7911,8 +7911,6 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
 .ytx-m-chip.ghost { background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
 /* mediathek reiter scrollen mit der seite weg statt oben ueber dem inhalt zu kleben */
 html[data-ytx-page="library"] ytmusic-tabs { position: relative !important; top: auto !important; }
-html[data-ytx-page="library"] ytmusic-app-layout #nav-bar-background { border-bottom: 0 !important; }
-html[data-ytx-page="library"] ytmusic-app-layout #nav-bar-divider { display: none !important; }
 .ytx-m-pick { margin: -6px 0 8px; padding: 12px 12px 0; border-radius: 12px; background: rgba(255,255,255,.05); }
 .ytx-m-pick .ytx-m-chips { align-items: center; padding-bottom: 12px; }
 .ytx-m-pick-label { all: initial; flex: none; min-width: 96px; font: 400 13px/32px Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); }

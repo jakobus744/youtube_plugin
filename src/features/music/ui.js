@@ -26,6 +26,8 @@ const PAGE_CSS = `
 .ytx-m-chip.ghost { background: transparent; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
 /* mediathek reiter scrollen mit der seite weg statt oben ueber dem inhalt zu kleben */
 html[data-ytx-page="library"] ytmusic-tabs { position: relative !important; top: auto !important; }
+html[data-ytx-page="library"] ytmusic-app-layout #nav-bar-background { border-bottom: 0 !important; }
+html[data-ytx-page="library"] ytmusic-app-layout #nav-bar-divider { display: none !important; }
 .ytx-m-pick { margin: -6px 0 8px; padding: 12px 12px 0; border-radius: 12px; background: rgba(255,255,255,.05); }
 .ytx-m-pick .ytx-m-chips { align-items: center; padding-bottom: 12px; }
 .ytx-m-pick-label { all: initial; flex: none; min-width: 96px; font: 400 13px/32px Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); }

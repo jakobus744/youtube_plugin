@@ -15,6 +15,8 @@ const PAGE_CSS = `
   font: 500 14px/36px Roboto, Arial, sans-serif; color: var(--ytmusic-text-primary, #fff); background: rgba(255,255,255,.1); }
 .ytx-m-pill:hover { background: rgba(255,255,255,.2); }
 .ytx-m-pill[data-badge]:after { content: attr(data-badge); margin-left: 2px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; box-sizing: border-box; font-size: 11px; line-height: 18px; text-align: center; color: #fff; background: #e53935; }
+/* eigene regale stehen auf derselben inhaltsbreite wie youtubes regale */
+.ytx-m-shelf { box-sizing: border-box; width: 100%; max-width: var(--ytmusic-content-width, 100%); margin-left: auto !important; margin-right: auto !important; }
 .ytx-m-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0 14px; scrollbar-width: none; }
 .ytx-m-chips::-webkit-scrollbar { display: none; }
 .ytx-m-chip { all: initial; box-sizing: border-box; flex: none; height: 32px; padding: 0 12px; border-radius: 8px; cursor: pointer; user-select: none; white-space: nowrap;
@@ -34,7 +36,7 @@ ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 @media (max-width: 600px) {
   ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
-  .ytx-m-shelf { padding-inline: 16px; }
+  .ytx-m-shelf { max-width: none; padding-inline: 16px; }
   .ytx-m-chips { flex-wrap: nowrap; overflow-x: auto; }
 }
 `

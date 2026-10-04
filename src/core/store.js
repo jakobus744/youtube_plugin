@@ -134,6 +134,15 @@ const MIGRATIONS = [
         if (!('mb.top.openApp' in m.display)) m.display['mb.top.openApp'] = 'hide'
       }
     }
+  ],
+  [
+    'transcript-menu-item',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        const f = p.config?.youtube?.features?.['transcript.copy']
+        if (Array.isArray(f?.placement) && !f.placement.includes('menu')) f.placement.push('menu')
+      }
+    }
   ]
 ]
 

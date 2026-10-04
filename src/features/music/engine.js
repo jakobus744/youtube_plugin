@@ -53,7 +53,8 @@ function rankOptions(prefs, eff, overrides = {}) {
   }
 }
 
-async function seedArtists(profile, max = 8) {
+// die staerksten zwei bleiben fest, der rest wird pro mix neu gezogen
+async function seedArtists(profile, max = 8, { fixed = 2 } = {}) {
   const favs = (await music.favorites.byType('artist')).sort((a, b) => (b.weight ?? 1) - (a.weight ?? 1))
   const out = []
   const seen = new Set()
@@ -67,7 +68,34 @@ async function seedArtists(profile, max = 8) {
     seen.add(a.id)
     out.push({ id: a.id, name: a.name, key: a.key, kind: 'topArtist' })
   }
-  return out.slice(0, max)
+  return [...out.slice(0, fixed), ...shuffled(out.slice(fixed))].slice(0, max)
+}
+
+// kuenstler fuer neuerscheinungen: favoriten und nur wer wirklich oft zu ende gehoert wurde
+// einmal im autoplay gelaufen reicht nicht
+export async function releaseArtists(prefs = music.prefs()) {
+  const favs = await music.favorites.byType('artist')
+  const list = favs.filter((f) => f.id).map((f) => ({ id: f.id, name: f.name }))
+  if (prefs.releases.includeTopArtists) {
+    const profile = await music.profile()
+    for (const a of profile.topArtists(prefs.releases.maxArtists * 2)) {
+      if (list.length >= prefs.releases.maxArtists) break
+      if (!a.id || list.some((x) => x.id === a.id) || a.feedback < 0) continue
+      if (a.liked || a.completes >= 3) list.push({ id: a.id, name: a.name })
+    }
+  }
+  return list.slice(0, prefs.releases.maxArtists)
+}
+
+// neuerscheinungen nur von kuenstlern denen du noch folgst
+export async function followedReleases(limit = 60) {
+  const ids = new Set((await releaseArtists()).map((a) => a.id))
+  return (await music.releases.latest(limit * 2)).filter((r) => ids.has(r.artistId) && (r.fresh || r.recent)).slice(0, limit)
+}
+
+export async function unseenReleaseCount() {
+  const seen = (await music.getMeta('releasesSeenAt', 0)) || 0
+  return (await followedReleases(100)).filter((r) => r.fresh && r.firstSeen > seen).length
 }
 
 function shuffled(list) {
@@ -102,7 +130,7 @@ async function forYou(ctx) {
     const page = await b.get((o) => catalog.artist(seed.id, o))
     if (!page) continue
     for (const t of page.topSongs.slice(0, 6)) cands.push(toCandidate(t, { kind: seed.kind, via: seed.name, viaKey: seed.key }))
-    for (const sim of page.similar.slice(0, 3)) {
+    for (const sim of shuffled(page.similar.slice(0, 6)).slice(0, 3)) {
       if (similarCount >= 6 || similarSeen.has(sim.id)) continue
       similarSeen.add(sim.id)
       similarCount++
@@ -111,9 +139,9 @@ async function forYou(ctx) {
     }
   }
   // zu hoeren in: redaktionelle playlists der ersten favoriten
-  for (const seed of seeds.slice(0, 2)) {
+  for (const seed of shuffled(seeds).slice(0, 2)) {
     const page = await b.get((o) => catalog.artist(seed.id, o))
-    const pl = page?.featuredOn?.[0]
+    const pl = shuffled(page?.featuredOn || [])[0]
     if (!pl) continue
     const col = await b.get((o) => catalog.playlist(pl.id, o))
     for (const t of col?.tracks.slice(0, 12) || []) cands.push(toCandidate(t, { kind: 'featured', via: seed.name, viaKey: seed.key }))
@@ -126,11 +154,12 @@ async function forYou(ctx) {
 
 async function releasesMix(ctx) {
   const { b } = ctx
-  const list = (await music.releases.latest(60)).filter((r) => r.fresh || r.recent)
+  const list = await followedReleases(60)
   const cands = []
   for (const r of list.slice(0, 10)) {
     const col = await b.get((o) => catalog.album(r.id, o))
-    for (const t of col?.tracks.slice(0, r.kind && /single|ep/i.test(r.kind) ? 3 : 4) || []) cands.push(toCandidate(t, { kind: 'release', via: r.artistName, viaKey: r.artistId }))
+    // albumtitel haben kein eigenes bild, dann das cover der veroeffentlichung
+    for (const t of col?.tracks.slice(0, r.kind && /single|ep/i.test(r.kind) ? 3 : 4) || []) cands.push(toCandidate({ ...t, thumbnail: t.thumbnail || r.thumbnail || col.thumbnail }, { kind: 'release', via: r.artistName, viaKey: r.artistId }))
   }
   return { candidates: cands.filter(Boolean), releases: list, overrides: { discovery: 0.5, maxPerArtist: 4 } }
 }
@@ -293,11 +322,7 @@ export async function checkReleases({ force = false, onProgress } = {}) {
   checking = (async () => {
     const prefs = music.prefs()
     const db = music.db()
-    const profile = await music.profile()
-    const favs = await music.favorites.byType('artist')
-    const list = favs.filter((f) => f.id).map((f) => ({ id: f.id, name: f.name }))
-    if (prefs.releases.includeTopArtists) for (const a of profile.topArtists(prefs.releases.maxArtists)) if (a.id && !list.some((x) => x.id === a.id)) list.push({ id: a.id, name: a.name })
-    const artists = list.slice(0, prefs.releases.maxArtists)
+    const artists = await releaseArtists(prefs)
     const now = Date.now()
     const thisYear = new Date(now).getFullYear()
     const due = []

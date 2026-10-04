@@ -12,7 +12,7 @@ export const colorControls = [
     id: 'bg',
     label: 'Hintergrund',
     tokens: [T('background'), T('general-background-c'), T('nav-bar'), T('player-page-background'), T('color-black4')],
-    extra: (v) => `html:root body, ytmusic-app-layout #nav-bar-background, ytmusic-app-layout #mini-guide-background, ytmusic-app-layout #guide-wrapper, ytmusic-browse-response #background { background-color: ${v} !important; }`
+    extra: (v) => `html:root body, ytmusic-app-layout #nav-bar-background, ytmusic-app-layout #mini-guide-background, ytmusic-app-layout #guide-wrapper, ytmusic-browse-response #background, ytmusic-tabs.stuck { background-color: ${v} !important; }`
   },
   { id: 'raised', label: 'Flächen & Karten', tokens: [T('brand-background-solid'), T('color-black1'), T('color-black2'), T('search-background'), T('horizontal-action-card-background')] },
   { id: 'menu', label: 'Menüs & Dialoge', tokens: [], extra: (v) => `ytmusic-menu-popup-renderer, tp-yt-paper-listbox, ytmusic-dialog, tp-yt-paper-dialog, ytmusic-search-suggestions-section { background-color: ${v} !important; }` },

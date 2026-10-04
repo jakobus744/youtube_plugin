@@ -26,6 +26,13 @@ export const CARD_SELECTORS = [
 // verschachtelte kacheln nicht doppelt zaehlen
 export const CARD_PARENT = 'ytd-rich-item-renderer, ytd-video-renderer, ytd-compact-video-renderer, ytd-grid-video-renderer, ytd-playlist-video-renderer'
 
+// drei punkte menue an kacheln und unter dem video, alte polymer liste und neue sheet liste
+export const videoMenu = {
+  popup: 'ytd-popup-container tp-yt-iron-dropdown',
+  lists: ['ytd-popup-container ytd-menu-popup-renderer tp-yt-paper-listbox#items', 'ytd-popup-container yt-sheet-view-model yt-list-view-model', 'ytd-popup-container yt-list-view-model'],
+  watchOwn: 'ytd-watch-metadata'
+}
+
 function parseHref(href) {
   if (!href) return {}
   try {

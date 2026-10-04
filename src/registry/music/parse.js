@@ -209,7 +209,9 @@ export function parseCollectionPage(data, params = {}) {
   const artists = straps.artists
   const year = firstYear(subParts) ?? straps.year
   const isAlbum = pageType === 'ALBUM' || /^MPREb_/.test(params.browseId || '')
+  const thumbnail = thumbOf(h)
   if (isAlbum) for (const t of tracks) {
+    t.thumbnail ||= thumbnail
     // auf albumseiten sind alle eintraege songs, auch wenn youtube die videofassung verlinkt
     t.type = 'song'
     if (!t.artists.length || t.artists.every((a) => !a.id)) t.artists = artists.length ? artists : t.artists
@@ -224,6 +226,7 @@ export function parseCollectionPage(data, params = {}) {
     year,
     artists,
     trackCount: firstInt(runsText(h.secondSubtitle)),
+    thumbnail,
     tracks,
     related
   }

@@ -4,7 +4,7 @@ import { formatDuration } from '../../core/format.js'
 import { currentTrack, currentBrowse, navigateEndpoint, endpoints } from '../../registry/music/player.js'
 import { parseArtistPage } from '../../registry/music/parse.js'
 import { music } from './runtime.js'
-import { buildMix, checkReleases, releaseCheckRunning } from './engine.js'
+import { buildMix, checkReleases, releaseCheckRunning, followedReleases, unseenReleaseCount } from './engine.js'
 import { MIXES } from './mixes.js'
 import { catalog } from './data/catalog.js'
 import { SESSION_PRESETS } from './logic/sessions.js'
@@ -56,7 +56,7 @@ export const hubFeature = {
     const drawer = createDrawer({ title: 'ytx Mix' })
 
     const updateBadge = async () => {
-      badge = await music.releases.unseenCount().catch(() => 0)
+      badge = await unseenReleaseCount().catch(() => 0)
       if (btn.node) {
         if (badge) btn.node.setAttribute('data-badge', String(badge))
         else btn.node.removeAttribute('data-badge')
@@ -422,7 +422,7 @@ export const hubFeature = {
     // ---------- fuer dich (ytx) mit neu mischen ----------
 
     const SHOWN = 'm.hub.shown'
-    const home = { pool: null, poolAt: 0, step: 0, picked: [], loading: false, note: '', mode: ctx.state.get('m.hub.homeMode', 'forYou') }
+    const home = { pool: null, poolAt: 0, step: 0, turns: 0, picked: [], loading: false, note: '', mode: ctx.state.get('m.hub.homeMode', 'forYou') }
 
     // chips ueber dem regal, jeder chip ist ein eigener mix: [id, chip, ueberschrift]
     // neue mixe hier eintragen, engine.js baut sie
@@ -435,7 +435,7 @@ export const hubFeature = {
     const homeModes = () => [...HOME_MODES, ...music.prefs().genres.favorites.map((g) => [`genre:${g}`, g, g])]
     const modeLabel = (id) => homeModes().find(([m]) => m === id)?.[2] || 'Für dich'
 
-    // gewichteter zufall, vorne liegende passen besser, schon gezeigte kommen zuletzt dran
+    // gewichteter zufall, vorne liegende passen etwas besser, schon gezeigte kommen zuletzt dran
     function pickFresh(items, n) {
       const shown = new Set(ctx.state.get(SHOWN, []))
       let pool = items.filter((i) => !shown.has(i.videoId))
@@ -443,7 +443,7 @@ export const hubFeature = {
         shown.clear()
         pool = items.slice()
       }
-      const w = pool.map((_, i) => 1 / (i + 4))
+      const w = pool.map((_, i) => 1 / Math.sqrt(i + 4))
       const out = []
       while (out.length < n && pool.length) {
         let r = Math.random() * w.reduce((a, b) => a + b, 0)
@@ -463,7 +463,7 @@ export const hubFeature = {
       home.note = ''
       let res
       if (mode.startsWith('genre:')) res = await buildMix('genre', { genre: mode.slice(6), discovery }, { maxRequests: 8, limit: 60 })
-      else res = await buildMix(mode, { discovery }, { maxRequests: 8, limit: 80 })
+      else res = await buildMix(mode, { discovery }, { maxRequests: 8, limit: 120 })
       if (res.error) home.note = res.error
       home.poolMode = home.mode
       if (!res.items?.length && mode === 'forYou') {
@@ -484,8 +484,9 @@ export const hubFeature = {
       drawForYou(target, true)
       try {
         const shownCount = ctx.state.get(SHOWN, []).length
-        // anderer chip, oft gemischt oder mehr neues gewuenscht: neuen pool holen
-        if (rebuild || !home.pool || home.poolMode !== home.mode || Date.now() - home.poolAt > 30 * 60 * 1000 || (home.pool.length && shownCount >= home.pool.length * 0.6)) {
+        // anderer chip, jedes dritte mischen oder mehr neues gewuenscht: neuer pool mit anderen startkuenstlern
+        home.turns++
+        if (rebuild || !home.pool || home.poolMode !== home.mode || home.turns % 3 === 0 || Date.now() - home.poolAt > 30 * 60 * 1000 || (home.pool.length && shownCount >= home.pool.length * 0.6)) {
           if (rebuild) home.step++
           await loadPool()
         }
@@ -537,6 +538,7 @@ export const hubFeature = {
           home.mode = id
           ctx.state.set('m.hub.homeMode', id)
           shuffle(target)
+          drawReleases(shelf.node?.__rel)
         })
         bar.append(c)
       }
@@ -599,13 +601,15 @@ export const hubFeature = {
 
     async function drawReleases(node) {
       if (!node) return
-      if (!s.homeShelf) {
+      // der chip neu zeigt dasselbe schon oben
+      if (!s.homeShelf || (s.forYouShelf && home.mode === 'releases')) {
         node.replaceChildren()
+        node.__at = 0
         return
       }
       if (node.__at && Date.now() - node.__at < 60 * 1000) return
       node.__at = Date.now()
-      const list = (await music.releases.latest(40).catch(() => [])).filter((r) => r.fresh || r.recent).slice(0, 12)
+      const list = await followedReleases(12).catch(() => [])
       if (!list.length) {
         node.replaceChildren()
         return

@@ -379,25 +379,39 @@ export function profilesTab(app) {
 
   root.append(h('h3', { text: 'Nextcloud-Abgleich' }))
   const cc = cloudConfig()
+  const fields = {}
   const field = (key, ph, type = 'text') => {
     const i = h('input', { type, placeholder: ph, value: cc[key] || '', autocomplete: 'off', spellcheck: 'false' })
     i.addEventListener('change', () => st.updateSettings((s) => ((s.cloud ||= {})[key] = i.value.trim())))
+    fields[key] = i
     return i
   }
-  const sync = (fn) => async () => {
-    if (!cloudReady()) return app.flash('Zuerst Adresse, Benutzer und App-Passwort eintragen')
+  // rueckmeldung direkt unter den knoepfen, das fussfeld des panels ist auf dem handy nicht zu sehen
+  const cloudStatus = h('div', { class: 'muted', style: { padding: '6px 0', fontWeight: '500' } })
+  const sync = (fn, doing) => async () => {
+    const say = (text) => {
+      cloudStatus.textContent = text
+      app.flash(text)
+    }
+    // eingaben sicher uebernehmen, auch wenn das feld noch den fokus hat
+    st.updateSettings((s) => {
+      s.cloud ||= {}
+      for (const [k, el] of Object.entries(fields)) s.cloud[k] = el.value.trim()
+    })
+    if (!cloudReady()) return say('Zuerst Adresse, Benutzer und App-Passwort eintragen')
+    say(doing)
     try {
-      app.flash(await fn())
-      app.rerender()
+      say(await fn())
     } catch (e) {
-      app.flash(e.message)
+      say(`Fehlgeschlagen: ${e.message}`)
     }
   }
   root.append(
     row('Server', field('url', 'http://pi.tail5f332e.ts.net:8181'), { note: 'Adresse deiner Nextcloud, auf dem Handy muss Tailscale an sein', stack: true }),
     row('Benutzer', field('user', 'Nextcloud-Benutzer'), { stack: true }),
     row('App-Passwort', field('pass', 'In Nextcloud unter Sicherheit erzeugen', 'password'), { note: 'Bleibt auf diesem Gerät und steht nie im Export', stack: true }),
-    h('div', { class: 'btns' }, btn('Hochladen', sync(cloudPush), 'primary'), btn('Herunterladen', sync(cloudPull))),
+    h('div', { class: 'btns' }, btn('Hochladen', sync(cloudPush, 'Lade hoch …'), 'primary'), btn('Herunterladen', sync(cloudPull, 'Lade herunter …'))),
+    cloudStatus,
     h('small', { class: 'muted', text: 'Legt die Datei ytx/profiles.json in deiner Nextcloud ab. Herunterladen überschreibt Profile mit gleichem Namen auf diesem Gerät.' })
   )
 

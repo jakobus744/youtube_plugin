@@ -48,6 +48,12 @@ ytmusic-player-controls .content-info-wrapper { position: relative; padding-righ
 ytmusic-player-controls .content-info-wrapper > [data-ytx-mount] { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
 ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] { right: 40px; }
 @media (max-width: 600px) {
+  /* handy: das bunte titelbild oben laeuft sanft aus statt mit harter kante zu enden */
+  ytmusic-fullbleed-thumbnail-renderer { display: none !important; }
+  .background-gradient { background-size: 100% 100% !important; background-repeat: no-repeat !important; }
+  /* playerleiste nimmt wie in der music app die farbe des titels an */
+  ytmusic-app-layout #player-bar-background { background: transparent !important; }
+  ytmusic-player-bar { background: color-mix(in srgb, var(--ytx-tint, #212121) 78%, #000) !important; }
   ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
   .ytx-m-shelf { max-width: none; padding-inline: 16px; }
@@ -55,8 +61,19 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
 }
 `
 
+// farbton der seite, ihn nimmt auf dem handy auch die playerleiste an
+function syncTint() {
+  const g = document.querySelector('.background-gradient')
+  if (!g) return
+  const all = getComputedStyle(g).backgroundImage.match(/rgb([^)]*)/g)
+  const c = all?.[all.length - 1]
+  if (c && document.documentElement.style.getPropertyValue('--ytx-tint') !== c) document.documentElement.style.setProperty('--ytx-tint', c)
+}
+
 export function initMusicUiCss() {
   setCss('music.ui', PAGE_CSS)
+  const t = setInterval(syncTint, 1500)
+  onDispose(() => clearInterval(t))
 }
 
 export function iconButton({ icon, label, title, pressed, onClick }) {

@@ -8343,14 +8343,29 @@ ytmusic-player-controls .content-info-wrapper { position: relative; padding-righ
 ytmusic-player-controls .content-info-wrapper > [data-ytx-mount] { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
 ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] { right: 40px; }
 @media (max-width: 600px) {
+  /* handy: das bunte titelbild oben laeuft sanft aus statt mit harter kante zu enden */
+  ytmusic-fullbleed-thumbnail-renderer { display: none !important; }
+  .background-gradient { background-size: 100% 100% !important; background-repeat: no-repeat !important; }
+  /* playerleiste nimmt wie in der music app die farbe des titels an */
+  ytmusic-app-layout #player-bar-background { background: transparent !important; }
+  ytmusic-player-bar { background: color-mix(in srgb, var(--ytx-tint, #212121) 78%, #000) !important; }
   ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
   .ytx-m-shelf { max-width: none; padding-inline: 16px; }
   .ytx-m-chips { flex-wrap: nowrap; overflow-x: auto; }
 }
 `;
+  function syncTint() {
+    const g = document.querySelector(".background-gradient");
+    if (!g) return;
+    const all = getComputedStyle(g).backgroundImage.match(/rgb([^)]*)/g);
+    const c = all?.[all.length - 1];
+    if (c && document.documentElement.style.getPropertyValue("--ytx-tint") !== c) document.documentElement.style.setProperty("--ytx-tint", c);
+  }
   function initMusicUiCss() {
     setCss("music.ui", PAGE_CSS);
+    const t = setInterval(syncTint, 1500);
+    onDispose(() => clearInterval(t));
   }
   function iconButton({ icon, label, title, pressed, onClick }) {
     const b = h("button", { type: "button", class: "ytx-m-iconbtn", title: title || label || "", "aria-pressed": pressed == null ? void 0 : String(!!pressed) }, h("span", { text: icon }), label && h("span", { class: "ytx-m-lbl", text: label }));
@@ -13143,25 +13158,37 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     root.append(row("ytx-Button in der Kopfzeile", toggle(st.settings.panelButton !== false, (v) => st.updateSettings((s) => s.panelButton = v))));
     root.append(h("h3", { text: "Nextcloud-Abgleich" }));
     const cc = cloudConfig();
+    const fields = {};
     const field = (key, ph, type = "text") => {
       const i = h("input", { type, placeholder: ph, value: cc[key] || "", autocomplete: "off", spellcheck: "false" });
       i.addEventListener("change", () => st.updateSettings((s) => (s.cloud ||= {})[key] = i.value.trim()));
+      fields[key] = i;
       return i;
     };
-    const sync = (fn) => async () => {
-      if (!cloudReady()) return app.flash("Zuerst Adresse, Benutzer und App-Passwort eintragen");
+    const cloudStatus = h("div", { class: "muted", style: { padding: "6px 0", fontWeight: "500" } });
+    const sync = (fn, doing) => async () => {
+      const say = (text) => {
+        cloudStatus.textContent = text;
+        app.flash(text);
+      };
+      st.updateSettings((s) => {
+        s.cloud ||= {};
+        for (const [k, el] of Object.entries(fields)) s.cloud[k] = el.value.trim();
+      });
+      if (!cloudReady()) return say("Zuerst Adresse, Benutzer und App-Passwort eintragen");
+      say(doing);
       try {
-        app.flash(await fn());
-        app.rerender();
+        say(await fn());
       } catch (e) {
-        app.flash(e.message);
+        say(`Fehlgeschlagen: ${e.message}`);
       }
     };
     root.append(
       row("Server", field("url", "http://pi.tail5f332e.ts.net:8181"), { note: "Adresse deiner Nextcloud, auf dem Handy muss Tailscale an sein", stack: true }),
       row("Benutzer", field("user", "Nextcloud-Benutzer"), { stack: true }),
       row("App-Passwort", field("pass", "In Nextcloud unter Sicherheit erzeugen", "password"), { note: "Bleibt auf diesem Gerät und steht nie im Export", stack: true }),
-      h("div", { class: "btns" }, btn("Hochladen", sync(cloudPush), "primary"), btn("Herunterladen", sync(cloudPull))),
+      h("div", { class: "btns" }, btn("Hochladen", sync(cloudPush, "Lade hoch …"), "primary"), btn("Herunterladen", sync(cloudPull, "Lade herunter …"))),
+      cloudStatus,
       h("small", { class: "muted", text: "Legt die Datei ytx/profiles.json in deiner Nextcloud ab. Herunterladen überschreibt Profile mit gleichem Namen auf diesem Gerät." })
     );
     root.append(h("h3", { text: "Export / Import" }));

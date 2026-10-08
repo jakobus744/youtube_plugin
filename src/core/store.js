@@ -161,6 +161,17 @@ const MIGRATIONS = [
     }
   ],
   [
+    'mobile-swipe-down-back',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        const m = p.config?.mobile
+        if (!m || p.template === 'youtube') continue
+        const b = (m.behavior ||= {})
+        if (!('swipeDownBack' in b)) b.swipeDownBack = true
+      }
+    }
+  ],
+  [
     'music-open-app-hidden',
     (d) => {
       for (const p of Object.values(d.profiles || {})) {

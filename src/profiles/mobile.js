@@ -40,13 +40,13 @@ export const mobileTemplates = {
   youtube: () => ({}),
   aufgeraeumt: () => ({
     display: { ...tidyDisplay },
-    behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true },
+    behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, swipeDownBack: true },
     filters: { enabled: true, mode: 'dim', shorts: true, pages: ['home', 'subscriptions', 'search', 'watch'] },
     features: structuredClone(tidyFeatures)
   }),
   fokus: () => ({
     display: { ...tidyDisplay, 'mb.home.feed': H, 'mb.home.sections': H, 'mb.home.chips': H, 'mb.watch.related': C, 'mb.watch.comments': C },
-    behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, homeRedirect: '/feed/subscriptions' },
+    behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, swipeDownBack: true, homeRedirect: '/feed/subscriptions' },
     filters: { enabled: true, mode: 'hide', shorts: true, pages: ['home', 'subscriptions', 'search', 'watch', 'channel'] },
     features: structuredClone(tidyFeatures)
   })

@@ -36,9 +36,17 @@ Startprofil ist **„Aufgeräumt“**. **„YouTube (Original)“** schaltet auf
 Eine richtige App mit zwei Icons, **ytx** (YouTube) und **ytx Music**, ohne Firefox und ohne Browserleiste. Drin steckt die Firefox-Engine (GeckoView), ytx ist fest eingebaut.
 
 **Installieren**
-1. Am Rechner `npm run apk` ausführen. Die fertige Datei liegt in `android/apk/ytx-<version>.apk` (nicht im Git, rund 95 MB).
-2. Die APK aufs Handy bringen, z. B. über den Nextcloud-Ordner, und antippen. Beim ersten Mal fragt Android, ob die Nextcloud- oder Dateien-App Apps installieren darf: erlauben.
+1. Am Rechner in PowerShell bauen. Node kommt über nvm, ist oft nicht aktiv und fehlt dann im Suchpfad (`npm` wird nicht erkannt). Die erste Zeile hängt Node für dieses Fenster vorne an den Suchpfad an:
+   ```powershell
+   $env:Path = "C:\Users\jarot\AppData\Local\nvm\v26.7.0;$env:Path"
+   cd C:\Nextcloud\Entwicklung\ytx
+   npm run apk
+   ```
+   Die fertige Datei liegt in `android/apk/ytx-<version>.apk` (nicht im Git, rund 95 MB). Vorher die neue Version committen und pushen, spätere Updates kommen über GitHub.
+2. Die APK aufs Handy bringen, z. B. über den Nextcloud-Ordner, und antippen. Beim ersten Mal fragt Android, ob die Nextcloud- oder Dateien-App Apps installieren darf: erlauben. Play Protect warnt vor einem unbekannten Entwickler, weil die App nicht aus dem Play Store kommt: „Weitere Details“ › „Trotzdem installieren“.
 3. **ytx** öffnen, bei YouTube anmelden (Tab „Mein YouTube“). **ytx Music** nutzt dieselbe Anmeldung.
+
+**Testen**: Anmelden und nach App-Neustart noch angemeldet? Video, Vollbild, Drehen, Zurück-Taste. In Music Chips, ↻, „+ Genre“, Song und Warteschlange. Aus der YouTube-App teilen › ytx. Icon lange drücken. Theme im Panel ändern und nach Neustart prüfen.
 
 **Was die App kann**
 - Zwei getrennte Einträge in der App-Übersicht, YouTube und Music laufen nebeneinander.
@@ -49,7 +57,8 @@ Eine richtige App mit zwei Icons, **ytx** (YouTube) und **ytx Music**, ohne Fire
 
 **Updates**
 - **ytx selbst** aktualisiert sich wie bei Violentmonkey: Die App schaut alle 6 Stunden nach einer neueren `dist/ytx.user.js` auf GitHub und lädt sie. Sie gilt ab dem nächsten Seitenwechsel.
-- **Die App** (Engine, Icons) braucht nur bei Änderungen am `android`-Ordner eine neue APK. Einfach drüber installieren, die Daten bleiben. Immer auf demselben Rechner bauen, denn die App ist mit dessen Schlüssel signiert.
+- **Die App** (Engine, Icons, Farbwähler) braucht nur bei Änderungen am `android`-Ordner eine neue APK. Die App schaut alle 12 Stunden unter GitHub **Releases** nach. Liegt dort ein neueres Release mit `ytx-<version>.apk`, fragt sie „Installieren?“. Beim ersten Mal will Android die Freigabe „Apps aus dieser Quelle zulassen“. Ein Release anlegen: GitHub › Releases › Draft a new release › Tag `v0.4.0` › APK aus `android/apk` hineinziehen › Publish.
+- Ohne Release geht es per Kabel: USB-Debugging an, dann `adb install -r androidapkytx-<version>.apk` (adb liegt in `%LOCALAPPDATA%AndroidSdkplatform-tools`). Immer auf demselben Rechner bauen, denn die App ist mit dessen Schlüssel signiert.
 
 **Technik**: `android/app/src/main/assets/ytx/` ist eine eingebaute Erweiterung. Sie stellt die GM-Funktionen bereit (Speicher, Live-Abgleich, Anfragen, Zwischenablage) und entfernt auf YouTube die Content-Security-Policy, weil ytx sonst nicht in die Seite darf. Bauen braucht Android SDK und JDK 17, Build-Dateien landen in `%LOCALAPPDATA%/ytx-android-build`, nicht in Nextcloud.
 
@@ -63,7 +72,7 @@ Eine richtige App mit zwei Icons, **ytx** (YouTube) und **ytx Music**, ohne Fire
 
 Auf dem Handy ist das Panel ein Blatt von unten, die Bedienelemente sind größer. Auf YouTube Music führen die Chips auf der Startseite zu den Mixen.
 
-Mobil gibt es: Ausblenden (Shorts-Tab, Shorts-Regale, Werbung, Empfehlungen, Kommentar-Vorschau …), Themes und Farben, Filter (Kanäle, Stichwörter, Shorts, Dauer, Alter), Abo-Gruppen, Schauzeit mit Tageslimit, Shorts-Umleitung. Profile und Daten liegen pro Gerät, zum Übertragen **Profile › Export/Import** nutzen.
+Mobil gibt es: Ausblenden (Shorts-Tab, Shorts-Regale, Werbung, Empfehlungen, Kommentar-Vorschau …), Themes und Farben, Filter (Kanäle, Stichwörter, Shorts, Dauer, Alter), Abo-Gruppen, Schauzeit mit Tageslimit, Shorts-Umleitung und dieselben Features wie am Rechner: Transkript kopieren (ytx-Leiste unter dem Video und ⋯-Menü jeder Kachel), Kopieren-Menü, Datum und Endzeit, Playlist-Dauer, -Suche und -Sortierung (Playlist-Seite und Playlist unter dem Video), Fortschritt auf Thumbnails, Autoplay aus, Qualität und Tempo. Nur „Buttons spiegeln“ fehlt, die Handy-Leiste hat dafür keinen Platz. Profile und Daten liegen pro Gerät, zum Übertragen **Profile › Export/Import** nutzen.
 
 ---
 

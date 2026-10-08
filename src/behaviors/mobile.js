@@ -1,9 +1,9 @@
 import { behaviors as yt } from './youtube.js'
 
 // verhalten fuer m.youtube.com
-// umleitungen arbeiten nur mit urls und laufen deshalb unveraendert auch mobil
+// umleitungen arbeiten mit urls, der rest mit der player api, beides gibt es auch mobil
 
-const SHARED = ['shortsRedirect', 'homeRedirect']
+const SHARED = ['shortsRedirect', 'homeRedirect', 'autoplayOff', 'forceQuality', 'speedMemory', 'pauseOnBlur', 'channelTrailerPause']
 
 export const behaviors = yt.filter((b) => SHARED.includes(b.id))
 

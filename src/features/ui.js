@@ -23,7 +23,7 @@ const CSS = `
 .ytx-split > .ytx-btn:first-child { border-radius: 18px 0 0 18px; padding-right: 10px; }
 .ytx-split > .ytx-btn:last-child { border-radius: 0 18px 18px 0; padding: 0 10px; border-left: 1px solid var(--yt-sys-color-baseline--outline, rgba(255,255,255,.2)); }
 .ytx-small { height: 28px; line-height: 28px; font-size: 12px; padding: 0 10px; border-radius: 14px; }
-.ytx-inline { all: initial; font: inherit; color: inherit; }
+.ytx-inline { all: initial; font: inherit; color: inherit; visibility: inherit; }
 .ytx-note { all: initial; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font: 400 12px/1.4 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-secondary, #aaa); }
 .ytx-note b { font-weight: 500; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); }
 .ytx-link { all: initial; cursor: pointer; font: 500 12px/1.4 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--call-to-action, #3ea6ff); }

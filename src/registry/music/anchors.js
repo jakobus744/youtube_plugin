@@ -13,9 +13,10 @@ export const anchors = {
     label: 'Playerleiste Titelinfo',
     sel: ['ytmusic-player-bar .content-info-wrapper', 'ytmusic-player-bar .middle-controls']
   },
+  // auf dem handy gibt es keine grosse playerleiste, dort neben dem titel in der player ansicht
   'm.bar.middleButtons': {
     label: 'Playerleiste neben Like',
-    sel: ['ytmusic-player-bar .middle-controls-buttons']
+    sel: ['ytmusic-player-bar .middle-controls-buttons', 'ytmusic-player-page ytmusic-player-controls .content-info-wrapper']
   },
   'm.player.tabs': {
     label: 'Tab-Leiste im Player',

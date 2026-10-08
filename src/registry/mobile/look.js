@@ -22,7 +22,7 @@ export const colorControls = [
 ytm-pivot-bar-renderer { background: color-mix(in srgb, ${v} 88%, transparent) !important; }`
   },
   { id: 'raised', label: 'Flächen & Karten', tokens: [] },
-  { id: 'menu', label: 'Menüs & Dialoge', tokens: [], extra: (v) => `ytm-app bottom-sheet-container [class*="BottomSheet"], .ytmBottomSheetRendererContainer, ytm-menu-popup-renderer { background-color: ${v} !important; }` },
+  { id: 'menu', label: 'Menüs & Dialoge', tokens: [], extra: (v) => `bottom-sheet-container .ytSpecBottomSheetLayoutHost, .ytmBottomSheetRendererContainer, ytm-menu-popup-renderer, #menu.menu-container .menu-content { background-color: ${v} !important; }` },
   { id: 'text', label: 'Text', tokens: [], extra: (v) => `ytm-app, .media-item-headline, ytm-app h1, ytm-app h2, ytm-app h3 { color: ${v} !important; }` },
   { id: 'textSecondary', label: 'Text gedimmt', tokens: [], extra: (v) => `.ytmBadgeAndBylineRendererItemByline, ytm-badge-and-byline-renderer { color: ${v} !important; }` },
   { id: 'accent', label: 'Akzent & Links', tokens: [] },

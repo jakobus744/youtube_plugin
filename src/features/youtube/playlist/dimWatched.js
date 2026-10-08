@@ -1,5 +1,5 @@
 import { readPlaylist } from './common.js'
-import { playlistPanel } from '../../../registry/youtube/paths.js'
+import { playlistPanel } from '../sitePaths.js'
 import { qsa } from '../../../core/dom.js'
 
 const ATTR = 'data-ytx-watched'

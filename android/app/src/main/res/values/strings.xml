@@ -10,4 +10,12 @@
     <string name="crashed">Seite abgestürzt, wird neu geladen</string>
     <string name="updated">ytx %1$s geladen, gilt ab dem nächsten Seitenwechsel</string>
     <string name="no_app">Keine App für diesen Link gefunden</string>
+    <string name="pick_color">Farbe wählen</string>
+    <string name="update_title">ytx-App %1$s ist da</string>
+    <string name="update_text">Installiert ist %1$s. Die neue Version jetzt laden und installieren? Einstellungen und Verlauf bleiben erhalten.</string>
+    <string name="update_install">Installieren</string>
+    <string name="update_later">Später</string>
+    <string name="update_allow">Bitte „Apps aus dieser Quelle zulassen“ einschalten und zurück zu ytx wechseln</string>
+    <string name="update_loading">Update wird geladen …</string>
+    <string name="update_failed">Update fehlgeschlagen: %1$s</string>
 </resources>

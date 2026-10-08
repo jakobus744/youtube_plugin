@@ -14,6 +14,13 @@ function shortsId(url) {
   return m ? m[1] : null
 }
 
+// autoplay schalter im player, am rechner aria-checked, auf dem handy aria-pressed
+const AUTONAV = '#movie_player .ytp-autonav-toggle-button, button.ytwAutonavToggleButtonHost'
+const autonavOn = (el) => {
+  const v = el.getAttribute('aria-checked') ?? el.getAttribute('aria-pressed')
+  return v == null ? null : v === 'true'
+}
+
 export const behaviors = [
   {
     id: 'shortsRedirect',
@@ -81,7 +88,7 @@ export const behaviors = [
         document,
         'click',
         (e) => {
-          if (e.isTrusted && e.target?.closest?.('#movie_player .ytp-autonav-toggle')) userTouched = true
+          if (e.isTrusted && e.target?.closest?.(`${AUTONAV}, #movie_player .ytp-autonav-toggle`)) userTouched = true
         },
         true
       )
@@ -90,8 +97,8 @@ export const behaviors = [
         if (ctx.nav.page !== 'watch' || userTouched || clicks >= 10) return
         const now = Date.now()
         if (now - lastTry < 1200 || !player()?.getPlayerState) return
-        const toggle = qs('#movie_player .ytp-autonav-toggle-button')
-        if (!toggle || toggle.getAttribute('aria-checked') !== 'true') return
+        const toggle = qs(AUTONAV)
+        if (!toggle || autonavOn(toggle) !== true) return
         const btn = toggle.closest('button') || toggle
         btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
         lastTry = now
@@ -110,8 +117,8 @@ export const behaviors = [
     },
     health: () => {
       if (!document.querySelector('#movie_player')) return { status: 'skip', detail: 'Kein Player auf dieser Seite' }
-      const btn = qs('#movie_player .ytp-autonav-toggle-button')
-      return btn ? { status: 'ok', detail: `Schalter gefunden (an: ${btn.getAttribute('aria-checked')})` } : { status: 'warn', detail: 'Autoplay-Schalter nicht gefunden' }
+      const btn = qs(AUTONAV)
+      return btn ? { status: 'ok', detail: `Schalter gefunden (an: ${autonavOn(btn)})` } : { status: 'warn', detail: 'Autoplay-Schalter nicht gefunden' }
     }
   },
   {
@@ -238,7 +245,7 @@ export const behaviors = [
         'playing',
         (e) => {
           const v = e.target
-          if (v?.tagName === 'VIDEO' && v.closest('ytd-channel-video-player-renderer')) v.pause()
+          if (v?.tagName === 'VIDEO' && v.closest('ytd-channel-video-player-renderer, ytm-channel-video-player-renderer')) v.pause()
         },
         true
       )

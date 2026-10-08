@@ -1,6 +1,7 @@
 import { dataOf, pick, pickAny, runsText, player } from '../../core/bridge.js'
 import { qs, qsa } from '../../core/dom.js'
 import { parseDuration, parseAgeDays, firstInt } from '../../core/format.js'
+import { chaptersFromDescription } from './chapters.js'
 
 // wo daten stehen
 // zwei generationen von youtube komponenten laufen parallel
@@ -32,7 +33,12 @@ export const videoMenu = {
   lists: ['ytd-popup-container ytd-menu-popup-renderer tp-yt-paper-listbox#items', 'ytd-popup-container yt-sheet-view-model yt-list-view-model', 'ytd-popup-container yt-list-view-model'],
   watchOwn: 'ytd-watch-metadata',
   // dazu die eintraege der playlist neben dem video
-  cards: [...CARD_SELECTORS, 'ytd-playlist-panel-video-renderer'].join(', ')
+  cards: [...CARD_SELECTORS, 'ytd-playlist-panel-video-renderer'].join(', '),
+  close() {
+    const dd = qsa(this.popup).find((x) => x.getClientRects().length)
+    try { dd?.close?.() } catch {}
+    if (dd?.getClientRects().length) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }))
+  }
 }
 
 function parseHref(href) {
@@ -298,7 +304,7 @@ export const watch = {
       }
       if (out.length) break
     }
-    return out
+    return out.length ? out : chaptersFromDescription(this.description())
   },
   // url die der player selbst mit token fuer untertitel anfragt
   isTimedtextUrl(url) {

@@ -28,9 +28,11 @@ import org.mozilla.geckoview.GeckoRuntime;
 import org.mozilla.geckoview.GeckoSession;
 import org.mozilla.geckoview.GeckoSession.PermissionDelegate.ContentPermission;
 import org.mozilla.geckoview.GeckoSession.PromptDelegate;
+import org.mozilla.geckoview.GeckoSession.PromptDelegate.PromptResponse;
 import org.mozilla.geckoview.GeckoSessionSettings;
 import org.mozilla.geckoview.GeckoView;
 import org.mozilla.geckoview.OrientationController;
+import org.mozilla.geckoview.WebRequestError;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,6 +46,10 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     private static final Pattern RGB = Pattern.compile("rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)");
     // bleibt in der app: youtube und google anmeldung
     private static final Pattern INSIDE = Pattern.compile("(^|\\.)(youtube\\.com|youtu\\.be|youtube-nocookie\\.com|ytimg\\.com|googlevideo\\.com|gstatic\\.com|googleusercontent\\.com|google\\.[a-z.]+)$");
+
+    private static final int REQ_FILE = 41;
+    private GeckoResult<PromptResponse> pendingFile;
+    private PromptDelegate.FilePrompt pendingFilePrompt;
 
     private FrameLayout root;
     private GeckoView view;
@@ -114,6 +120,8 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         super.onResume();
         YtxRuntime.setListener(this);
         if (session != null) session.setFocused(true);
+        AppUpdater.resume(this);
+        AppUpdater.maybeCheck(this);
         // vollbild videos duerfen das handy drehen
         YtxRuntime.get(this).getOrientationController().setDelegate(new OrientationController.OrientationDelegate() {
             @Override
@@ -127,6 +135,27 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
                 runOnUiThread(() -> setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED));
             }
         });
+    }
+
+    @Override
+    protected void onActivityResult(int req, int code, Intent data) {
+        super.onActivityResult(req, code, data);
+        if (req != REQ_FILE || pendingFile == null) return;
+        GeckoResult<PromptResponse> res = pendingFile;
+        PromptDelegate.FilePrompt p = pendingFilePrompt;
+        pendingFile = null;
+        pendingFilePrompt = null;
+        if (code != RESULT_OK || data == null) {
+            res.complete(p.dismiss());
+        } else if (data.getClipData() != null && data.getClipData().getItemCount() > 1) {
+            Uri[] uris = new Uri[data.getClipData().getItemCount()];
+            for (int i = 0; i < uris.length; i++) uris[i] = data.getClipData().getItemAt(i).getUri();
+            res.complete(p.confirm(this, uris));
+        } else if (data.getData() != null) {
+            res.complete(p.confirm(this, data.getData()));
+        } else {
+            res.complete(p.dismiss());
+        }
     }
 
     @Override
@@ -185,6 +214,18 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         return p.getString("lastUrl", null);
     }
 
+    // haeufige ursachen in einem satz
+    private static String hint(WebRequestError e) {
+        String t = null;
+        if (e.code == WebRequestError.ERROR_UNKNOWN_HOST) t = "Der Servername wird nicht gefunden. Ein VPN (z. B. WireGuard zum Pi) oder ein DNS Server, der nicht antwortet, ist die häufigste Ursache. VPN ausschalten und neu laden.";
+        else if (e.code == WebRequestError.ERROR_NET_TIMEOUT || e.code == WebRequestError.ERROR_CONNECTION_REFUSED) t = "Keine Verbindung. WLAN, mobile Daten oder VPN prüfen.";
+        return t == null ? "" : "<p style='color:#aaa;margin:0 0 20px;font-size:14px'>" + escape(t) + "</p>";
+    }
+
+    private static String escape(String t) {
+        return t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
+    }
+
     private void openOutside(String uri) {
         try {
             Intent i = uri.startsWith("intent:") ? Intent.parseUri(uri, Intent.URI_INTENT_SCHEME) : new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
@@ -208,6 +249,17 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
             public void onLocationChange(GeckoSession s, String url, List<ContentPermission> perms, Boolean hasUserGesture) {
                 currentUrl = url;
                 if (url != null && url.startsWith("https://")) prefs().edit().putString("lastUrl", url).putLong("lastAt", System.currentTimeMillis()).apply();
+            }
+
+            // statt weissem bildschirm eine seite mit grund und neu laden
+            @Override
+            public GeckoResult<String> onLoadError(GeckoSession s, String uri, WebRequestError error) {
+                // adresse nur als https link, alles maskiert, kein script in der seite
+                String target = uri != null && uri.startsWith("https://") ? uri : "https://m.youtube.com/";
+                String html = "<meta name='viewport' content='width=device-width,initial-scale=1'><body style='margin:0;background:#0f0f0f;color:#f1f1f1;font:16px sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center'>"
+                        + "<div style='padding:24px'><h2 style='margin:0 0 8px'>Seite nicht erreichbar</h2><p style='color:#aaa;margin:0 0 20px;word-break:break-all'>Fehler " + error.code + " (Kategorie " + error.category + ")<br>" + escape(target) + "</p>" + hint(error)
+                        + "<a href=\"" + escape(target) + "\" style='display:inline-block;padding:12px 28px;border-radius:24px;background:#f1f1f1;color:#0f0f0f;text-decoration:none'>Neu laden</a></div>";
+                return GeckoResult.fromValue("data:text/html;charset=utf-8," + Uri.encode(html));
             }
 
             @Override
@@ -383,6 +435,35 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
             }
         }
 
+        // farbfeld der seite, etwa im ytx theme: palette plus eingabe als hex
+        @Override
+        public GeckoResult<PromptResponse> onColorPrompt(GeckoSession s, ColorPrompt p) {
+            GeckoResult<PromptResponse> res = new GeckoResult<>();
+            ColorPicker picker = new ColorPicker(MainActivity.this, p.defaultValue);
+            dialog().setTitle(p.title != null ? p.title : getString(R.string.pick_color)).setView(picker.view())
+                    .setPositiveButton(R.string.ok, (d, w) -> res.complete(p.confirm(picker.value())))
+                    .setNegativeButton(R.string.cancel, (d, w) -> res.complete(p.dismiss()))
+                    .setOnCancelListener(d -> res.complete(p.dismiss()))
+                    .show();
+            return res;
+        }
+
+        // dateiauswahl, etwa fuer den import von profilen und musikdaten
+        @Override
+        public GeckoResult<PromptResponse> onFilePrompt(GeckoSession s, FilePrompt p) {
+            if (pendingFile != null) pendingFile.complete(pendingFilePrompt.dismiss());
+            Intent pick = new Intent(Intent.ACTION_GET_CONTENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*");
+            if (p.type == FilePrompt.Type.MULTIPLE) pick.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+            pendingFile = new GeckoResult<>();
+            pendingFilePrompt = p;
+            try {
+                startActivityForResult(pick, REQ_FILE);
+            } catch (ActivityNotFoundException e) {
+                pendingFile.complete(p.dismiss());
+            }
+            return pendingFile;
+        }
+
         @Override
         public GeckoResult<PromptResponse> onSharePrompt(GeckoSession s, SharePrompt p) {
             Intent send = new Intent(Intent.ACTION_SEND);
@@ -417,6 +498,8 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     private void handleBack() {
         if (fullscreen) session.exitFullScreen();
         else if (canGoBack) session.goBack();
+        // kein verlauf mehr, aber nicht auf der startseite: erst dorthin, dann erst app schliessen
+        else if (currentUrl != null && !currentUrl.replaceAll("[?#].*$", "").replaceAll("/+$", "").equals(homeUrl().replaceAll("/+$", ""))) session.loadUri(homeUrl());
         else moveTaskToBack(true);
     }
 

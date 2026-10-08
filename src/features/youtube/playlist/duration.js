@@ -1,5 +1,5 @@
 import { readPlaylist, summarize, loadAll, isLoading } from './common.js'
-import { playlistPanel } from '../../../registry/youtube/paths.js'
+import { playlistPanel } from '../sitePaths.js'
 import { formatDuration } from '../../../core/format.js'
 import { player } from '../../../core/bridge.js'
 import { h, clear } from '../../ui.js'
@@ -11,7 +11,7 @@ export default {
   description: 'Gesamtdauer, gesehene und verbleibende Zeit auf Playlist-Seiten und im Playlist-Panel neben Videos',
   pages: ['playlist', 'watch'],
   stability: 'mittel-hoch',
-  anchors: ['playlist.header', 'watch.playlistHeader'],
+  anchors: ['playlist.header', 'watch.playlistInfo'],
   settings: {
     show: { type: 'multi', label: 'Anzeigen', options: [['total', 'Gesamt'], ['watched', 'Gesehen'], ['remaining', 'Übrig']], default: ['total', 'remaining'] },
     doneThreshold: { type: 'range', label: 'Gilt als gesehen ab', min: 50, max: 100, step: 5, unit: '%', default: 90 },
@@ -116,7 +116,7 @@ export default {
 
     const panelMount = ctx.mount({
       id: 'watch.playlist.duration',
-      anchor: 'watch.playlistHeader',
+      anchor: 'watch.playlistInfo',
       position: 'append',
       when: () => ctx.nav.page === 'watch' && !!playlistPanel.read(),
       create: () => h('div', { class: 'ytx-note', style: { display: 'flex', marginTop: '4px' } }),

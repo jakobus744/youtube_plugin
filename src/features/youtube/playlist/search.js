@@ -1,5 +1,5 @@
 import { readPlaylist, loadAll, isLoading } from './common.js'
-import { playlistPanel } from '../../../registry/youtube/paths.js'
+import { playlistPanel } from '../sitePaths.js'
 import { qsa } from '../../../core/dom.js'
 import { debounce } from '../../../core/scheduler.js'
 import { h } from '../../ui.js'

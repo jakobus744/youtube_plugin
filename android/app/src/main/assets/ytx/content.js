@@ -68,7 +68,13 @@ function pageShim(CH, VALUES, VERSION) {
     return id
   })
   def('GM_removeValueChangeListener', (id) => listeners.delete(id))
+  // ueber die app, android braucht dafuer keinen frischen fingertipp wie der browser
   def('GM_setClipboard', (text) => {
+    send({ t: 'clip', text: String(text) })
+  })
+  // meldungen fuer das android protokoll (adb logcat -s ytx-page)
+  def('__ytxAppLog', (...a) => send({ t: 'log', text: a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ') }))
+  def('__ytxBrowserCopy', (text) => {
     const s = String(text)
     const fallback = () => {
       const ta = document.createElement('textarea')
@@ -112,6 +118,8 @@ function pageShim(CH, VALUES, VERSION) {
     } else if (m.t === 'del') {
       own.set(m.k, undefined)
       browser.storage.local.remove(`gm:${m.k}`)
+    } else if (m.t === 'clip' || m.t === 'log') {
+      browser.runtime.sendMessage({ t: m.t, text: String(m.text).slice(0, m.t === 'log' ? 2000 : 4000000) }).catch(() => {})
     } else if (m.t === 'xhr') {
       const r = await browser.runtime.sendMessage(m).catch((err) => ({ error: String(err) }))
       toPage({ t: 'xhr', id: m.id, ...r })

@@ -16,7 +16,8 @@ const tidyDisplay = {
   'm.home.samplesShelf': H,
   'm.explore.podcasts': H,
   'm.search.podcasts': C,
-  'm.search.profiles': H
+  'm.search.profiles': H,
+  'm.nav.openApp': H
 }
 
 const tidyFeatures = {

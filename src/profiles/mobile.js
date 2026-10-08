@@ -21,22 +21,32 @@ const tidyDisplay = {
   'mb.premiumPromo': H
 }
 
-const tidyFeatures = {
+// dieselben features wie am rechner, ohne buttons spiegeln
+export const tidyFeatures = {
+  'transcript.copy': { enabled: true },
+  'watch.copyInfo': { enabled: true },
+  'playlist.duration': { enabled: true },
+  'playlist.search': { enabled: true },
+  'playlist.sort': { enabled: true },
+  'playlist.dimWatched': { enabled: false },
   'subs.groups': { enabled: true },
-  'watch.time': { enabled: true }
+  'watch.time': { enabled: true },
+  'player.endsAt': { enabled: true },
+  'watch.publishDate': { enabled: true },
+  'thumb.progressBadge': { enabled: true }
 }
 
 export const mobileTemplates = {
   youtube: () => ({}),
   aufgeraeumt: () => ({
     display: { ...tidyDisplay },
-    behavior: { shortsRedirect: true },
+    behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true },
     filters: { enabled: true, mode: 'dim', shorts: true, pages: ['home', 'subscriptions', 'search', 'watch'] },
     features: structuredClone(tidyFeatures)
   }),
   fokus: () => ({
     display: { ...tidyDisplay, 'mb.home.feed': H, 'mb.home.sections': H, 'mb.home.chips': H, 'mb.watch.related': C, 'mb.watch.comments': C },
-    behavior: { shortsRedirect: true, homeRedirect: '/feed/subscriptions' },
+    behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, homeRedirect: '/feed/subscriptions' },
     filters: { enabled: true, mode: 'hide', shorts: true, pages: ['home', 'subscriptions', 'search', 'watch', 'channel'] },
     features: structuredClone(tidyFeatures)
   })

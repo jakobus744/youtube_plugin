@@ -1,6 +1,8 @@
 import { qs, qsa } from '../../core/dom.js'
 import { parseDuration, parseAgeDays, firstInt } from '../../core/format.js'
 import { pageFromUrl } from '../youtube/pages.js'
+import { watch as desktopWatch, playlistPage as desktopPlaylistPage } from '../youtube/paths.js'
+import { chaptersFromDescription } from '../youtube/chapters.js'
 
 // datenquellen auf m.youtube.com
 // die mobilseite haengt keine daten an ihre elemente, alles kommt aus dem dom
@@ -112,4 +114,124 @@ export function pauseActive() {
   try {
     mainPlayer()?.pauseVideo?.()
   } catch {}
+}
+
+// ---------- videoseite ----------
+// derselbe html5 player wie am rechner, daten kommen aus seiner api
+
+export const watch = {
+  playerResponse() {
+    try { return mainPlayer()?.getPlayerResponse?.() || null } catch { return null }
+  },
+  videoData() {
+    try { return mainPlayer()?.getVideoData?.() || null } catch { return null }
+  },
+  captionTracks(pr = this.playerResponse()) {
+    return desktopWatch.captionTracks(pr)
+  },
+  publishDate(pr = this.playerResponse()) {
+    return desktopWatch.publishDate(pr)
+  },
+  description(pr = this.playerResponse()) {
+    return pr?.videoDetails?.shortDescription || ''
+  },
+  chapters() {
+    const out = []
+    for (const el of qsa('ytm-macro-markers-list-item-renderer')) {
+      const title = qs('h4, [class*="title" i]', el)?.textContent.trim() || ''
+      const time = qs('[class*="time" i]', el)?.textContent.trim() || ''
+      const sec = parseDuration(time)
+      if (title && sec != null && !out.some((c) => c.startSec === sec)) out.push({ title, startSec: sec })
+    }
+    return out.length ? out : chaptersFromDescription(this.description())
+  },
+  isTimedtextUrl(url) {
+    return desktopWatch.isTimedtextUrl(url)
+  }
+}
+
+// ---------- playlist seite ----------
+// gleiche lockup bausteine wie am rechner
+
+const PL = 'ytm-browse'
+
+export const playlistPage = {
+  root: PL,
+  polymerItems: 'ytx-none',
+  lockupItems: `${PL} yt-item-section-renderer yt-lockup-view-model, ${PL} ytm-item-section-renderer yt-lockup-view-model`,
+  continuation: [`${PL} yt-continuation-item-view-model`, `${PL} ytm-continuation-item-renderer`],
+  dragHandles: 'ytx-none',
+  readPolymerItem: () => null,
+  readLockupItem: (el) => desktopPlaylistPage.readLockupItem(el),
+  listContainer() {
+    return qs(`${PL} yt-item-section-renderer #contents, ${PL} ytm-item-section-renderer #contents`)
+  },
+  // „41 Videos“ im kopf, der kanalname davor kann selbst zahlen enthalten
+  total() {
+    const text = qs(`${PL} yt-page-header-view-model yt-content-metadata-view-model`)?.textContent || ''
+    const m = text.match(/(\d[\d.]*)\s*(?:Videos?|videos?|Titel|Folgen)/)
+    return m ? firstInt(m[1].replace(/\./g, '')) : null
+  },
+  playlistId() {
+    return new URL(location.href).searchParams.get('list')
+  }
+}
+
+// ---------- playlist auf der videoseite ----------
+// liste im ausklappbaren panel, laedt nur sichtbare eintraege
+
+function panelCount() {
+  const t = qs('.playlist-engagement-panel-list-count, ytm-playlist-panel-entry-point .playlist-panel-subhead')?.textContent || ''
+  const m = t.match(/(\d+)\s*\/\s*(\d+)/)
+  return m ? { current: Number(m[1]) - 1, total: Number(m[2]) } : null
+}
+
+export const playlistPanel = {
+  root: 'ytm-playlist-engagement-panel, ytm-playlist-panel-entry-point',
+  read() {
+    if (!new URL(location.href).searchParams.get('list') || !qs(this.root)) return null
+    const items = []
+    for (const el of this.itemElements()) {
+      const a = qs('a[href*="/watch?"]', el)
+      const u = new URL(a?.getAttribute('href') || '/', location.origin)
+      const idx = firstInt(u.searchParams.get('index'))
+      const bar = qs('[class*="ResumePlayback"] [style*="width"], ytm-thumbnail-overlay-resume-playback-renderer [style*="width"], [class*="ProgressBar"] [style*="width"]', el)
+      items.push({
+        videoId: u.searchParams.get('v'),
+        index: idx != null ? idx - 1 : items.length,
+        durationSec: parseDuration(qs('ytm-thumbnail-overlay-time-status-renderer, badge-shape', el)?.textContent || ''),
+        percent: bar ? firstInt(bar.style.width) : null,
+        selected: el.getAttribute('aria-selected') === 'true'
+      })
+    }
+    const c = panelCount()
+    const current = c?.current ?? items.find((i) => i.selected)?.index ?? 0
+    return { el: qs(this.root), items, total: c?.total ?? null, current, infinite: false }
+  },
+  itemElements() {
+    return qsa('ytm-playlist-panel-video-renderer')
+  },
+  readElement(el) {
+    const a = qs('a[href*="/watch?"]', el)
+    const videoId = a ? new URL(a.getAttribute('href'), location.origin).searchParams.get('v') : null
+    const title = qs('h4, [class*="Headline"]', el)?.textContent.trim() || ''
+    const channel = qs('[class*="Byline"], [class*="Subhead"], [class*="subhead"]', el)?.textContent.trim() || ''
+    return videoId ? { videoId, title, channel } : null
+  }
+}
+
+// ---------- drei punkte menue ----------
+// auf dem handy ein blatt von unten, im querformat ein popup
+
+export const videoMenu = {
+  popup: 'bottom-sheet-container, #menu.menu-container',
+  lists: ['bottom-sheet-container .bottom-sheet-media-menu-item', 'bottom-sheet-container yt-list-view-model', '#menu.menu-container .menu-content'],
+  watchOwn: 'ytm-slim-video-action-bar-renderer',
+  cards: [...CARD_SELECTORS, 'ytm-playlist-panel-video-renderer'].join(', '),
+  async close() {
+    const scrim = qsa('ytw-scrim .ytWebScrimHiddenButton, ytw-scrim button').find((b) => b.getClientRects().length)
+    if (scrim) scrim.click()
+    else if (/^#(bottom-sheet|menu)$/.test(location.hash)) history.back()
+    await new Promise((r) => setTimeout(r, 350))
+  }
 }

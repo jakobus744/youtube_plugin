@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.3.6
+// @version      0.4.0
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -26,10 +26,16 @@
 // ==/UserScript==
 
 (() => {
+  var __defProp = Object.defineProperty;
+  var __export = (target, all) => {
+    for (var name in all)
+      __defProp(target, name, { get: all[name], enumerable: true });
+  };
+
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.3.6",
+    version: "0.4.0",
     description: "YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen",
     private: true,
     type: "module",
@@ -646,6 +652,11 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
     },
     "watch.playlistHeader": {
       label: "Playlist-Panel Kopf",
+      sel: ["ytd-watch-flexy ytd-playlist-panel-renderer#playlist #header-description", "ytd-watch-flexy ytd-playlist-panel-renderer#playlist #header-contents"]
+    },
+    // am rechner dasselbe, auf dem handy die zeile unter dem video statt des aufklappbaren panels
+    "watch.playlistInfo": {
+      label: "Playlist-Panel Statistik",
       sel: ["ytd-watch-flexy ytd-playlist-panel-renderer#playlist #header-description", "ytd-watch-flexy ytd-playlist-panel-renderer#playlist #header-contents"]
     },
     "subs.feedTop": {
@@ -1414,6 +1425,26 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     ["playlist", "Playlists"]
   ];
 
+  // src/registry/youtube/paths.js
+  var paths_exports = {};
+  __export(paths_exports, {
+    CARD_PARENT: () => CARD_PARENT,
+    CARD_SELECTORS: () => CARD_SELECTORS,
+    activePageRoots: () => activePageRoots,
+    activePlayback: () => activePlayback,
+    channelPageInfo: () => channelPageInfo,
+    channelRefOf: () => channelRefOf,
+    pauseActive: () => pauseActive,
+    playlistPage: () => playlistPage,
+    playlistPanel: () => playlistPanel,
+    readCard: () => readCard,
+    readLockupCard: () => readLockupCard,
+    readPolymerCard: () => readPolymerCard,
+    subscribedChannels: () => subscribedChannels,
+    videoMenu: () => videoMenu,
+    watch: () => watch
+  });
+
   // src/core/format.js
   function parseDuration(text) {
     if (text == null) return null;
@@ -1490,6 +1521,26 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     return date.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
   }
 
+  // src/registry/youtube/chapters.js
+  var STAMP = /(?:^|\s|\()((?:\d{1,2}:)?\d{1,2}:\d{2})(?=$|\s|\)|[-–:|.,])/;
+  function toSec(stamp2) {
+    return stamp2.split(":").map(Number).reduce((a, b) => a * 60 + b, 0);
+  }
+  function chaptersFromDescription(text) {
+    const out = [];
+    for (const raw of String(text || "").split("\n")) {
+      const line = raw.trim();
+      const m = line.match(STAMP);
+      if (!m) continue;
+      const sec = toSec(m[1]);
+      const title = line.replace(m[1], "").replace(/^[\s\-–:|.()]+|[\s\-–:|()]+$/g, "").trim();
+      if (out.length && sec <= out[out.length - 1].startSec) continue;
+      out.push({ title: title || m[1], startSec: sec });
+    }
+    if (out.length < 3 || out[0].startSec !== 0) return [];
+    return out;
+  }
+
   // src/registry/youtube/paths.js
   function activePageRoots() {
     const roots = qsa("ytd-page-manager#page-manager > :not([hidden])");
@@ -1509,7 +1560,15 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     lists: ["ytd-popup-container ytd-menu-popup-renderer tp-yt-paper-listbox#items", "ytd-popup-container yt-sheet-view-model yt-list-view-model", "ytd-popup-container yt-list-view-model"],
     watchOwn: "ytd-watch-metadata",
     // dazu die eintraege der playlist neben dem video
-    cards: [...CARD_SELECTORS, "ytd-playlist-panel-video-renderer"].join(", ")
+    cards: [...CARD_SELECTORS, "ytd-playlist-panel-video-renderer"].join(", "),
+    close() {
+      const dd = qsa(this.popup).find((x) => x.getClientRects().length);
+      try {
+        dd?.close?.();
+      } catch {
+      }
+      if (dd?.getClientRects().length) document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }));
+    }
   };
   function parseHref(href) {
     if (!href) return {};
@@ -1755,7 +1814,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
         }
         if (out.length) break;
       }
-      return out;
+      return out.length ? out : chaptersFromDescription(this.description());
     },
     // url die der player selbst mit token fuer untertitel anfragt
     isTimedtextUrl(url) {
@@ -1878,6 +1937,11 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     const m = String(url || "").match(/\/shorts\/([\w-]{6,})/);
     return m ? m[1] : null;
   }
+  var AUTONAV = "#movie_player .ytp-autonav-toggle-button, button.ytwAutonavToggleButtonHost";
+  var autonavOn = (el) => {
+    const v = el.getAttribute("aria-checked") ?? el.getAttribute("aria-pressed");
+    return v == null ? null : v === "true";
+  };
   var behaviors = [
     {
       id: "shortsRedirect",
@@ -1943,7 +2007,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
           document,
           "click",
           (e) => {
-            if (e.isTrusted && e.target?.closest?.("#movie_player .ytp-autonav-toggle")) userTouched = true;
+            if (e.isTrusted && e.target?.closest?.(`${AUTONAV}, #movie_player .ytp-autonav-toggle`)) userTouched = true;
           },
           true
         );
@@ -1952,8 +2016,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
           if (ctx.nav.page !== "watch" || userTouched || clicks >= 10) return;
           const now = Date.now();
           if (now - lastTry < 1200 || !player()?.getPlayerState) return;
-          const toggle2 = qs("#movie_player .ytp-autonav-toggle-button");
-          if (!toggle2 || toggle2.getAttribute("aria-checked") !== "true") return;
+          const toggle2 = qs(AUTONAV);
+          if (!toggle2 || autonavOn(toggle2) !== true) return;
           const btn2 = toggle2.closest("button") || toggle2;
           btn2.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
           lastTry = now;
@@ -1972,8 +2036,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       },
       health: () => {
         if (!document.querySelector("#movie_player")) return { status: "skip", detail: "Kein Player auf dieser Seite" };
-        const btn2 = qs("#movie_player .ytp-autonav-toggle-button");
-        return btn2 ? { status: "ok", detail: `Schalter gefunden (an: ${btn2.getAttribute("aria-checked")})` } : { status: "warn", detail: "Autoplay-Schalter nicht gefunden" };
+        const btn2 = qs(AUTONAV);
+        return btn2 ? { status: "ok", detail: `Schalter gefunden (an: ${autonavOn(btn2)})` } : { status: "warn", detail: "Autoplay-Schalter nicht gefunden" };
       }
     },
     {
@@ -2100,7 +2164,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
           "playing",
           (e) => {
             const v = e.target;
-            if (v?.tagName === "VIDEO" && v.closest("ytd-channel-video-player-renderer")) v.pause();
+            if (v?.tagName === "VIDEO" && v.closest("ytd-channel-video-player-renderer, ytm-channel-video-player-renderer")) v.pause();
           },
           true
         );
@@ -2157,6 +2221,233 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     return out;
   }
   var behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]));
+
+  // src/registry/mobile/paths.js
+  var paths_exports2 = {};
+  __export(paths_exports2, {
+    CARD_PARENT: () => CARD_PARENT2,
+    CARD_SELECTORS: () => CARD_SELECTORS2,
+    activePageRoots: () => activePageRoots2,
+    activePlayback: () => activePlayback2,
+    channelPageInfo: () => channelPageInfo2,
+    pauseActive: () => pauseActive2,
+    playlistPage: () => playlistPage2,
+    playlistPanel: () => playlistPanel2,
+    readCard: () => readCard2,
+    subscribedChannels: () => subscribedChannels2,
+    videoMenu: () => videoMenu2,
+    watch: () => watch2
+  });
+  function activePageRoots2() {
+    const root = qs("ytm-app .page-container");
+    return root ? [root] : [document];
+  }
+  var CARD_SELECTORS2 = ["ytm-rich-item-renderer", "ytm-video-with-context-renderer", "ytm-compact-video-renderer", "ytm-shorts-lockup-view-model", "ytm-playlist-video-renderer", "yt-lockup-view-model"];
+  var CARD_PARENT2 = "ytm-rich-item-renderer, ytm-video-with-context-renderer, ytm-compact-video-renderer, ytm-playlist-video-renderer";
+  function parseHref2(href) {
+    if (!href) return {};
+    try {
+      const u = new URL(href, location.origin);
+      if (u.pathname.startsWith("/shorts/")) return { videoId: u.pathname.split("/")[2], isShort: true };
+      return { videoId: u.searchParams.get("v"), radio: u.searchParams.get("start_radio") === "1" };
+    } catch {
+      return {};
+    }
+  }
+  function readCard2(el) {
+    const a = qs('a[href^="/watch"], a[href^="/shorts/"], a[href^="/playlist"]', el);
+    const href = a?.getAttribute("href") || "";
+    const info2 = parseHref2(href);
+    const channelLink = qs('a[href^="/@"], a[href^="/channel/"]', el);
+    const lines2 = qsa(".ytmBadgeAndBylineRendererItemByline, ytm-badge-and-byline-renderer", el).map((x) => x.textContent.trim()).filter(Boolean);
+    const parts = lines2.flatMap((l) => l.split("•").map((s) => s.trim())).filter(Boolean);
+    const title = (qs('.media-item-headline, h3, [class*="Headline"], [class*="Title"]', el)?.textContent || a?.getAttribute("title") || a?.getAttribute("aria-label") || "").trim();
+    const badge2 = qs("ytm-thumbnail-overlay-time-status-renderer, badge-shape", el);
+    const live = badge2?.getAttribute("data-style") === "LIVE" || /live/i.test(badge2?.className || "");
+    const bar = qs('ytm-thumbnail-overlay-resume-playback-renderer [style*="width"], [class*="ResumePlayback"] [style*="width"], [class*="ProgressBarSegment"][style*="width"]', el);
+    let ageDays = null;
+    for (const p of parts) {
+      ageDays = parseAgeDays(p);
+      if (ageDays != null) break;
+    }
+    const isShort = !!info2.isShort || el.tagName === "YTM-SHORTS-LOCKUP-VIEW-MODEL";
+    return {
+      kind: href.startsWith("/playlist") ? "playlist" : info2.radio ? "mix" : "video",
+      videoId: info2.videoId || null,
+      title,
+      // erste zeile der byline ist der kanal, avatar link liefert das handle
+      channel: isShort ? "" : parts[0] || "",
+      channelUrl: channelLink?.getAttribute("href") || "",
+      channelId: "",
+      durationSec: parseDuration(badge2?.textContent || ""),
+      isShort,
+      live,
+      percent: bar ? firstInt(bar.style.width) : null,
+      ageDays
+    };
+  }
+  function channelPageInfo2() {
+    const m = location.pathname.match(/^\/(@[^/]+)/);
+    const id = (location.pathname.match(/^\/channel\/(UC[\w-]{22})/) || [])[1] || null;
+    if (!m && !id) return null;
+    const name = qs("ytm-browse yt-page-header-view-model h1, ytm-browse yt-page-header-renderer h1, ytm-browse .page-header-view-model-wiz__page-header-title")?.textContent.trim() || "";
+    return { id, handle: m ? decodeURIComponent(m[1]).toLowerCase() : null, name: name || (m ? decodeURIComponent(m[1]).slice(1) : "") };
+  }
+  function subscribedChannels2() {
+    return [];
+  }
+  function mainPlayer2() {
+    return qsa("#movie_player").find((p) => typeof p.getPlayerState === "function") || null;
+  }
+  function activePlayback2() {
+    const page = pageFromUrl(location.href);
+    if (page !== "watch" && page !== "shorts") return null;
+    const p = mainPlayer2();
+    if (!p) return null;
+    try {
+      const vd = p.getVideoData?.() || {};
+      if (!vd.video_id) return null;
+      const pr = p.getPlayerResponse?.();
+      const details = pr?.videoDetails?.videoId === vd.video_id ? pr.videoDetails : null;
+      return {
+        videoId: vd.video_id,
+        kind: page === "shorts" ? "short" : "video",
+        title: vd.title || details?.title || "",
+        channel: { id: details?.channelId || null, name: vd.author || details?.author || "" },
+        playing: p.getPlayerState() === 1,
+        ad: p.classList.contains("ad-showing"),
+        pos: p.getCurrentTime?.() || 0,
+        dur: p.getDuration?.() || 0,
+        live: !!vd.isLive
+      };
+    } catch {
+      return null;
+    }
+  }
+  function pauseActive2() {
+    try {
+      mainPlayer2()?.pauseVideo?.();
+    } catch {
+    }
+  }
+  var watch2 = {
+    playerResponse() {
+      try {
+        return mainPlayer2()?.getPlayerResponse?.() || null;
+      } catch {
+        return null;
+      }
+    },
+    videoData() {
+      try {
+        return mainPlayer2()?.getVideoData?.() || null;
+      } catch {
+        return null;
+      }
+    },
+    captionTracks(pr = this.playerResponse()) {
+      return watch.captionTracks(pr);
+    },
+    publishDate(pr = this.playerResponse()) {
+      return watch.publishDate(pr);
+    },
+    description(pr = this.playerResponse()) {
+      return pr?.videoDetails?.shortDescription || "";
+    },
+    chapters() {
+      const out = [];
+      for (const el of qsa("ytm-macro-markers-list-item-renderer")) {
+        const title = qs('h4, [class*="title" i]', el)?.textContent.trim() || "";
+        const time = qs('[class*="time" i]', el)?.textContent.trim() || "";
+        const sec = parseDuration(time);
+        if (title && sec != null && !out.some((c) => c.startSec === sec)) out.push({ title, startSec: sec });
+      }
+      return out.length ? out : chaptersFromDescription(this.description());
+    },
+    isTimedtextUrl(url) {
+      return watch.isTimedtextUrl(url);
+    }
+  };
+  var PL = "ytm-browse";
+  var playlistPage2 = {
+    root: PL,
+    polymerItems: "ytx-none",
+    lockupItems: `${PL} yt-item-section-renderer yt-lockup-view-model, ${PL} ytm-item-section-renderer yt-lockup-view-model`,
+    continuation: [`${PL} yt-continuation-item-view-model`, `${PL} ytm-continuation-item-renderer`],
+    dragHandles: "ytx-none",
+    readPolymerItem: () => null,
+    readLockupItem: (el) => playlistPage.readLockupItem(el),
+    listContainer() {
+      return qs(`${PL} yt-item-section-renderer #contents, ${PL} ytm-item-section-renderer #contents`);
+    },
+    // „41 Videos“ im kopf, der kanalname davor kann selbst zahlen enthalten
+    total() {
+      const text = qs(`${PL} yt-page-header-view-model yt-content-metadata-view-model`)?.textContent || "";
+      const m = text.match(/(\d[\d.]*)\s*(?:Videos?|videos?|Titel|Folgen)/);
+      return m ? firstInt(m[1].replace(/\./g, "")) : null;
+    },
+    playlistId() {
+      return new URL(location.href).searchParams.get("list");
+    }
+  };
+  function panelCount() {
+    const t = qs(".playlist-engagement-panel-list-count, ytm-playlist-panel-entry-point .playlist-panel-subhead")?.textContent || "";
+    const m = t.match(/(\d+)\s*\/\s*(\d+)/);
+    return m ? { current: Number(m[1]) - 1, total: Number(m[2]) } : null;
+  }
+  var playlistPanel2 = {
+    root: "ytm-playlist-engagement-panel, ytm-playlist-panel-entry-point",
+    read() {
+      if (!new URL(location.href).searchParams.get("list") || !qs(this.root)) return null;
+      const items = [];
+      for (const el of this.itemElements()) {
+        const a = qs('a[href*="/watch?"]', el);
+        const u = new URL(a?.getAttribute("href") || "/", location.origin);
+        const idx = firstInt(u.searchParams.get("index"));
+        const bar = qs('[class*="ResumePlayback"] [style*="width"], ytm-thumbnail-overlay-resume-playback-renderer [style*="width"], [class*="ProgressBar"] [style*="width"]', el);
+        items.push({
+          videoId: u.searchParams.get("v"),
+          index: idx != null ? idx - 1 : items.length,
+          durationSec: parseDuration(qs("ytm-thumbnail-overlay-time-status-renderer, badge-shape", el)?.textContent || ""),
+          percent: bar ? firstInt(bar.style.width) : null,
+          selected: el.getAttribute("aria-selected") === "true"
+        });
+      }
+      const c = panelCount();
+      const current3 = c?.current ?? items.find((i) => i.selected)?.index ?? 0;
+      return { el: qs(this.root), items, total: c?.total ?? null, current: current3, infinite: false };
+    },
+    itemElements() {
+      return qsa("ytm-playlist-panel-video-renderer");
+    },
+    readElement(el) {
+      const a = qs('a[href*="/watch?"]', el);
+      const videoId = a ? new URL(a.getAttribute("href"), location.origin).searchParams.get("v") : null;
+      const title = qs('h4, [class*="Headline"]', el)?.textContent.trim() || "";
+      const channel = qs('[class*="Byline"], [class*="Subhead"], [class*="subhead"]', el)?.textContent.trim() || "";
+      return videoId ? { videoId, title, channel } : null;
+    }
+  };
+  var videoMenu2 = {
+    popup: "bottom-sheet-container, #menu.menu-container",
+    lists: ["bottom-sheet-container .bottom-sheet-media-menu-item", "bottom-sheet-container yt-list-view-model", "#menu.menu-container .menu-content"],
+    watchOwn: "ytm-slim-video-action-bar-renderer",
+    cards: [...CARD_SELECTORS2, "ytm-playlist-panel-video-renderer"].join(", "),
+    async close() {
+      const scrim = qsa("ytw-scrim .ytWebScrimHiddenButton, ytw-scrim button").find((b) => b.getClientRects().length);
+      if (scrim) scrim.click();
+      else if (/^#(bottom-sheet|menu)$/.test(location.hash)) history.back();
+      await new Promise((r) => setTimeout(r, 350));
+    }
+  };
+
+  // src/features/youtube/sitePaths.js
+  var src = SITE_ID === "mobile" ? paths_exports2 : paths_exports;
+  var watch3 = src.watch;
+  var playlistPage3 = src.playlistPage;
+  var playlistPanel3 = src.playlistPanel;
+  var videoMenu3 = src.videoMenu;
+  var readCard3 = src.readCard;
 
   // src/features/youtube/transcript/panelSource.js
   var PANEL = 'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"]';
@@ -2218,7 +2509,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
   var tokenUrls = /* @__PURE__ */ new Map();
   var sourceStats = { captured: 0, observer: false, lastError: null, lastMethod: null };
   function record(url) {
-    if (!watch.isTimedtextUrl(url)) return;
+    if (!watch3.isTimedtextUrl(url)) return;
     try {
       const v = new URL(url).searchParams.get("v");
       if (v) {
@@ -2251,8 +2542,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     if (!tokenUrls.has(videoId)) scanEntries();
     return tokenUrls.has(videoId);
   }
-  function listTracks(pr = watch.playerResponse()) {
-    return watch.captionTracks(pr).map((t) => {
+  function listTracks(pr = watch3.playerResponse()) {
+    return watch3.captionTracks(pr).map((t) => {
       const u = new URL(t.baseUrl, location.origin);
       const kind = t.kind || u.searchParams.get("kind") || "";
       const name = t.name?.simpleText || t.name?.runs?.map((r) => r.text).join("") || t.languageCode;
@@ -2309,20 +2600,21 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       }
     }
   }
+  var CC_BUTTON = "#movie_player .ytp-subtitles-button, .ytmClosedCaptioningButtonButton";
   function captionsOn() {
-    const btn2 = document.querySelector("#movie_player .ytp-subtitles-button");
-    return btn2 ? btn2.getAttribute("aria-pressed") === "true" : false;
+    const btn2 = document.querySelector(CC_BUTTON);
+    return btn2 ? btn2.getAttribute("aria-pressed") === "true" : null;
   }
   async function triggerPlayer(videoId, track) {
     const p = player();
     if (!p) return null;
     const prefs = snapshotPrefs();
-    const wasOn = captionsOn();
     let prev2 = null;
     try {
       prev2 = p.getOption?.("captions", "track");
     } catch {
     }
+    const wasOn = captionsOn() ?? !!prev2?.languageCode;
     try {
       p.loadModule?.("captions");
     } catch {
@@ -2343,9 +2635,13 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       }
     } catch {
     }
-    if (!wasOn && captionsOn()) document.querySelector("#movie_player .ytp-subtitles-button")?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    for (let i = 0; i < 4 && !wasOn; i++) {
+      await sleep(i ? 700 : 150);
+      if (captionsOn() !== true) continue;
+      document.querySelector(CC_BUTTON)?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    }
     restorePrefs(prefs);
-    sourceStats.lastTrigger = { wasOn, restoredOff: !captionsOn() || wasOn };
+    sourceStats.lastTrigger = { wasOn, restoredOff: captionsOn() !== true || wasOn };
     return url;
   }
   function buildUrl(base2, track) {
@@ -2619,7 +2915,7 @@ ${s.text}
 .ytx-split > .ytx-btn:first-child { border-radius: 18px 0 0 18px; padding-right: 10px; }
 .ytx-split > .ytx-btn:last-child { border-radius: 0 18px 18px 0; padding: 0 10px; border-left: 1px solid var(--yt-sys-color-baseline--outline, rgba(255,255,255,.2)); }
 .ytx-small { height: 28px; line-height: 28px; font-size: 12px; padding: 0 10px; border-radius: 14px; }
-.ytx-inline { all: initial; font: inherit; color: inherit; }
+.ytx-inline { all: initial; font: inherit; color: inherit; visibility: inherit; }
 .ytx-note { all: initial; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font: 400 12px/1.4 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-secondary, #aaa); }
 .ytx-note b { font-weight: 500; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); }
 .ytx-link { all: initial; cursor: pointer; font: 500 12px/1.4 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--call-to-action, #3ea6ff); }
@@ -2762,10 +3058,11 @@ ${s.text}
   // src/features/youtube/transcript/index.js
   var FORMATS = Object.entries(FORMAT_LABELS);
   var PENDING = "ytx.transcript.pending";
-  var MENU_CSS = `.ytx-menu-item { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 36px; box-sizing: border-box; padding: 0 36px 0 16px; border: 0; background: none; cursor: pointer; text-align: left;
+  var MENU_CSS = `.ytx-yt-item { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 36px; box-sizing: border-box; padding: 0 36px 0 16px; border: 0; background: none; cursor: pointer; text-align: left;
   font: 400 14px/20px Roboto, Arial, sans-serif; color: var(--yt-spec-text-primary, #f1f1f1); }
-.ytx-menu-item:hover, .ytx-menu-item:focus-visible { background: var(--yt-spec-10-percent-layer, rgba(255,255,255,.1)); outline: none; }
-.ytx-menu-item svg { width: 24px; height: 24px; flex: none; fill: currentColor; }`;
+.ytx-yt-item:hover, .ytx-yt-item:focus-visible { background: var(--yt-spec-10-percent-layer, rgba(255,255,255,.1)); outline: none; }
+.ytx-yt-item svg { width: 24px; height: 24px; flex: none; fill: currentColor; }
+html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding: 0 12px; font-size: 16px; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); }`;
   function menuIcon() {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
@@ -2822,7 +3119,7 @@ ${s.text}
       let busy = false;
       const available = () => ctx.nav.page === "watch" && tracks.length > 0;
       const refreshTracks = () => {
-        const pr = watch.playerResponse();
+        const pr = watch3.playerResponse();
         const vid = ctx.nav.videoId;
         const prVid = pr?.videoDetails?.videoId;
         tracks = prVid && prVid === vid ? listTracks(pr) : [];
@@ -2831,18 +3128,18 @@ ${s.text}
       async function buildDoc(track, onStatus) {
         const vid = ctx.nav.videoId;
         const json = await fetchTrack(vid, track, { onStatus });
-        const pr = watch.playerResponse();
+        const pr = watch3.playerResponse();
         const vd = pr?.videoDetails || {};
         const segsRaw = parseJson3(json);
         const segs = cleanSegments(segsRaw, s);
-        const chapters = s.paragraphs === "chapters" ? watch.chapters() : [];
+        const chapters = s.paragraphs === "chapters" ? watch3.chapters() : [];
         const paras = toParagraphs(segs, { mode: s.paragraphs === "none" ? "none" : s.paragraphs, pauseMs: s.pauseMs, chapters });
         const meta = {
           videoId: vid,
           title: vd.title || document.title.replace(/ - YouTube$/, ""),
           author: vd.author,
           channelUrl: vd.channelId ? `https://www.youtube.com/channel/${vd.channelId}` : "",
-          publishDate: watch.publishDate(pr),
+          publishDate: watch3.publishDate(pr),
           durationSec: Number(vd.lengthSeconds) || null,
           trackLabel: track.label
         };
@@ -2941,17 +3238,9 @@ ${s.text}
       };
       let menuFor = null;
       let pending2 = readPending();
-      const closeMenu2 = () => {
-        const dd = qsa(videoMenu.popup).find(isVisible);
-        try {
-          dd?.close?.();
-        } catch {
-        }
-        if (isVisible(dd)) document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", keyCode: 27, bubbles: true }));
-      };
       async function fromMenu() {
         const target = menuFor;
-        closeMenu2();
+        await videoMenu3.close();
         if (!target) return;
         if (ctx.nav.page === "watch" && target.videoId === ctx.nav.videoId) {
           refreshTracks();
@@ -2978,15 +3267,27 @@ ${s.text}
         }
       }
       const addItem = (list) => {
-        const item = h("div", { class: "ytx-menu-item", role: "menuitem", tabindex: "0" }, menuIcon(), h("span", { text: "Transkript kopieren" }));
+        const item = h("div", { class: "ytx-yt-item", role: "menuitem", tabindex: "0" }, menuIcon(), h("span", { text: "Transkript kopieren" }));
         item.addEventListener("click", (e) => {
           e.preventDefault();
           e.stopPropagation();
           fromMenu();
         });
         list.append(item);
-        const pop = list.closest("ytd-menu-popup-renderer");
-        if (pop?.style.maxHeight) pop.style.maxHeight = `${parseFloat(pop.style.maxHeight) + item.offsetHeight}px`;
+        const ref = [...list.children].find((c) => c !== item && c.querySelector("svg") && c.getClientRects().length);
+        const icon = ref?.querySelector("svg");
+        const label = ref && [...ref.querySelectorAll("span, yt-formatted-string, div")].find((x) => x.children.length === 0 && x.textContent.trim());
+        if (icon && label) {
+          const box = item.getBoundingClientRect();
+          const ir = icon.getBoundingClientRect();
+          const lr = label.getBoundingClientRect();
+          const cs = getComputedStyle(label);
+          Object.assign(item.style, { paddingLeft: `${Math.max(0, ir.left - box.left)}px`, gap: `${Math.max(0, lr.left - ir.right)}px`, minHeight: `${ref.getBoundingClientRect().height}px`, font: cs.font, color: cs.color });
+          item.querySelector("svg").style.cssText = `width:${ir.width}px;height:${ir.height}px`;
+        }
+        for (let e = list, i = 0; e && i < 6; e = e.parentElement, i++) {
+          if (e.style?.maxHeight?.endsWith("px")) e.style.maxHeight = `${Math.min(parseFloat(e.style.maxHeight) + item.offsetHeight, innerHeight * 0.9)}px`;
+        }
         try {
           list.closest("tp-yt-iron-dropdown")?.refit?.();
         } catch {
@@ -2994,20 +3295,20 @@ ${s.text}
       };
       const onMenuClick = (e) => {
         const t = e.target instanceof Element ? e.target : null;
-        if (!t || t.closest(videoMenu.popup) || !t.closest("button, yt-icon-button")) return;
-        for (const old of qsa(".ytx-menu-item")) old.remove();
+        if (!t || t.closest(videoMenu3.popup) || !t.closest("button, yt-icon-button")) return;
+        for (const old of qsa(".ytx-yt-item")) old.remove();
         menuFor = null;
         if (!s.placement.includes("menu")) return;
-        const card2 = t.closest(videoMenu.cards);
+        const card2 = t.closest(videoMenu3.cards);
         let videoId = null;
         if (card2) {
-          const c = readCard(card2);
+          const c = readCard3(card2);
           if (c?.kind === "video" && !c.live) videoId = c.videoId;
-        } else if (ctx.nav.page === "watch" && t.closest(videoMenu.watchOwn)) videoId = ctx.nav.videoId;
+        } else if (ctx.nav.page === "watch" && t.closest(videoMenu3.watchOwn)) videoId = ctx.nav.videoId;
         if (!videoId) return;
         menuFor = { videoId, card: card2 };
-        waitFor(() => videoMenu.lists.map((sel) => qsa(sel).find(isVisible)).find(Boolean), { timeout: 2500, interval: 60 }).then((list) => {
-          if (list && menuFor?.videoId === videoId && !qs(".ytx-menu-item", list)) addItem(list);
+        waitFor(() => videoMenu3.lists.map((sel) => qsa(sel).find(isVisible)).find(Boolean), { timeout: 2500, interval: 60 }).then((list) => {
+          if (list && menuFor?.videoId === videoId && !qs(".ytx-yt-item", list)) addItem(list);
         });
       };
       document.addEventListener("click", onMenuClick, true);
@@ -3036,7 +3337,7 @@ ${MENU_CSS}`);
         dispose() {
           mounts2.forEach((m) => m.destroy());
           document.removeEventListener("click", onMenuClick, true);
-          for (const old of qsa(".ytx-menu-item")) old.remove();
+          for (const old of qsa(".ytx-yt-item")) old.remove();
         },
         health() {
           refreshTracks();
@@ -3055,20 +3356,25 @@ ${MENU_CSS}`);
 
   // src/features/youtube/playlist/common.js
   function readPlaylist() {
-    const polymer = qsa(playlistPage.polymerItems);
+    const polymer = qsa(playlistPage3.polymerItems);
     const kind = polymer.length ? "polymer" : "lockup";
-    const els = kind === "polymer" ? polymer : qsa(playlistPage.lockupItems);
+    const els = kind === "polymer" ? polymer : qsa(playlistPage3.lockupItems);
     const items = [];
     for (const el of els) {
-      const it = kind === "polymer" ? playlistPage.readPolymerItem(el) : playlistPage.readLockupItem(el);
+      const it = kind === "polymer" ? playlistPage3.readPolymerItem(el) : playlistPage3.readLockupItem(el);
       if (it) items.push(it);
     }
-    const continuation = findContinuation();
-    return { kind, items, total: playlistPage.total(), continuation, complete: !continuation };
+    const total = playlistPage3.total();
+    let continuation = findContinuation();
+    if (continuation?.matches(LAZY) && !continuation.childElementCount && (exhausted === location.href || total != null && items.length >= total)) continuation = null;
+    return { kind, items, total, continuation, complete: !continuation };
   }
+  var LAZY = "yt-continuation-item-view-model, ytm-continuation-item-renderer";
+  var exhausted = null;
   function findContinuation() {
-    const el = qsFirst(playlistPage.continuation);
+    const el = qsFirst(playlistPage3.continuation);
     if (!el) return null;
+    if (el.matches(LAZY)) return el;
     if (el.matches("ytd-continuation-item-renderer") || el.querySelector('ytd-continuation-item-renderer, tp-yt-paper-spinner, [class*="Spinner"], yt-spinner, [class*="continuation" i]')) return el;
     return null;
   }
@@ -3122,7 +3428,10 @@ ${MENU_CSS}`);
           rounds++;
           if (!grew) {
             stale++;
-            if (stale >= 3) break;
+            if (stale >= 3) {
+              exhausted = location.href;
+              break;
+            }
             window.scrollBy(0, -200);
             await sleep(200);
           } else {
@@ -3154,7 +3463,7 @@ ${MENU_CSS}`);
     description: "Gesamtdauer, gesehene und verbleibende Zeit auf Playlist-Seiten und im Playlist-Panel neben Videos",
     pages: ["playlist", "watch"],
     stability: "mittel-hoch",
-    anchors: ["playlist.header", "watch.playlistHeader"],
+    anchors: ["playlist.header", "watch.playlistInfo"],
     settings: {
       show: { type: "multi", label: "Anzeigen", options: [["total", "Gesamt"], ["watched", "Gesehen"], ["remaining", "Übrig"]], default: ["total", "remaining"] },
       doneThreshold: { type: "range", label: "Gilt als gesehen ab", min: 50, max: 100, step: 5, unit: "%", default: 90 },
@@ -3214,7 +3523,7 @@ ${MENU_CSS}`);
         renderPage(node);
       }
       function renderPanel(node) {
-        const d = playlistPanel.read();
+        const d = playlistPanel3.read();
         if (!d || !d.items.length) {
           clear(node);
           return;
@@ -3251,9 +3560,9 @@ ${MENU_CSS}`);
       });
       const panelMount = ctx.mount({
         id: "watch.playlist.duration",
-        anchor: "watch.playlistHeader",
+        anchor: "watch.playlistInfo",
         position: "append",
-        when: () => ctx.nav.page === "watch" && !!playlistPanel.read(),
+        when: () => ctx.nav.page === "watch" && !!playlistPanel3.read(),
         create: () => h("div", { class: "ytx-note", style: { display: "flex", marginTop: "4px" } }),
         update: (node) => renderPanel(node)
       });
@@ -3284,7 +3593,7 @@ ${MENU_CSS}`);
             if (!last2 || !last2.loaded) return { status: "warn", detail: "Keine Einträge erkannt" };
             return { status: "ok", detail: `${last2.kind === "lockup" ? "neue Komponenten" : "Polymer"} · ${last2.loaded}${last2.expected ? `/${last2.expected}` : ""} geladen · ${fmt(last2.total ?? 0)} · ${last2.complete ? "vollständig" : "teilweise"} · ${last2.unavailable} ohne Dauer` };
           }
-          if (!playlistPanel.read()) return { status: "skip", detail: "Keine Playlist im Video" };
+          if (!playlistPanel3.read()) return { status: "skip", detail: "Keine Playlist im Video" };
           return panelMount.ok ? { status: "ok", detail: `Panel · ${last2?.loaded ?? 0}/${last2?.expected ?? "?"} Einträge` } : { status: "warn", detail: "Anker im Playlist-Panel fehlt" };
         },
         debug: { readPlaylist, loadAll: () => loadAll(), last: () => last2 }
@@ -3326,9 +3635,9 @@ ${MENU_CSS}`);
             } else if (it.wrapper.hasAttribute(ATTR)) it.wrapper.removeAttribute(ATTR);
           }
         } else if (ctx.nav.page === "watch") {
-          const d = playlistPanel.read();
+          const d = playlistPanel3.read();
           if (!d) return;
-          const els = playlistPanel.itemElements();
+          const els = playlistPanel3.itemElements();
           els.forEach((el, i) => {
             const it = d.items[i];
             const on = it && !it.selected && it.percent != null && it.percent >= s.threshold;
@@ -3404,7 +3713,7 @@ ${MENU_CSS}`);
       let applied = 0;
       ctx.css(`
 [data-ytx-sorted] { display: flex !important; flex-direction: column !important; }
-${playlistPage.dragHandles} { visibility: hidden !important; }
+${playlistPage3.dragHandles} { visibility: hidden !important; }
 [data-ytx-sorted] ytd-playlist-video-renderer #reorder { visibility: hidden !important; }`);
       const reset = () => {
         for (const c of qsa("[data-ytx-sorted]")) {
@@ -3416,7 +3725,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
       const apply = () => {
         if (!key) return reset();
         const data2 = readPlaylist();
-        const container = playlistPage.listContainer(data2.kind);
+        const container = playlistPage3.listContainer(data2.kind);
         if (!container) return;
         const cmp = sorter(key);
         const sorted = data2.items.slice().sort((a, b) => cmp(a, b) || (a.index ?? 0) - (b.index ?? 0));
@@ -3513,8 +3822,8 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
       function applyPanel() {
         let shown = 0;
         let loaded = 0;
-        for (const el of playlistPanel.itemElements()) {
-          const it = playlistPanel.readElement(el);
+        for (const el of playlistPanel3.itemElements()) {
+          const it = playlistPanel3.readElement(el);
           if (!it) continue;
           loaded++;
           const ok = matches(it, q2.panel);
@@ -3578,7 +3887,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         id: "watch.playlist.search",
         anchor: "watch.playlistHeader",
         position: "append",
-        when: () => ctx.nav.page === "watch" && !!playlistPanel.read(),
+        when: () => ctx.nav.page === "watch" && !!playlistPanel3.read(),
         create: () => box("panel")
       });
       return {
@@ -3607,7 +3916,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         },
         health() {
           if (ctx.nav.page === "playlist") return pageMount.ok ? { status: "ok", detail: stats2.page && q2.page ? `${stats2.page.shown}/${stats2.page.loaded} passend` : "Suchfeld da" } : { status: "warn", detail: "Anker im Playlist-Kopf fehlt" };
-          if (!playlistPanel.read()) return { status: "skip", detail: "Keine Playlist im Video" };
+          if (!playlistPanel3.read()) return { status: "skip", detail: "Keine Playlist im Video" };
           return panelMount.ok ? { status: "ok", detail: "Suchfeld im Panel" } : { status: "warn", detail: "Anker im Playlist-Panel fehlt" };
         }
       };
@@ -3652,19 +3961,19 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
     return {};
   }
   function normalize(raw, def) {
-    const src = isObj(raw) ? raw : {};
+    const src2 = isObj(raw) ? raw : {};
     const cfg = emptySection(def);
     const look = def.look;
     const presets = def.presets;
-    if (isObj(src.display)) {
-      for (const [id, mode] of Object.entries(src.display)) {
+    if (isObj(src2.display)) {
+      for (const [id, mode] of Object.entries(src2.display)) {
         const t = def.targetById[id];
         if (t && t.modes.includes(mode) && mode !== "show") cfg.display[id] = mode;
       }
     }
-    if (isObj(src.vars)) {
-      if (look.themes.some((t) => t.id === src.vars.theme)) cfg.vars.theme = src.vars.theme;
-      for (const [id, v] of Object.entries(src.vars)) {
+    if (isObj(src2.vars)) {
+      if (look.themes.some((t) => t.id === src2.vars.theme)) cfg.vars.theme = src2.vars.theme;
+      for (const [id, v] of Object.entries(src2.vars)) {
         if (id === "theme") continue;
         const c = look.controlById[id];
         if (!c || v === "" || v === null || v === void 0) continue;
@@ -3678,15 +3987,15 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         }
       }
     }
-    if (isObj(src.layout)) {
-      if (isObj(src.layout.presets)) {
-        for (const [page, id] of Object.entries(src.layout.presets)) {
+    if (isObj(src2.layout)) {
+      if (isObj(src2.layout.presets)) {
+        for (const [page, id] of Object.entries(src2.layout.presets)) {
           const p = presets.presetById[id];
           if (p && p.pages.includes(page)) cfg.layout.presets[page] = id;
         }
       }
-      if (isObj(src.layout.order)) {
-        for (const [gid, list] of Object.entries(src.layout.order)) {
+      if (isObj(src2.layout.order)) {
+        for (const [gid, list] of Object.entries(src2.layout.order)) {
           const g = presets.orderGroups[gid];
           if (!g) continue;
           const known2 = new Set(g.items.map(([id]) => id));
@@ -3694,11 +4003,11 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
           if (clean.length) cfg.layout.order[gid] = [...new Set(clean)];
         }
       }
-      if (presets.topbarModes.some(([v]) => v === src.layout.topbar)) cfg.layout.topbar = src.layout.topbar;
-      if (isObj(src.layout.zones)) cfg.layout.zones = src.layout.zones;
+      if (presets.topbarModes.some(([v]) => v === src2.layout.topbar)) cfg.layout.topbar = src2.layout.topbar;
+      if (isObj(src2.layout.zones)) cfg.layout.zones = src2.layout.zones;
     }
-    if (isObj(src.behavior)) {
-      for (const [id, v] of Object.entries(src.behavior)) {
+    if (isObj(src2.behavior)) {
+      for (const [id, v] of Object.entries(src2.behavior)) {
         const b = def.behaviorById[id];
         if (!b) continue;
         if (b.type === "toggle") cfg.behavior[id] = !!v;
@@ -3706,8 +4015,8 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         else if (b.type === "textarea") cfg.behavior[id] = String(v ?? "");
       }
     }
-    if (def.filters && isObj(src.filters)) {
-      const f = src.filters;
+    if (def.filters && isObj(src2.filters)) {
+      const f = src2.filters;
       const d = cfg.filters;
       d.enabled = !!f.enabled;
       if (["dim", "collapse", "hide"].includes(f.mode)) d.mode = f.mode;
@@ -3725,7 +4034,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
       d.watched.hide = !!f.watched?.hide;
       d.watched.minPercent = numOrNull(f.watched?.minPercent) ?? 90;
     }
-    const srcFeatures = isObj(src.features) ? src.features : {};
+    const srcFeatures = isObj(src2.features) ? src2.features : {};
     for (const m of def.features) {
       const s = isObj(srcFeatures[m.id]) ? srcFeatures[m.id] : {};
       const out = { enabled: !!s.enabled };
@@ -3876,7 +4185,8 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
     "m.home.samplesShelf": H2,
     "m.explore.podcasts": H2,
     "m.search.podcasts": C2,
-    "m.search.profiles": H2
+    "m.search.profiles": H2,
+    "m.nav.openApp": H2
   };
   var tidyFeatures2 = {
     "m.history": { enabled: true },
@@ -3934,20 +4244,29 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
     "mb.premiumPromo": H3
   };
   var tidyFeatures3 = {
+    "transcript.copy": { enabled: true },
+    "watch.copyInfo": { enabled: true },
+    "playlist.duration": { enabled: true },
+    "playlist.search": { enabled: true },
+    "playlist.sort": { enabled: true },
+    "playlist.dimWatched": { enabled: false },
     "subs.groups": { enabled: true },
-    "watch.time": { enabled: true }
+    "watch.time": { enabled: true },
+    "player.endsAt": { enabled: true },
+    "watch.publishDate": { enabled: true },
+    "thumb.progressBadge": { enabled: true }
   };
   var mobileTemplates = {
     youtube: () => ({}),
     aufgeraeumt: () => ({
       display: { ...tidyDisplay3 },
-      behavior: { shortsRedirect: true },
+      behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true },
       filters: { enabled: true, mode: "dim", shorts: true, pages: ["home", "subscriptions", "search", "watch"] },
       features: structuredClone(tidyFeatures3)
     }),
     fokus: () => ({
       display: { ...tidyDisplay3, "mb.home.feed": H3, "mb.home.sections": H3, "mb.home.chips": H3, "mb.watch.related": C3, "mb.watch.comments": C3 },
-      behavior: { shortsRedirect: true, homeRedirect: "/feed/subscriptions" },
+      behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, homeRedirect: "/feed/subscriptions" },
       filters: { enabled: true, mode: "hide", shorts: true, pages: ["home", "subscriptions", "search", "watch", "channel"] },
       features: structuredClone(tidyFeatures3)
     })
@@ -4100,6 +4419,32 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         for (const p of Object.values(d.profiles || {})) {
           const f = p.config?.youtube?.features?.["transcript.copy"];
           if (Array.isArray(f?.placement) && !f.placement.includes("menu")) f.placement.push("menu");
+        }
+      }
+    ],
+    [
+      // handy bekommt die features vom rechner, bestehende profile schalten sie wie die vorlage ein
+      "mobile-desktop-features",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.mobile;
+          if (!m || p.template === "youtube") continue;
+          const f = m.features ||= {};
+          for (const [id, v] of Object.entries(tidyFeatures3)) if (!f[id]) f[id] = { ...v };
+          const b = m.behavior ||= {};
+          if (!("autoplayOff" in b)) b.autoplayOff = true;
+          if (!("channelTrailerPause" in b)) b.channelTrailerPause = true;
+        }
+      }
+    ],
+    [
+      "music-open-app-hidden",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.music;
+          if (!m || p.template === "youtube") continue;
+          m.display ||= {};
+          if (!("m.nav.openApp" in m.display)) m.display["m.nav.openApp"] = "hide";
         }
       }
     ]
@@ -4324,8 +4669,8 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
     createProfile(name, fromId = data.active) {
       let id = slug(name);
       while (data.profiles[id]) id += "-2";
-      const src = data.profiles[fromId];
-      data.profiles[id] = { name: String(name).trim() || "Profil", template: null, config: structuredClone(src ? src.config : {}) };
+      const src2 = data.profiles[fromId];
+      data.profiles[id] = { name: String(name).trim() || "Profil", template: null, config: structuredClone(src2 ? src2.config : {}) };
       data.active = id;
       commit("profile");
       return id;
@@ -4466,9 +4811,9 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
   // src/features/youtube/subGroups/index.js
   var cards = () => site.filters;
   var channelRefOf2 = (card2) => site.channels.channelRefOf(card2);
-  var channelPageInfo2 = () => site.channels.channelPageInfo();
-  var subscribedChannels2 = () => site.channels.subscribedChannels();
-  var readCard2 = (el) => cards().readCard(el);
+  var channelPageInfo3 = () => site.channels.channelPageInfo();
+  var subscribedChannels3 = () => site.channels.subscribedChannels();
+  var readCard4 = (el) => cards().readCard(el);
   var ATTR3 = "data-ytx-sg-hide";
   var groupsData = () => store.bucket(GROUPS_BUCKET, normalizeGroups);
   var updateGroups = (fn) => store.updateBucket(GROUPS_BUCKET, fn, normalizeGroups);
@@ -4490,8 +4835,8 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
       const prev2 = out.get(key);
       out.set(key, { id: c.id || prev2?.id || null, handle: c.handle || prev2?.handle || null, name: c.name || prev2?.name || "" });
     };
-    for (const c of subscribedChannels2()) add2(c);
-    for (const el of outerCards()) add2(channelRefOf2(readCard2(el)));
+    for (const c of subscribedChannels3()) add2(c);
+    for (const el of outerCards()) add2(channelRefOf2(readCard4(el)));
     for (const g of groupsData().groups) for (const c of g.channels) add2(c);
     return [...out.values()].sort((a, b) => a.name.localeCompare(b.name, "de"));
   }
@@ -4539,7 +4884,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         let hidden = 0;
         let learned = false;
         for (const el of outerCards()) {
-          const card2 = readCard2(el);
+          const card2 = readCard4(el);
           if (!card2) continue;
           const ch = channelRefOf2(card2);
           checked++;
@@ -4589,14 +4934,14 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         id: "subs.groups.channel",
         anchor: "channel.headerButtons",
         position: "append",
-        when: () => ctx.nav.page === "channel" && !!channelPageInfo2(),
+        when: () => ctx.nav.page === "channel" && !!channelPageInfo3(),
         create: () => {
           const b = button({
             label: "Gruppen",
             icon: "☰",
             title: "Kanal einer Abo-Gruppe zuordnen",
             onClick: () => {
-              const ch = channelPageInfo2();
+              const ch = channelPageInfo3();
               if (!ch) return toast("Kanal noch nicht erkannt");
               const data2 = groupsData();
               const items = [{ title: ch.name }];
@@ -4623,7 +4968,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
           return b;
         },
         update: (node) => {
-          const ch = channelPageInfo2();
+          const ch = channelPageInfo3();
           const names = ch ? groupsOf(ch, groupsData()).map((g) => g.name) : [];
           const label = node.querySelector(".ytx-label");
           const text = names.length ? names.join(", ") : "Gruppen";
@@ -4892,8 +5237,8 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
   }
 
   // src/features/youtube/watchtime/index.js
-  var activePlayback2 = () => site.playback.activePlayback();
-  var pauseActive2 = () => site.playback.pauseActive();
+  var activePlayback3 = () => site.playback.activePlayback();
+  var pauseActive3 = () => site.playback.pauseActive();
   var current = null;
   var watchTime = {
     get instance() {
@@ -4968,12 +5313,12 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         closeCard();
         const sec = todaySec();
         const paused = kind === "limit" && s.pauseAtLimit;
-        if (paused) pauseActive2();
+        if (paused) pauseActive3();
         const title = kind === "limit" ? "Tageslimit erreicht" : "Zeit für eine kurze Pause?";
         const text = kind === "limit" ? `Du hast heute schon ${formatDuration(sec)} geschaut (Limit ${formatDuration(s.limitMinutes * 60)}).${paused ? " Das Video ist angehalten." : ""}` : `Du schaust seit ${formatDuration(st.streak)} am Stück.`;
         const actions2 = h("div", { class: "ytx-row" });
         if (!paused) actions2.append(button({ label: "Video anhalten", small: true, onClick: () => {
-          pauseActive2();
+          pauseActive3();
           closeCard();
         } }));
         actions2.append(button({ label: kind === "limit" ? "Weiter schauen" : "Weiter", small: true, onClick: closeCard }));
@@ -4997,7 +5342,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
           st.remind = { limitAt: null, breakAt: null };
         }
         if (!s.record) return;
-        let p = activePlayback2();
+        let p = activePlayback3();
         if (p && p.kind === "short" && !s.countShorts) p = null;
         if (st.session && (!p || p.videoId !== st.session.videoId)) {
           save2(st.session);
@@ -5147,12 +5492,12 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
         id: "watch.publishDate",
         anchor: "watch.titleRow",
         position: "append",
-        when: () => ctx.nav.page === "watch" && !!watch.publishDate(),
+        when: () => ctx.nav.page === "watch" && !!watch3.publishDate(),
         create: () => h("div", { class: "ytx-note", style: { marginTop: "4px" } }),
         update: (node) => {
-          const pr = watch.playerResponse();
+          const pr = watch3.playerResponse();
           if (pr?.videoDetails?.videoId !== ctx.nav.videoId) return;
-          const iso = watch.publishDate(pr);
+          const iso = watch3.publishDate(pr);
           const t = iso ? `Veröffentlicht am ${formatDate(iso, s.withTime && /T/.test(iso))}` : "";
           if (t !== shown) node.textContent = shown = t;
         }
@@ -5165,7 +5510,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
           m.refresh();
         },
         dispose: () => m.destroy(),
-        health: () => m.ok ? { status: "ok", detail: shown } : { status: watch.publishDate() ? "warn" : "skip", detail: watch.publishDate() ? "Anker unter dem Titel fehlt" : "Kein Datum in Player-Daten" }
+        health: () => m.ok ? { status: "ok", detail: shown } : { status: watch3.publishDate() ? "warn" : "skip", detail: watch3.publishDate() ? "Anker unter dem Titel fehlt" : "Kein Datum in Player-Daten" }
       };
     }
   };
@@ -5184,7 +5529,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
     setup(ctx) {
       let s = ctx.settings;
       const meta = () => {
-        const pr = watch.playerResponse();
+        const pr = watch3.playerResponse();
         const vd = pr?.videoDetails || {};
         return { id: ctx.nav.videoId, title: vd.title || document.title.replace(/ - YouTube$/, ""), author: vd.author || "", pr };
       };
@@ -5196,7 +5541,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
       const link = (title, sec) => s.linkFormat === "markdown" ? `[${title}](${videoLink(meta().id, sec)})` : videoLink(meta().id, sec);
       const chaptersText = (md) => {
         const m = meta();
-        const ch = watch.chapters();
+        const ch = watch3.chapters();
         if (!ch.length) return null;
         return ch.map((c) => md ? `- [${clock(c.startSec)}](${videoLink(m.id, c.startSec)}) ${c.title}` : `${clock(c.startSec)} ${c.title}`).join("\n");
       };
@@ -5207,7 +5552,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
       ctx.action("info.linkHere", () => ctx.nav.page === "watch" && linkHere());
       const open = (anchor) => {
         const m = meta();
-        const hasChapters = watch.chapters().length > 0;
+        const hasChapters = watch3.chapters().length > 0;
         showMenu(anchor, [
           { title: "Kopieren" },
           { label: "Titel mit Link", run: () => done2(link(m.title), "Link") },
@@ -5217,7 +5562,7 @@ ${playlistPage.dragHandles} { visibility: hidden !important; }
 
 ${chaptersText(true)}
 `, "Kapitel") },
-          { label: "Beschreibung", run: () => done2(watch.description(m.pr), "Beschreibung") }
+          { label: "Beschreibung", run: () => done2(watch3.description(m.pr), "Beschreibung") }
         ]);
       };
       const mt = ctx.mount({
@@ -5236,13 +5581,13 @@ ${chaptersText(true)}
           s = next;
         },
         dispose: () => mt.destroy(),
-        health: () => mt.ok ? { status: "ok", detail: `${watch.chapters().length} Kapitel erkannt` } : { status: "warn", detail: "Aktionsleiste nicht gefunden" }
+        health: () => mt.ok ? { status: "ok", detail: `${watch3.chapters().length} Kapitel erkannt` } : { status: "warn", detail: "Aktionsleiste nicht gefunden" }
       };
     }
   };
 
   // src/features/youtube/cardExtras.js
-  var BARS = ['ytd-thumbnail-overlay-resume-playback-renderer #progress[style*="width"]', 'yt-thumbnail-view-model [class*="ProgressBarSegment"][style*="width"]', 'yt-thumbnail-overlay-progress-bar-view-model [style*="width"]'];
+  var BARS = ['ytd-thumbnail-overlay-resume-playback-renderer #progress[style*="width"]', 'yt-thumbnail-view-model [class*="ProgressBarSegment"][style*="width"]', 'yt-thumbnail-overlay-progress-bar-view-model [style*="width"]', 'ytm-thumbnail-overlay-resume-playback-renderer [style*="width"]', 'ytm-thumbnail-cover [class*="ResumePlayback"] [style*="width"]'];
   var progressBadge = {
     id: "thumb.progressBadge",
     label: "Fortschritt als Zahl auf Thumbnails",
@@ -5260,7 +5605,7 @@ ${chaptersText(true)}
         count = 0;
         for (const bar of qsa(BARS.join(", "))) {
           const pct = firstInt(bar.style.width);
-          const thumb = bar.closest("ytd-thumbnail, yt-thumbnail-view-model");
+          const thumb = bar.closest("ytd-thumbnail, yt-thumbnail-view-model, ytm-thumbnail-cover, ytm-compact-thumbnail");
           if (!thumb) continue;
           let badge2 = thumb.querySelector(":scope > .ytx-badge");
           if (pct == null || pct < s.min) {
@@ -5490,6 +5835,13 @@ ${chaptersText(true)}
       sel: ["ytmusic-nav-bar ytmusic-cast-button", "ytmusic-nav-bar .cast-button"]
     },
     {
+      id: "m.nav.openApp",
+      label: "„App öffnen“ oben (Handy)",
+      group: "Navigation",
+      modes: SH,
+      sel: ["ytmusic-nav-bar a.app-install-link"]
+    },
+    {
       id: "m.nav.history",
       label: "Verlaufs-Button oben",
       group: "Navigation",
@@ -5714,9 +6066,10 @@ ${chaptersText(true)}
       label: "Playerleiste Titelinfo",
       sel: ["ytmusic-player-bar .content-info-wrapper", "ytmusic-player-bar .middle-controls"]
     },
+    // auf dem handy gibt es keine grosse playerleiste, dort neben dem titel in der player ansicht
     "m.bar.middleButtons": {
       label: "Playerleiste neben Like",
-      sel: ["ytmusic-player-bar .middle-controls-buttons"]
+      sel: ["ytmusic-player-bar .middle-controls-buttons", "ytmusic-player-page ytmusic-player-controls .content-info-wrapper"]
     },
     "m.player.tabs": {
       label: "Tab-Leiste im Player",
@@ -7928,6 +8281,9 @@ html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hid
 ytmusic-player-queue-item[data-ytx-skip] { opacity: .55; }
 ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 .ytx-m-bar-btns { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; }
+/* handy player ansicht: knoepfe rechts neben titel und kuenstler */
+ytmusic-player-controls .content-info-wrapper { position: relative; padding-right: 48px; box-sizing: border-box; }
+ytmusic-player-controls .content-info-wrapper > [data-ytx-mount] { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
 @media (max-width: 600px) {
   ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
@@ -8355,10 +8711,10 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     if (typeof mode === "number") return Math.max(0, Math.min(1, mode));
     return { familiar: 0.1, balanced: 0.5, explore: 0.9 }[mode] ?? 0.5;
   }
-  function reasonText(src, ctx) {
-    switch (src.kind) {
+  function reasonText(src2, ctx) {
+    switch (src2.kind) {
       case "seed":
-        return src.via ? `Passend zu ${src.via}` : "Passend zum Startpunkt";
+        return src2.via ? `Passend zu ${src2.via}` : "Passend zum Startpunkt";
       case "favoriteArtist":
         return "Favorisierter Künstler";
       case "release":
@@ -8366,15 +8722,15 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       case "topArtist":
         return "Oft von dir gehört";
       case "similar":
-        return `Ähnlich zu ${src.via}`;
+        return `Ähnlich zu ${src2.via}`;
       case "genre":
-        return `Genre: ${src.genre}`;
+        return `Genre: ${src2.genre}`;
       case "featured":
-        return src.via ? `Von Fans von ${src.via} gehört` : "Von Fans deiner Favoriten häufig gehört";
+        return src2.via ? `Von Fans von ${src2.via} gehört` : "Von Fans deiner Favoriten häufig gehört";
       case "history":
         return "Lange nicht gehört";
       case "search":
-        return src.via ? `Suche: ${src.via}` : "Suchtreffer";
+        return src2.via ? `Suche: ${src2.via}` : "Suchtreffer";
       default:
         return null;
     }
@@ -10285,7 +10641,7 @@ ${data2.source}` : ""].join("\n").trim();
         try {
           if (!graph || graph.el !== el) {
             const ac = graph?.ac || new AudioContext();
-            const src = ac.createMediaElementSource(el);
+            const src2 = ac.createMediaElementSource(el);
             const pre = ac.createGain();
             const filters = EQ_BANDS.map((f, i) => {
               const b = ac.createBiquadFilter();
@@ -10294,14 +10650,14 @@ ${data2.source}` : ""].join("\n").trim();
               b.Q.value = 1;
               return b;
             });
-            src.connect(pre);
+            src2.connect(pre);
             let node = pre;
             for (const f of filters) {
               node.connect(f);
               node = f;
             }
             node.connect(ac.destination);
-            graph = { ac, el, src, pre, filters };
+            graph = { ac, el, src: src2, pre, filters };
           }
           if (graph.ac.state === "suspended") graph.ac.resume().catch(() => {
           });
@@ -10865,6 +11221,38 @@ ${data2.source}` : ""].join("\n").trim();
       label: "Kopfzeile rechts",
       sel: ["ytm-mobile-topbar-renderer .mobile-topbar-header-content", "ytm-mobile-topbar-renderer header"]
     },
+    // die aktionsleiste der handy seite hat keinen platz, ytx bekommt eine eigene zeile darunter
+    "watch.actions": {
+      label: "ytx-Leiste unter dem Video",
+      sel: [".ytx-watch-row > .ytx-row-end"]
+    },
+    "watch.titleRow": {
+      label: "Unter dem Videotitel",
+      sel: ["ytm-slim-video-information-renderer"]
+    },
+    "player.timeDisplay": {
+      label: "Zeitanzeige im Player",
+      // die steuerung liegt auf dem handy neben dem player, nicht darin
+      sel: [".ytwPlayerTimeDisplayTimeChunks > div[dir]", ".ytwPlayerTimeDisplayTimeChunks", ".ytwPlayerTimeDisplayHost"]
+    },
+    "playlist.header": {
+      label: "Playlist-Kopf Statistik",
+      sel: ["ytm-browse yt-page-header-view-model yt-content-metadata-view-model", "ytm-browse yt-page-header-view-model"]
+    },
+    "watch.playlistHeader": {
+      label: "Playlist-Panel Kopf",
+      visibleOnly: true,
+      sel: ["ytm-playlist-engagement-panel-header"]
+    },
+    "watch.playlistInfo": {
+      label: "Playlist unter dem Video",
+      sel: ["ytm-playlist-panel-entry-point .playlist-panel-data", "ytm-playlist-engagement-panel-header"]
+    },
+    "transcript.panelHeader": {
+      label: "Kopf des Transkript-Panels",
+      visibleOnly: true,
+      sel: ['ytm-engagement-panel-section-list-renderer[panel-target-id*="transcript"] ytm-engagement-panel-title-header-renderer']
+    },
     "subs.feedTop": {
       label: "Abo-Feed oben",
       visibleOnly: true,
@@ -10933,7 +11321,7 @@ ${data2.source}` : ""].join("\n").trim();
 ytm-pivot-bar-renderer { background: color-mix(in srgb, ${v} 88%, transparent) !important; }`
     },
     { id: "raised", label: "Flächen & Karten", tokens: [] },
-    { id: "menu", label: "Menüs & Dialoge", tokens: [], extra: (v) => `ytm-app bottom-sheet-container [class*="BottomSheet"], .ytmBottomSheetRendererContainer, ytm-menu-popup-renderer { background-color: ${v} !important; }` },
+    { id: "menu", label: "Menüs & Dialoge", tokens: [], extra: (v) => `bottom-sheet-container .ytSpecBottomSheetLayoutHost, .ytmBottomSheetRendererContainer, ytm-menu-popup-renderer, #menu.menu-container .menu-content { background-color: ${v} !important; }` },
     { id: "text", label: "Text", tokens: [], extra: (v) => `ytm-app, .media-item-headline, ytm-app h1, ytm-app h2, ytm-app h3 { color: ${v} !important; }` },
     { id: "textSecondary", label: "Text gedimmt", tokens: [], extra: (v) => `.ytmBadgeAndBylineRendererItemByline, ytm-badge-and-byline-renderer { color: ${v} !important; }` },
     { id: "accent", label: "Akzent & Links", tokens: [] },
@@ -11015,102 +11403,8 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     return decl.length ? `html:root:root { ${decl.join(" ")} }` : "";
   }
 
-  // src/registry/mobile/paths.js
-  function activePageRoots2() {
-    const root = qs("ytm-app .page-container");
-    return root ? [root] : [document];
-  }
-  var CARD_SELECTORS2 = ["ytm-rich-item-renderer", "ytm-video-with-context-renderer", "ytm-compact-video-renderer", "ytm-shorts-lockup-view-model", "ytm-playlist-video-renderer", "yt-lockup-view-model"];
-  var CARD_PARENT2 = "ytm-rich-item-renderer, ytm-video-with-context-renderer, ytm-compact-video-renderer, ytm-playlist-video-renderer";
-  function parseHref2(href) {
-    if (!href) return {};
-    try {
-      const u = new URL(href, location.origin);
-      if (u.pathname.startsWith("/shorts/")) return { videoId: u.pathname.split("/")[2], isShort: true };
-      return { videoId: u.searchParams.get("v"), radio: u.searchParams.get("start_radio") === "1" };
-    } catch {
-      return {};
-    }
-  }
-  function readCard3(el) {
-    const a = qs('a[href^="/watch"], a[href^="/shorts/"], a[href^="/playlist"]', el);
-    const href = a?.getAttribute("href") || "";
-    const info2 = parseHref2(href);
-    const channelLink = qs('a[href^="/@"], a[href^="/channel/"]', el);
-    const lines2 = qsa(".ytmBadgeAndBylineRendererItemByline, ytm-badge-and-byline-renderer", el).map((x) => x.textContent.trim()).filter(Boolean);
-    const parts = lines2.flatMap((l) => l.split("•").map((s) => s.trim())).filter(Boolean);
-    const title = (qs('.media-item-headline, h3, [class*="Headline"], [class*="Title"]', el)?.textContent || a?.getAttribute("title") || a?.getAttribute("aria-label") || "").trim();
-    const badge2 = qs("ytm-thumbnail-overlay-time-status-renderer, badge-shape", el);
-    const live = badge2?.getAttribute("data-style") === "LIVE" || /live/i.test(badge2?.className || "");
-    const bar = qs('ytm-thumbnail-overlay-resume-playback-renderer [style*="width"], [class*="ResumePlayback"] [style*="width"], [class*="ProgressBarSegment"][style*="width"]', el);
-    let ageDays = null;
-    for (const p of parts) {
-      ageDays = parseAgeDays(p);
-      if (ageDays != null) break;
-    }
-    const isShort = !!info2.isShort || el.tagName === "YTM-SHORTS-LOCKUP-VIEW-MODEL";
-    return {
-      kind: href.startsWith("/playlist") ? "playlist" : info2.radio ? "mix" : "video",
-      videoId: info2.videoId || null,
-      title,
-      // erste zeile der byline ist der kanal, avatar link liefert das handle
-      channel: isShort ? "" : parts[0] || "",
-      channelUrl: channelLink?.getAttribute("href") || "",
-      channelId: "",
-      durationSec: parseDuration(badge2?.textContent || ""),
-      isShort,
-      live,
-      percent: bar ? firstInt(bar.style.width) : null,
-      ageDays
-    };
-  }
-  function channelPageInfo3() {
-    const m = location.pathname.match(/^\/(@[^/]+)/);
-    const id = (location.pathname.match(/^\/channel\/(UC[\w-]{22})/) || [])[1] || null;
-    if (!m && !id) return null;
-    const name = qs("ytm-browse yt-page-header-view-model h1, ytm-browse yt-page-header-renderer h1, ytm-browse .page-header-view-model-wiz__page-header-title")?.textContent.trim() || "";
-    return { id, handle: m ? decodeURIComponent(m[1]).toLowerCase() : null, name: name || (m ? decodeURIComponent(m[1]).slice(1) : "") };
-  }
-  function subscribedChannels3() {
-    return [];
-  }
-  function mainPlayer2() {
-    return qsa("#movie_player").find((p) => typeof p.getPlayerState === "function") || null;
-  }
-  function activePlayback3() {
-    const page = pageFromUrl(location.href);
-    if (page !== "watch" && page !== "shorts") return null;
-    const p = mainPlayer2();
-    if (!p) return null;
-    try {
-      const vd = p.getVideoData?.() || {};
-      if (!vd.video_id) return null;
-      const pr = p.getPlayerResponse?.();
-      const details = pr?.videoDetails?.videoId === vd.video_id ? pr.videoDetails : null;
-      return {
-        videoId: vd.video_id,
-        kind: page === "shorts" ? "short" : "video",
-        title: vd.title || details?.title || "",
-        channel: { id: details?.channelId || null, name: vd.author || details?.author || "" },
-        playing: p.getPlayerState() === 1,
-        ad: p.classList.contains("ad-showing"),
-        pos: p.getCurrentTime?.() || 0,
-        dur: p.getDuration?.() || 0,
-        live: !!vd.isLive
-      };
-    } catch {
-      return null;
-    }
-  }
-  function pauseActive3() {
-    try {
-      mainPlayer2()?.pauseVideo?.();
-    } catch {
-    }
-  }
-
   // src/behaviors/mobile.js
-  var SHARED = ["shortsRedirect", "homeRedirect"];
+  var SHARED = ["shortsRedirect", "homeRedirect", "autoplayOff", "forceQuality", "speedMemory", "pauseOnBlur", "channelTrailerPause"];
   var behaviors3 = behaviors.filter((b) => SHARED.includes(b.id));
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
@@ -11129,7 +11423,15 @@ html[data-ytx-dark] {
 }
 /* die kopfleiste ist auf der videoseite auch im hellen modus dunkel, knoepfe folgen ihrer schriftfarbe und schrumpfen nicht */
 ytm-mobile-topbar-renderer [data-ytx-mount] { flex: none !important; }
-ytm-mobile-topbar-renderer .ytx-btn { color: inherit !important; background: color-mix(in srgb, currentColor 12%, transparent) !important; }`;
+ytm-mobile-topbar-renderer .ytx-btn { color: inherit !important; background: color-mix(in srgb, currentColor 12%, transparent) !important; }
+/* eigene ytx zeile unter dem video, leer unsichtbar */
+.ytx-watch-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 4px 12px 12px; }
+.ytx-watch-row:not(:has(> :not(.ytx-row-end))) { display: none; }
+.ytx-watch-row .ytx-btn { margin: 0 !important; }
+ytm-slim-video-information-renderer > .ytx-note { padding: 0 12px; }
+/* playlist panel: dauer und suche als eigene zeilen unter dem kopf */
+ytm-playlist-engagement-panel-header > [data-ytx-mount] { margin: 0 12px 8px !important; }
+ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
   var FILTER_PAGES2 = [
     ["home", "Startseite"],
     ["subscriptions", "Abos"],
@@ -11137,6 +11439,12 @@ ytm-mobile-topbar-renderer .ytx-btn { color: inherit !important; background: col
     ["watch", "Empfehlungen auf Videoseite"],
     ["channel", "Kanal"]
   ];
+  function ensureWatchRow() {
+    if (pageFromUrl(location.href) !== "watch") return;
+    const bar = qs("ytm-slim-video-metadata-section-renderer ytm-slim-video-action-bar-renderer");
+    if (!bar || bar.nextElementSibling?.classList.contains("ytx-watch-row")) return;
+    bar.after(h("div", { class: "ytx-watch-row", "data-ytx-own": "" }, h("span", { class: "ytx-row-end" })));
+  }
   function pageIsDark() {
     const m = getComputedStyle(document.documentElement).color.match(/\d+/g);
     if (!m) return true;
@@ -11160,13 +11468,16 @@ ytm-mobile-topbar-renderer .ytx-btn { color: inherit !important; background: col
     presets: { layoutPresets: [], presetById: {}, LAYOUT_PAGES: [], orderGroups: {}, topbarModes: [["", "Fixiert (YouTube)"]], topbarCss: {} },
     behaviors: behaviors3,
     behaviorById: behaviorById3,
-    features: [subGroups_default, watchtime_default],
-    filters: { pages: FILTER_PAGES2, CARD_SELECTORS: CARD_SELECTORS2, CARD_PARENT: CARD_PARENT2, readCard: readCard3, activePageRoots: activePageRoots2 },
-    channels: { channelRefOf, channelPageInfo: channelPageInfo3, subscribedChannels: subscribedChannels3 },
-    playback: { activePlayback: activePlayback3, pauseActive: pauseActive3 },
+    // buttons spiegeln braucht die aktionsleiste vom rechner
+    features: featureManifests.filter((m) => m.id !== "ui.proxyButtons"),
+    filters: { pages: FILTER_PAGES2, CARD_SELECTORS: CARD_SELECTORS2, CARD_PARENT: CARD_PARENT2, readCard: readCard2, activePageRoots: activePageRoots2 },
+    channels: { channelRefOf, channelPageInfo: channelPageInfo2, subscribedChannels: subscribedChannels2 },
+    playback: { activePlayback: activePlayback2, pauseActive: pauseActive2 },
     panelTabs: ["display", "look", "behavior", "filters", "features", "subGroups", "watchStats", "profiles", "diagnose"],
     boot() {
       setCss("mobile.baseTokens", BASE_TOKENS);
+      initTimedtextCapture();
+      onSweep("mobile.watchRow", ensureWatchRow);
       bootHashTokens(pageIsDark, "mobil", (dark) => document.documentElement.toggleAttribute("data-ytx-dark", dark));
     }
   };

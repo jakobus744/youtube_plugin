@@ -1,5 +1,5 @@
 import { readPlaylist, loadAll, isLoading } from './common.js'
-import { playlistPage } from '../../../registry/youtube/paths.js'
+import { playlistPage } from '../sitePaths.js'
 import { h } from '../../ui.js'
 import { qs, qsa } from '../../../core/dom.js'
 import { toast } from '../../ui.js'

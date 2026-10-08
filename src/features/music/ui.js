@@ -43,6 +43,9 @@ html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hid
 ytmusic-player-queue-item[data-ytx-skip] { opacity: .55; }
 ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 .ytx-m-bar-btns { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; }
+/* handy player ansicht: knoepfe rechts neben titel und kuenstler */
+ytmusic-player-controls .content-info-wrapper { position: relative; padding-right: 48px; box-sizing: border-box; }
+ytmusic-player-controls .content-info-wrapper > [data-ytx-mount] { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
 @media (max-width: 600px) {
   ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }

@@ -1,4 +1,4 @@
-import { playlistPage } from '../../../registry/youtube/paths.js'
+import { playlistPage } from '../sitePaths.js'
 import { qsa, qsFirst } from '../../../core/dom.js'
 import { sleep } from '../../../core/scheduler.js'
 
@@ -12,14 +12,21 @@ export function readPlaylist() {
     const it = kind === 'polymer' ? playlistPage.readPolymerItem(el) : playlistPage.readLockupItem(el)
     if (it) items.push(it)
   }
-  const continuation = findContinuation()
-  return { kind, items, total: playlistPage.total(), continuation, complete: !continuation }
+  const total = playlistPage.total()
+  let continuation = findContinuation()
+  // auf dem handy bleibt ein leeres nachlade element stehen, es zaehlt nur solange eintraege fehlen
+  if (continuation?.matches(LAZY) && !continuation.childElementCount && (exhausted === location.href || (total != null && items.length >= total))) continuation = null
+  return { kind, items, total, continuation, complete: !continuation }
 }
+
+const LAZY = 'yt-continuation-item-view-model, ytm-continuation-item-renderer'
+let exhausted = null
 
 export function findContinuation() {
   const el = qsFirst(playlistPage.continuation)
   if (!el) return null
   // leere wrapper am ende sind keine nachlade elemente
+  if (el.matches(LAZY)) return el
   if (el.matches('ytd-continuation-item-renderer') || el.querySelector('ytd-continuation-item-renderer, tp-yt-paper-spinner, [class*="Spinner"], yt-spinner, [class*="continuation" i]')) return el
   return null
 }
@@ -77,7 +84,10 @@ export async function loadAll(onProgress) {
         rounds++
         if (!grew) {
           stale++
-          if (stale >= 3) break
+          if (stale >= 3) {
+            exhausted = location.href
+            break
+          }
           window.scrollBy(0, -200)
           await sleep(200)
         } else {

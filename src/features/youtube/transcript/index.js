@@ -1,6 +1,6 @@
 import { listTracks, pickTrack, fetchTrack, sourceStats, hasToken } from './source.js'
 import { parseJson3, cleanSegments, toParagraphs, render, stats, FORMAT_LABELS, videoLink } from './formats.js'
-import { watch, videoMenu, readCard } from '../../../registry/youtube/paths.js'
+import { watch, videoMenu, readCard } from '../sitePaths.js'
 import { splitButton, button, showMenu, toast, setButtonBusy, textDialog } from '../../ui.js'
 import { clock } from '../../../core/format.js'
 import { player } from '../../../core/bridge.js'
@@ -11,10 +11,11 @@ import { PANEL_HIDE_CSS } from './panelSource.js'
 const FORMATS = Object.entries(FORMAT_LABELS)
 const PENDING = 'ytx.transcript.pending'
 
-const MENU_CSS = `.ytx-menu-item { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 36px; box-sizing: border-box; padding: 0 36px 0 16px; border: 0; background: none; cursor: pointer; text-align: left;
+const MENU_CSS = `.ytx-yt-item { display: flex; align-items: center; gap: 16px; width: 100%; min-height: 36px; box-sizing: border-box; padding: 0 36px 0 16px; border: 0; background: none; cursor: pointer; text-align: left;
   font: 400 14px/20px Roboto, Arial, sans-serif; color: var(--yt-spec-text-primary, #f1f1f1); }
-.ytx-menu-item:hover, .ytx-menu-item:focus-visible { background: var(--yt-spec-10-percent-layer, rgba(255,255,255,.1)); outline: none; }
-.ytx-menu-item svg { width: 24px; height: 24px; flex: none; fill: currentColor; }`
+.ytx-yt-item:hover, .ytx-yt-item:focus-visible { background: var(--yt-spec-10-percent-layer, rgba(255,255,255,.1)); outline: none; }
+.ytx-yt-item svg { width: 24px; height: 24px; flex: none; fill: currentColor; }
+html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding: 0 12px; font-size: 16px; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); }`
 
 function menuIcon() {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
@@ -205,15 +206,9 @@ export default {
     let menuFor = null
     let pending = readPending()
 
-    const closeMenu = () => {
-      const dd = qsa(videoMenu.popup).find(isVisible)
-      try { dd?.close?.() } catch {}
-      if (isVisible(dd)) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }))
-    }
-
     async function fromMenu() {
       const target = menuFor
-      closeMenu()
+      await videoMenu.close()
       if (!target) return
       if (ctx.nav.page === 'watch' && target.videoId === ctx.nav.videoId) {
         refreshTracks()
@@ -243,16 +238,29 @@ export default {
     }
 
     const addItem = (list) => {
-      const item = h('div', { class: 'ytx-menu-item', role: 'menuitem', tabindex: '0' }, menuIcon(), h('span', { text: 'Transkript kopieren' }))
+      const item = h('div', { class: 'ytx-yt-item', role: 'menuitem', tabindex: '0' }, menuIcon(), h('span', { text: 'Transkript kopieren' }))
       item.addEventListener('click', (e) => {
         e.preventDefault()
         e.stopPropagation()
         fromMenu()
       })
       list.append(item)
-      // youtube legt die hoehe beim oeffnen fest, sonst kommt ein scrollbalken
-      const pop = list.closest('ytd-menu-popup-renderer')
-      if (pop?.style.maxHeight) pop.style.maxHeight = `${parseFloat(pop.style.maxHeight) + item.offsetHeight}px`
+      // abstand, hoehe und schrift vom nachbareintrag uebernehmen, youtube hat mehrere menueformen
+      const ref = [...list.children].find((c) => c !== item && c.querySelector('svg') && c.getClientRects().length)
+      const icon = ref?.querySelector('svg')
+      const label = ref && [...ref.querySelectorAll('span, yt-formatted-string, div')].find((x) => x.children.length === 0 && x.textContent.trim())
+      if (icon && label) {
+        const box = item.getBoundingClientRect()
+        const ir = icon.getBoundingClientRect()
+        const lr = label.getBoundingClientRect()
+        const cs = getComputedStyle(label)
+        Object.assign(item.style, { paddingLeft: `${Math.max(0, ir.left - box.left)}px`, gap: `${Math.max(0, lr.left - ir.right)}px`, minHeight: `${ref.getBoundingClientRect().height}px`, font: cs.font, color: cs.color })
+        item.querySelector('svg').style.cssText = `width:${ir.width}px;height:${ir.height}px`
+      }
+      // youtube legt die hoehe beim oeffnen fest, am rechner am popup, auf dem handy am blatt
+      for (let e = list, i = 0; e && i < 6; e = e.parentElement, i++) {
+        if (e.style?.maxHeight?.endsWith('px')) e.style.maxHeight = `${Math.min(parseFloat(e.style.maxHeight) + item.offsetHeight, innerHeight * 0.9)}px`
+      }
       try { list.closest('tp-yt-iron-dropdown')?.refit?.() } catch {}
     }
 
@@ -260,7 +268,7 @@ export default {
     const onMenuClick = (e) => {
       const t = e.target instanceof Element ? e.target : null
       if (!t || t.closest(videoMenu.popup) || !t.closest('button, yt-icon-button')) return
-      for (const old of qsa('.ytx-menu-item')) old.remove()
+      for (const old of qsa('.ytx-yt-item')) old.remove()
       menuFor = null
       if (!s.placement.includes('menu')) return
       const card = t.closest(videoMenu.cards)
@@ -272,7 +280,7 @@ export default {
       if (!videoId) return
       menuFor = { videoId, card }
       waitFor(() => videoMenu.lists.map((sel) => qsa(sel).find(isVisible)).find(Boolean), { timeout: 2500, interval: 60 }).then((list) => {
-        if (list && menuFor?.videoId === videoId && !qs('.ytx-menu-item', list)) addItem(list)
+        if (list && menuFor?.videoId === videoId && !qs('.ytx-yt-item', list)) addItem(list)
       })
     }
     document.addEventListener('click', onMenuClick, true)
@@ -302,7 +310,7 @@ export default {
       dispose() {
         mounts.forEach((m) => m.destroy())
         document.removeEventListener('click', onMenuClick, true)
-        for (const old of qsa('.ytx-menu-item')) old.remove()
+        for (const old of qsa('.ytx-yt-item')) old.remove()
       },
       health() {
         refreshTracks()

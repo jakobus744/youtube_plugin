@@ -1,5 +1,6 @@
 import { normalize, normalizeProfile, splitLegacy, SCHEMA, SITE_KEYS } from './config.js'
 import { templates, templateById, DEFAULT_ACTIVE } from '../profiles/index.js'
+import { tidyFeatures as mobileTidyFeatures } from '../profiles/mobile.js'
 import { sites, site } from '../sites/index.js'
 import { debounce } from './scheduler.js'
 import { log } from './log.js'
@@ -141,6 +142,32 @@ const MIGRATIONS = [
       for (const p of Object.values(d.profiles || {})) {
         const f = p.config?.youtube?.features?.['transcript.copy']
         if (Array.isArray(f?.placement) && !f.placement.includes('menu')) f.placement.push('menu')
+      }
+    }
+  ],
+  [
+    // handy bekommt die features vom rechner, bestehende profile schalten sie wie die vorlage ein
+    'mobile-desktop-features',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        const m = p.config?.mobile
+        if (!m || p.template === 'youtube') continue
+        const f = (m.features ||= {})
+        for (const [id, v] of Object.entries(mobileTidyFeatures)) if (!f[id]) f[id] = { ...v }
+        const b = (m.behavior ||= {})
+        if (!('autoplayOff' in b)) b.autoplayOff = true
+        if (!('channelTrailerPause' in b)) b.channelTrailerPause = true
+      }
+    }
+  ],
+  [
+    'music-open-app-hidden',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        const m = p.config?.music
+        if (!m || p.template === 'youtube') continue
+        m.display ||= {}
+        if (!('m.nav.openApp' in m.display)) m.display['m.nav.openApp'] = 'hide'
       }
     }
   ]

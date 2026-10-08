@@ -1,4 +1,4 @@
-import { watch } from '../../registry/youtube/paths.js'
+import { watch } from './sitePaths.js'
 import { player } from '../../core/bridge.js'
 import { formatDate, formatTimeOfDay, clock } from '../../core/format.js'
 import { listen } from '../../core/lifecycle.js'

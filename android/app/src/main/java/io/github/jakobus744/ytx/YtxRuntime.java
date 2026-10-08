@@ -1,6 +1,10 @@
 package io.github.jakobus744.ytx;
 
 import android.content.Context;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import org.json.JSONObject;
@@ -11,6 +15,8 @@ import org.mozilla.geckoview.WebExtension;
 
 // eine gecko engine fuer beide icons, ytx als eingebaute erweiterung
 final class YtxRuntime {
+
+    private static Context appContext;
     private static final String TAG = "ytx";
     static final String EXT_URI = "resource://android/assets/ytx/";
     static final String EXT_ID = "ytx@jakobus744.github.io";
@@ -31,7 +37,8 @@ final class YtxRuntime {
                 .consoleOutput(BuildConfig.DEBUG)
                 .aboutConfigEnabled(false)
                 .build();
-        runtime = GeckoRuntime.create(ctx.getApplicationContext(), settings);
+        appContext = ctx.getApplicationContext();
+        runtime = GeckoRuntime.create(appContext, settings);
         runtime.getWebExtensionController()
                 .ensureBuiltIn(EXT_URI, EXT_ID)
                 .accept(YtxRuntime::onExtension, e -> Log.e(TAG, "erweiterung nicht installiert", e));
@@ -50,6 +57,19 @@ final class YtxRuntime {
             public GeckoResult<Object> onMessage(String nativeApp, Object message, WebExtension.MessageSender sender) {
                 if (!(message instanceof JSONObject)) return null;
                 JSONObject m = (JSONObject) message;
+                String type = m.optString("t");
+                if ("clip".equals(type)) {
+                    String text = m.optString("text");
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        ClipboardManager cm = (ClipboardManager) appContext.getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("ytx", text));
+                    });
+                    return null;
+                }
+                if ("log".equals(type)) {
+                    Log.i("ytx-page", m.optString("text"));
+                    return null;
+                }
                 Listener l = listener;
                 if (l == null) return null;
                 String t = m.optString("t");

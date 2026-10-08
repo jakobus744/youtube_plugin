@@ -50,6 +50,13 @@ export const targets = [
     sel: ['ytmusic-nav-bar ytmusic-cast-button', 'ytmusic-nav-bar .cast-button']
   },
   {
+    id: 'm.nav.openApp',
+    label: '„App öffnen“ oben (Handy)',
+    group: 'Navigation',
+    modes: SH,
+    sel: ['ytmusic-nav-bar a.app-install-link']
+  },
+  {
     id: 'm.nav.history',
     label: 'Verlaufs-Button oben',
     group: 'Navigation',

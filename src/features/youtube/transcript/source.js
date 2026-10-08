@@ -1,6 +1,6 @@
-import { watch } from '../../../registry/youtube/paths.js'
+import { watch } from '../sitePaths.js'
 import { player } from '../../../core/bridge.js'
-import { waitFor } from '../../../core/scheduler.js'
+import { waitFor, sleep } from '../../../core/scheduler.js'
 import { onDispose } from '../../../core/lifecycle.js'
 import { log } from '../../../core/log.js'
 import { transcriptFromPanel } from './panelSource.js'
@@ -109,18 +109,21 @@ function restorePrefs(snap) {
   }
 }
 
+// untertitel knopf am rechner und auf m.youtube.com, null wenn keiner da ist
+const CC_BUTTON = '#movie_player .ytp-subtitles-button, .ytmClosedCaptioningButtonButton'
+
 function captionsOn() {
-  const btn = document.querySelector('#movie_player .ytp-subtitles-button')
-  return btn ? btn.getAttribute('aria-pressed') === 'true' : false
+  const btn = document.querySelector(CC_BUTTON)
+  return btn ? btn.getAttribute('aria-pressed') === 'true' : null
 }
 
 async function triggerPlayer(videoId, track) {
   const p = player()
   if (!p) return null
   const prefs = snapshotPrefs()
-  const wasOn = captionsOn()
   let prev = null
   try { prev = p.getOption?.('captions', 'track') } catch {}
+  const wasOn = captionsOn() ?? !!prev?.languageCode
   try { p.loadModule?.('captions') } catch {}
   try { p.setOption?.('captions', 'track', { languageCode: track.lang, ...(track.kind ? { kind: track.kind } : {}) }) } catch {}
   const url = await waitFor(() => {
@@ -135,9 +138,14 @@ async function triggerPlayer(videoId, track) {
       p.unloadModule?.('captions')
     }
   } catch {}
-  if (!wasOn && captionsOn()) document.querySelector('#movie_player .ytp-subtitles-button')?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  // der handy player schaltet teils verzoegert wieder ein, deshalb mehrmals nachsehen
+  for (let i = 0; i < 4 && !wasOn; i++) {
+    await sleep(i ? 700 : 150)
+    if (captionsOn() !== true) continue
+    document.querySelector(CC_BUTTON)?.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  }
   restorePrefs(prefs)
-  sourceStats.lastTrigger = { wasOn, restoredOff: !captionsOn() || wasOn }
+  sourceStats.lastTrigger = { wasOn, restoredOff: captionsOn() !== true || wasOn }
   return url
 }
 

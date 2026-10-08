@@ -88,3 +88,16 @@ test('stats zaehlt woerter', () => {
   assert.equal(s.words, 4)
   assert.equal(s.readingMin, 1)
 })
+
+test('chaptersFromDescription: zeitstempel pro zeile, start bei 0:00, mindestens drei', async () => {
+  const { chaptersFromDescription } = await import('../src/registry/youtube/chapters.js')
+  const d = 'Intro text\n0:00 Start\n1:30 - Aufwärmen\n(12:05) Übungen\n1:02:10 Ende\nhttps://x.y'
+  assert.deepEqual(chaptersFromDescription(d), [
+    { title: 'Start', startSec: 0 },
+    { title: 'Aufwärmen', startSec: 90 },
+    { title: 'Übungen', startSec: 725 },
+    { title: 'Ende', startSec: 3730 }
+  ])
+  assert.deepEqual(chaptersFromDescription('1:00 a\n2:00 b\n3:00 c'), [])
+  assert.deepEqual(chaptersFromDescription('0:00 a\n2:00 b'), [])
+})

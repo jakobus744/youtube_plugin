@@ -47,6 +47,11 @@ export const anchors = {
     label: 'Playlist-Panel Kopf',
     sel: ['ytd-watch-flexy ytd-playlist-panel-renderer#playlist #header-description', 'ytd-watch-flexy ytd-playlist-panel-renderer#playlist #header-contents']
   },
+  // am rechner dasselbe, auf dem handy die zeile unter dem video statt des aufklappbaren panels
+  'watch.playlistInfo': {
+    label: 'Playlist-Panel Statistik',
+    sel: ['ytd-watch-flexy ytd-playlist-panel-renderer#playlist #header-description', 'ytd-watch-flexy ytd-playlist-panel-renderer#playlist #header-contents']
+  },
   'subs.feedTop': {
     label: 'Abo-Feed oben',
     visibleOnly: true,

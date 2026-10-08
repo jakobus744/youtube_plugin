@@ -3,7 +3,7 @@ import { firstInt } from '../../core/format.js'
 import { h, button } from '../ui.js'
 
 // fortschritt steht nur bei angemeldeten nutzern in den kacheln
-const BARS = ['ytd-thumbnail-overlay-resume-playback-renderer #progress[style*="width"]', 'yt-thumbnail-view-model [class*="ProgressBarSegment"][style*="width"]', 'yt-thumbnail-overlay-progress-bar-view-model [style*="width"]']
+const BARS = ['ytd-thumbnail-overlay-resume-playback-renderer #progress[style*="width"]', 'yt-thumbnail-view-model [class*="ProgressBarSegment"][style*="width"]', 'yt-thumbnail-overlay-progress-bar-view-model [style*="width"]', 'ytm-thumbnail-overlay-resume-playback-renderer [style*="width"]', 'ytm-thumbnail-cover [class*="ResumePlayback"] [style*="width"]']
 
 export const progressBadge = {
   id: 'thumb.progressBadge',
@@ -22,7 +22,7 @@ export const progressBadge = {
       count = 0
       for (const bar of qsa(BARS.join(', '))) {
         const pct = firstInt(bar.style.width)
-        const thumb = bar.closest('ytd-thumbnail, yt-thumbnail-view-model')
+        const thumb = bar.closest('ytd-thumbnail, yt-thumbnail-view-model, ytm-thumbnail-cover, ytm-compact-thumbnail')
         if (!thumb) continue
         let badge = thumb.querySelector(':scope > .ytx-badge')
         if (pct == null || pct < s.min) {

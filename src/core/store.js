@@ -55,7 +55,7 @@ function slug(name) {
   )
 }
 
-const defaultSettings = () => ({ hotkeys: {}, panelButton: true, panelTab: 'display' })
+const defaultSettings = () => ({ hotkeys: {}, panelButton: true, panelTab: 'display', linkLook: true })
 
 function freshData() {
   const profiles = {}
@@ -190,6 +190,14 @@ const MIGRATIONS = [
         const f = (p.config.music.features ||= {})
         f['m.sleepTimer'] ||= { enabled: true }
       }
+    }
+  ],
+  [
+    // theme und farben gelten fuer youtube und music gemeinsam, wer es ausdruecklich ausgeschaltet hat behaelt das
+    'link-look-default-on',
+    (d) => {
+      d.settings ||= {}
+      if (!('linkLook' in d.settings)) d.settings.linkLook = true
     }
   ]
 ]

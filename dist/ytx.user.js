@@ -4341,7 +4341,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
   function slug(name) {
     return String(name).toLowerCase().replace(/[äöü]/g, (c) => ({ ä: "ae", ö: "oe", ü: "ue" })[c]).replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "profil";
   }
-  var defaultSettings = () => ({ hotkeys: {}, panelButton: true, panelTab: "display" });
+  var defaultSettings = () => ({ hotkeys: {}, panelButton: true, panelTab: "display", linkLook: true });
   function freshData() {
     const profiles = {};
     for (const t of templates2) profiles[t.id] = { name: t.name, template: t.id, config: t.config() };
@@ -4472,6 +4472,14 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           const f = p.config.music.features ||= {};
           f["m.sleepTimer"] ||= { enabled: true };
         }
+      }
+    ],
+    [
+      // theme und farben gelten fuer youtube und music gemeinsam, wer es ausdruecklich ausgeschaltet hat behaelt das
+      "link-look-default-on",
+      (d) => {
+        d.settings ||= {};
+        if (!("linkLook" in d.settings)) d.settings.linkLook = true;
       }
     ]
   ];

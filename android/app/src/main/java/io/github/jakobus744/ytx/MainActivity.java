@@ -286,6 +286,8 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     @Override
     protected void onUserLeaveHint() {
         super.onUserLeaveHint();
+        // bei musik gibt es kein video, dort reicht die benachrichtigung
+        if (homeUrl().contains("music.")) return;
         if (playing.isEmpty() || isInPictureInPictureMode()) return;
         boolean watching = mini != null || (currentUrl != null && currentUrl.contains("/watch"));
         if (!watching) return;

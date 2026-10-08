@@ -63,9 +63,9 @@ Eine richtige App mit zwei Icons, **ytx** (YouTube) und **ytx Music**, ohne Fire
 **Updates**
 - **ytx selbst** aktualisiert sich wie bei Violentmonkey: Die App schaut alle 6 Stunden nach einer neueren `dist/ytx.user.js` auf GitHub und lädt sie. Sie gilt ab dem nächsten Seitenwechsel.
 - **Die App** (Engine, Icons, Farbwähler) braucht nur bei Änderungen am `android`-Ordner eine neue APK. Die App schaut alle 12 Stunden unter GitHub **Releases** nach. Liegt dort ein neueres Release mit `ytx-<version>.apk`, fragt sie „Installieren?“. Beim ersten Mal will Android die Freigabe „Apps aus dieser Quelle zulassen“. Ein Release anlegen: GitHub › Releases › Draft a new release › Tag `v0.4.0` › APK aus `android/apk` hineinziehen › Publish.
-- Ohne Release geht es per Kabel: USB-Debugging an, dann `adb install -r androidapkytx-<version>.apk` (adb liegt in `%LOCALAPPDATA%AndroidSdkplatform-tools`). Immer auf demselben Rechner bauen, denn die App ist mit dessen Schlüssel signiert.
+- Ohne Release geht es per Kabel: USB-Debugging an, dann `adb install -r android\apk\ytx-<version>.apk` (adb liegt in `%LOCALAPPDATA%\Android\Sdk\platform-tools`). Immer auf demselben Rechner bauen, denn die App ist mit dessen Schlüssel signiert.
 
-**Technik**: `android/app/src/main/assets/ytx/` ist eine eingebaute Erweiterung. Sie stellt die GM-Funktionen bereit (Speicher, Live-Abgleich, Anfragen, Zwischenablage) und entfernt auf YouTube die Content-Security-Policy, weil ytx sonst nicht in die Seite darf. Bauen braucht Android SDK und JDK 17, Build-Dateien landen in `%LOCALAPPDATA%/ytx-android-build`, nicht in Nextcloud.
+**Technik**: Aufbau, Entscheidungen und Testweg stehen in [docs/ANDROID-APP.md](docs/ANDROID-APP.md). `android/app/src/main/assets/ytx/` ist eine eingebaute Erweiterung. Sie stellt die GM-Funktionen bereit (Speicher, Live-Abgleich, Anfragen, Zwischenablage) und entfernt auf YouTube die Content-Security-Policy, weil ytx sonst nicht in die Seite darf. Bauen braucht Android SDK und JDK 17, Build-Dateien landen in `%LOCALAPPDATA%/ytx-android-build`, nicht in Nextcloud.
 
 ### Android: Firefox + Violentmonkey
 
@@ -194,7 +194,7 @@ ytx/
 │   │       └── metadataProviders/  index · local · musicbrainz · lastfm · ollama · http
 │   ├── profiles/                youtube.js · music.js · index.js
 │   └── panel/                   index · tabs · musicTabs · controls · styles
-├── tests/                       58 Tests + fixtures/music (echte Seitendaten)
+├── tests/                       62 Tests + fixtures/music (echte Seitendaten)
 └── tools/                       serve.mjs (Test-Handoff) · music-fixtures.mjs
 ```
 

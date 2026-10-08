@@ -5,7 +5,7 @@ import { displayTab, lookTab, layoutTab, behaviorTab, filterTab, featuresTab, pr
 import { button } from '../features/ui.js'
 import { summarize, runChecks } from '../core/diagnose.js'
 import { musicTab, musicDataTab, musicStatsTab } from './musicTabs.js'
-import { subGroupsTab, watchStatsTab } from './youtubeTabs.js'
+import { subGroupsTab, watchStatsTab, downloadsTab } from './youtubeTabs.js'
 import { site } from '../sites/index.js'
 import { makeMovable } from './geometry.js'
 
@@ -18,6 +18,7 @@ const ALL_TABS = {
   features: ['Features', featuresTab],
   subGroups: ['Abo-Gruppen', subGroupsTab],
   watchStats: ['Schauzeit', watchStatsTab],
+  downloads: ['Downloads', downloadsTab],
   music: ['Musik', musicTab],
   musicData: ['Verlauf & Daten', musicDataTab],
   musicStats: ['Statistik', musicStatsTab],

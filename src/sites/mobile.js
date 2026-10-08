@@ -12,6 +12,7 @@ import { bootHashTokens } from './hashBoot.js'
 import { setCss } from '../core/css.js'
 import { onSweep } from '../core/observer.js'
 import { initMiniMode } from './miniMode.js'
+import { addDownload, openInYoutubeApp } from '../features/youtube/downloads.js'
 import { qs, h } from '../core/dom.js'
 
 // die mobilseite kennt die youtube farbtokens nicht, ytx elemente brauchen sie fuer hell und dunkel
@@ -54,6 +55,9 @@ const FILTER_PAGES = [
 
 // zeile direkt unter der aktionsleiste, features docken am end marker an
 const OPEN_YT_CSS = `
+.ytx-watch-row:not([data-open]) > :not(.ytx-row-toggle) { display: none !important; }
+.ytx-watch-row .ytx-row-toggle { all: unset; box-sizing: border-box; margin: 4px 12px; padding: 4px 12px; border-radius: 14px; font: 500 13px/18px Roboto, sans-serif; cursor: pointer; opacity: .8; background: var(--yt-spec-badge-chip-background, rgba(255,255,255,.1)); color: var(--yt-spec-text-primary, #f1f1f1); }
+.ytx-watch-row[data-open] { display: flex; flex-wrap: wrap; align-items: center; }
 .ytx-open-yt { all: unset; box-sizing: border-box; margin: 6px 12px; padding: 8px 14px; border-radius: 18px; font: 500 14px/20px Roboto, sans-serif; cursor: pointer; background: var(--yt-spec-badge-chip-background, rgba(255,255,255,.1)); color: var(--yt-spec-text-primary, #f1f1f1); }`
 
 function ensureWatchRow() {
@@ -63,13 +67,23 @@ function ensureWatchRow() {
   const row = h('div', { class: 'ytx-watch-row', 'data-ytx-own': '' }, h('span', { class: 'ytx-row-end' }))
   // zum herunterladen oder offline schauen geht es in die offizielle youtube app, das gehoert dort zu premium
   if (window.__ytxNative) {
-    const open = h('button', { class: 'ytx-open-yt', type: 'button', text: 'In der YouTube-App öffnen' })
+    const open = h('button', { class: 'ytx-open-yt', type: 'button', text: 'Herunterladen (YouTube-App)' })
     open.addEventListener('click', () => {
+      const id = videoIdFromUrl(location.href)
+      if (!id) return
       document.getElementById('movie_player')?.pauseVideo?.()
-      window.__ytxNative({ a: 'openyt' })
+      addDownload(id, document.title.replace(/ - YouTube$/, ''))
+      openInYoutubeApp(id)
     })
     row.append(open)
   }
+  // standardmaessig zu, damit unter dem video Ruhe ist
+  const toggle = h('button', { class: 'ytx-row-toggle', type: 'button', text: 'ytx ▾' })
+  toggle.addEventListener('click', () => {
+    const on = row.toggleAttribute('data-open')
+    toggle.textContent = on ? 'ytx ▴' : 'ytx ▾'
+  })
+  row.prepend(toggle)
   bar.after(row)
 }
 
@@ -102,7 +116,7 @@ export const mobileSite = {
   filters: { pages: FILTER_PAGES, CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots },
   channels: { channelRefOf, channelPageInfo, subscribedChannels },
   playback: { activePlayback, pauseActive },
-  panelTabs: ['display', 'look', 'behavior', 'filters', 'features', 'subGroups', 'watchStats', 'profiles', 'diagnose'],
+  panelTabs: ['display', 'look', 'behavior', 'filters', 'features', 'subGroups', 'watchStats', 'downloads', 'profiles', 'diagnose'],
   boot() {
     setCss('mobile.baseTokens', BASE_TOKENS + OPEN_YT_CSS)
     initTimedtextCapture()

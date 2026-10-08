@@ -181,6 +181,16 @@ const MIGRATIONS = [
         if (!('m.nav.openApp' in m.display)) m.display['m.nav.openApp'] = 'hide'
       }
     }
+  ],
+  [
+    'music-sleep-timer-on',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        if (p.template === 'youtube' || !p.config?.music) continue
+        const f = (p.config.music.features ||= {})
+        f['m.sleepTimer'] ||= { enabled: true }
+      }
+    }
   ]
 ]
 

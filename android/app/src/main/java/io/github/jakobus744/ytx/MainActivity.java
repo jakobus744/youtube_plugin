@@ -60,6 +60,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     private FrameLayout miniBox;
     private String lastBrowse;
     private boolean pip;
+    private final java.util.Map<GeckoSession, String> urls = new java.util.HashMap<>();
     // vorbereitete leere sitzung, damit das verkleinern nicht ruckelt
     private GeckoSession spare;
     // sitzungen in denen gerade medien laufen, sie bleiben auch im hintergrund aktiv
@@ -409,6 +410,8 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
 
             @Override
             public void onLocationChange(GeckoSession s, String url, List<ContentPermission> perms, Boolean hasUserGesture) {
+                // jede sitzung merkt sich ihre seite, damit sie nach dem vergroessern bekannt ist
+                if (url != null) urls.put(s, url);
                 if (s != MainActivity.this.session) return;
                 currentUrl = url;
                 // letzte seite die kein video ist, dorthin geht es beim verkleinern zurueck
@@ -523,14 +526,14 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
             if ("minimize".equals(action)) minimize();
             else if ("expand".equals(action)) expand();
             else if ("close".equals(action)) closeMini();
-            else if ("openyt".equals(action)) openInYoutubeApp();
+            else if (action != null && action.startsWith("openyt:")) openInYoutubeApp(action.substring(7));
         });
     }
 
     // aktuelles video in der offiziellen app, dort laesst es sich herunterladen und offline schauen
-    private void openInYoutubeApp() {
-        String url = currentUrl;
-        if (url == null || !url.startsWith("https://")) return;
+    private void openInYoutubeApp(String id) {
+        if (id == null || !id.matches("[A-Za-z0-9_-]{11}")) return;
+        String url = "https://www.youtube.com/watch?v=" + id;
         Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url)).setPackage("com.google.android.youtube");
         try {
             startActivity(i);
@@ -583,7 +586,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         session = video;
         old.close();
         canGoBack = true;
-        currentUrl = null;
+        currentUrl = urls.get(video);
     }
 
     private void closeMini() {

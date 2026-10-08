@@ -57,7 +57,8 @@ Eine richtige App mit zwei Icons, **ytx** (YouTube) und **ytx Music**, ohne Fire
 - **Mini-Player**: Video nach unten wischen verkleinert es unten rechts, ein neues Video ersetzt es, Tippen holt es zurück. Nach oben wischen öffnet den Vollbildmodus.
 - **Hintergrund**: Solange etwas spielt, läuft der Ton weiter, mit Titel, Vorschaubild und Tasten in der Benachrichtigung, auf dem Sperrbildschirm und an Kopfhörern. Beim Verlassen der App schwebt das Video als Bild-in-Bild über anderen Apps.
 - **Nextcloud-Abgleich** der Profile: Panel › Profile › Nextcloud-Abgleich. Adresse, Benutzer und ein in Nextcloud erzeugtes App-Passwort eintragen, dann Hochladen oder Herunterladen. Die Datei liegt unter `ytx/profiles.json`, das Passwort bleibt auf dem Gerät. Auf dem Handy muss Tailscale an sein. Erlaubte Server stehen in `build.mjs` (`@connect`), `background.js` und `manifest.json`.
-- Offline-Downloads gibt es bewusst nicht.
+- **Downloads**: Der Knopf „Herunterladen (YouTube-App)“ öffnet das Video in der offiziellen App und merkt es im Panel unter „Downloads“. Der Download selbst läuft dort.
+- **Music**: Wischen auf dem Cover oder der Playerleiste wechselt den Titel, der Mond-Knopf neben dem Stern ist der Sleep-Timer (15 bis 60 Minuten oder Titelende).
 
 **Updates**
 - **ytx selbst** aktualisiert sich wie bei Violentmonkey: Die App schaut alle 6 Stunden nach einer neueren `dist/ytx.user.js` auf GitHub und lädt sie. Sie gilt ab dem nächsten Seitenwechsel.

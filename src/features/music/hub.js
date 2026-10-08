@@ -488,7 +488,8 @@ export const hubFeature = {
         home.turns++
         if (rebuild || !home.pool || home.poolMode !== home.mode || home.turns % 3 === 0 || Date.now() - home.poolAt > 30 * 60 * 1000 || (home.pool.length && shownCount >= home.pool.length * 0.6)) {
           if (rebuild) home.step++
-          await loadPool()
+          // haengt das netz, nach 25 s aufgeben statt dauerhaft zu laden
+          await Promise.race([loadPool(), new Promise((_, rej) => setTimeout(() => rej(new Error('Zeitüberschreitung, Netz zu langsam')), 25000))])
         }
         home.picked = pickFresh(home.pool, 12)
       } catch (e) {
@@ -623,7 +624,13 @@ export const hubFeature = {
         mix, play, more)
       const row = shelfRow()
       for (const it of home.picked) {
-        row.append(shelfCard({ img: it.thumbnail, title: it.title, sub: `${it.artists.map((a) => a.name).join(', ')}${it.reasons?.[0] ? ` · ${it.reasons[0]}` : ''}`, onClick: () => navigateEndpoint(endpoints.radio(it.videoId)) }))
+        row.append(shelfCard({ img: it.thumbnail, title: it.title, sub: `${it.artists.map((a) => a.name).join(', ')}${it.reasons?.[0] ? ` · ${it.reasons[0]}` : ''}`, onClick: async () => {
+          // auf dem handy reagiert der interne weg manchmal nicht, dann geht es ueber die adresse
+          const before = location.href
+          const ok = await navigateEndpoint(endpoints.radio(it.videoId))
+          if (ok) await new Promise((r) => setTimeout(r, 1500))
+          if (!ok || location.href === before) location.href = `https://music.youtube.com/watch?v=${it.videoId}&list=RDAMVM${it.videoId}`
+        } }))
       }
       const children = [chipBar(target), home.picking ? genrePicker(target) : null, head].filter(Boolean)
       const hint = (text) => h('div', { text, style: { color: T.secondary, font: '400 14px Roboto, Arial, sans-serif', margin: '0 0 16px' } })

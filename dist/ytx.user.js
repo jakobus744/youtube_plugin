@@ -4201,6 +4201,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     "m.smartQueue": { enabled: true },
     "m.queueInfo": { enabled: true },
     "m.lyrics": { enabled: true },
+    "m.sleepTimer": { enabled: true },
     "m.audio": { enabled: false }
   };
   var musicTemplates = {
@@ -4460,6 +4461,16 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           if (!m || p.template === "youtube") continue;
           m.display ||= {};
           if (!("m.nav.openApp" in m.display)) m.display["m.nav.openApp"] = "hide";
+        }
+      }
+    ],
+    [
+      "music-sleep-timer-on",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          if (p.template === "youtube" || !p.config?.music) continue;
+          const f = p.config.music.features ||= {};
+          f["m.sleepTimer"] ||= { enabled: true };
         }
       }
     ]
@@ -7073,7 +7084,38 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     btn2.click();
     return true;
   }
+  var SWIPE_ZONE = "ytmusic-player-bar, ytmusic-player-page #song-image, ytmusic-player-page ytmusic-player, ytmusic-player-page #player";
+  var SWIPE_SKIP = "tp-yt-paper-slider, #progress-bar, button, a, .middle-controls-buttons, .right-controls, .volume-slider";
   var behaviors2 = [
+    {
+      id: "m.swipeSkip",
+      label: "Cover und Playerleiste wischen: nächster oder vorheriger Titel",
+      description: "Nach links wischen spielt den nächsten Titel, nach rechts den vorherigen, wie in der YouTube-Music-App",
+      type: "toggle",
+      default: true,
+      start() {
+        let t0 = null;
+        const click = (sel) => document.querySelector(`ytmusic-player-bar ${sel}`)?.click();
+        const offs = [
+          listen(document, "touchstart", (e) => {
+            t0 = null;
+            if (e.touches.length !== 1 || !e.target.closest?.(SWIPE_ZONE) || e.target.closest?.(SWIPE_SKIP)) return;
+            t0 = { x: e.touches[0].clientX, y: e.touches[0].clientY, at: Date.now(), done: false };
+          }, { passive: true, capture: true }),
+          listen(document, "touchmove", (e) => {
+            if (!t0 || t0.done || e.touches.length !== 1) return;
+            const dx = e.touches[0].clientX - t0.x;
+            const dy = e.touches[0].clientY - t0.y;
+            if (Math.abs(dy) > 60 && Math.abs(dy) > Math.abs(dx)) t0 = null;
+            else if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 1.5 && Date.now() - t0.at < 1200) {
+              t0.done = true;
+              click(dx < 0 ? ".next-button" : ".previous-button");
+            }
+          }, { passive: true, capture: true })
+        ];
+        return () => offs.forEach((off) => off());
+      }
+    },
     {
       id: "m.stillThere",
       label: "„Noch da?“ automatisch bestätigen",
@@ -8297,8 +8339,9 @@ ytmusic-player-queue-item[data-ytx-skip] { opacity: .55; }
 ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 .ytx-m-bar-btns { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; }
 /* handy player ansicht: knoepfe rechts neben titel und kuenstler */
-ytmusic-player-controls .content-info-wrapper { position: relative; padding-right: 48px; box-sizing: border-box; }
+ytmusic-player-controls .content-info-wrapper { position: relative; padding-right: 120px; box-sizing: border-box; }
 ytmusic-player-controls .content-info-wrapper > [data-ytx-mount] { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
+ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] { right: 40px; }
 @media (max-width: 600px) {
   ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
@@ -9813,7 +9856,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           home.turns++;
           if (rebuild || !home.pool || home.poolMode !== home.mode || home.turns % 3 === 0 || Date.now() - home.poolAt > 30 * 60 * 1e3 || home.pool.length && shownCount >= home.pool.length * 0.6) {
             if (rebuild) home.step++;
-            await loadPool();
+            await Promise.race([loadPool(), new Promise((_, rej) => setTimeout(() => rej(new Error("Zeitüberschreitung, Netz zu langsam")), 25e3))]);
           }
           home.picked = pickFresh(home.pool, 12);
         } catch (e) {
@@ -9949,7 +9992,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         );
         const row2 = shelfRow();
         for (const it of home.picked) {
-          row2.append(shelfCard({ img: it.thumbnail, title: it.title, sub: `${it.artists.map((a) => a.name).join(", ")}${it.reasons?.[0] ? ` · ${it.reasons[0]}` : ""}`, onClick: () => navigateEndpoint(endpoints.radio(it.videoId)) }));
+          row2.append(shelfCard({ img: it.thumbnail, title: it.title, sub: `${it.artists.map((a) => a.name).join(", ")}${it.reasons?.[0] ? ` · ${it.reasons[0]}` : ""}`, onClick: async () => {
+            const before = location.href;
+            const ok = await navigateEndpoint(endpoints.radio(it.videoId));
+            if (ok) await new Promise((r) => setTimeout(r, 1500));
+            if (!ok || location.href === before) location.href = `https://music.youtube.com/watch?v=${it.videoId}&list=RDAMVM${it.videoId}`;
+          } }));
         }
         const children = [chipBar(target), home.picking ? genrePicker(target) : null, head].filter(Boolean);
         const hint = (text) => h("div", { text, style: { color: T2.secondary, font: "400 14px Roboto, Arial, sans-serif", margin: "0 0 16px" } });
@@ -10258,6 +10306,100 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           if (!last2) return { status: "skip", detail: "prüft kurz nach dem Laden" };
           if (last2.error) return { status: "warn", detail: last2.error };
           return { status: "ok", detail: last2.shown ? "Rückblick dieser Woche gezeigt" : "keine Hördaten letzte Woche" };
+        }
+      };
+    }
+  };
+
+  // src/features/music/sleepTimer.js
+  var OPTIONS = [[15, "15 Minuten"], [30, "30 Minuten"], [45, "45 Minuten"], [60, "60 Minuten"], [0, "Ende des Titels"]];
+  var video = () => document.querySelector("video");
+  function pause() {
+    const p = document.getElementById("movie_player");
+    if (typeof p?.pauseVideo === "function") p.pauseVideo();
+    else video()?.pause();
+  }
+  var sleepTimerFeature = {
+    id: "m.sleepTimer",
+    site: "music",
+    label: "Sleep-Timer",
+    group: "Hören",
+    description: "Mond-Knopf in der Playerleiste: Die Wiedergabe pausiert nach 15 bis 60 Minuten oder am Ende des Titels",
+    stability: "hoch",
+    anchors: ["m.bar.middleButtons"],
+    settings: {
+      button: { type: "toggle", label: "Knopf in der Playerleiste", default: true }
+    },
+    setup(ctx) {
+      let s = ctx.settings;
+      const st = { until: 0, endOfTrack: false, timer: 0 };
+      const active = () => !!st.until || st.endOfTrack;
+      const label = () => {
+        if (st.endOfTrack) return "Ende";
+        if (!st.until) return "";
+        return `${Math.max(1, Math.ceil((st.until - Date.now()) / 6e4))}m`;
+      };
+      const stop = () => {
+        clearInterval(st.timer);
+        st.timer = 0;
+        st.until = 0;
+        st.endOfTrack = false;
+        bar.refresh();
+      };
+      const tick2 = () => {
+        if (st.until && Date.now() >= st.until) {
+          pause();
+          toast("Sleep-Timer: Wiedergabe pausiert");
+          return stop();
+        }
+        const v = video();
+        if (st.endOfTrack && v && isFinite(v.duration) && v.duration - v.currentTime < 1.2) {
+          pause();
+          toast("Sleep-Timer: Titel zu Ende, pausiert");
+          return stop();
+        }
+        bar.refresh();
+      };
+      const start = (minutes) => {
+        stop();
+        if (minutes) st.until = Date.now() + minutes * 6e4;
+        else st.endOfTrack = true;
+        st.timer = setInterval(tick2, 1e3);
+        toast(minutes ? `Sleep-Timer: ${minutes} Minuten` : "Sleep-Timer: bis zum Ende des Titels");
+        bar.refresh();
+      };
+      const menu = (btn2) => {
+        const items = OPTIONS.map(([m, l]) => ({ label: l, checked: m ? void 0 : st.endOfTrack, run: () => start(m) }));
+        if (active()) items.push({ sep: true }, { label: "Timer ausschalten", run: stop });
+        showMenu(btn2, items);
+      };
+      const bar = ctx.mount({
+        id: "m.sleep.bar",
+        anchor: "m.bar.middleButtons",
+        position: "prepend",
+        when: () => s.button,
+        create: () => iconButton({ icon: "☾", title: "Sleep-Timer", pressed: false, onClick: (e, b) => menu(b) }),
+        update: (node) => {
+          node.setAttribute("aria-pressed", String(active()));
+          const l = label();
+          node.querySelector(".ytx-m-lbl")?.remove();
+          if (l) node.append(Object.assign(document.createElement("span"), { className: "ytx-m-lbl", textContent: l }));
+        }
+      });
+      return {
+        update(next) {
+          s = next;
+          bar.refresh();
+        },
+        onVideo() {
+          bar.refresh();
+        },
+        dispose() {
+          stop();
+          bar.destroy();
+        },
+        health() {
+          return s.button && !bar.ok ? { status: "warn", detail: "Playerleiste nicht gefunden" } : { status: "ok", detail: active() ? `läuft: ${label()}` : "bereit" };
         }
       };
     }
@@ -10725,7 +10867,7 @@ ${data2.source}` : ""].join("\n").trim();
   };
 
   // src/features/music/index.js
-  var featureManifests2 = [historyFeature, favoritesFeature, hubFeature, releasesFeature, weeklyFeature, smartQueueFeature, queueInfoFeature, lyricsFeature, audioFeature];
+  var featureManifests2 = [historyFeature, favoritesFeature, hubFeature, releasesFeature, weeklyFeature, smartQueueFeature, queueInfoFeature, lyricsFeature, audioFeature, sleepTimerFeature];
 
   // src/core/diagnose.js
   var checks = /* @__PURE__ */ new Map();
@@ -11436,19 +11578,19 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           if (e.touches.length !== 1 || pageFromUrl(location.href) !== "watch" || full() || !inPlayer(e.target)) return;
           const box = (e.target.closest("#movie_player, ytm-custom-control") || e.target).getBoundingClientRect();
           const y = e.touches[0].clientY;
-          if (box.height && y > box.bottom - 56) return;
+          if (box.height && y > box.bottom - 40) return;
           t0 = { x: e.touches[0].clientX, y, at: Date.now(), done: false };
         }, { passive: true, capture: true }),
         listen(document, "touchmove", (e) => {
           if (!t0 || t0.done || e.touches.length !== 1) return;
           const dx = e.touches[0].clientX - t0.x;
           const dy = e.touches[0].clientY - t0.y;
-          if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)) t0 = null;
-          else if (dy > 90 && dy > Math.abs(dx) * 1.6 && Date.now() - t0.at < 900) {
+          if (Math.abs(dx) > 90 && Math.abs(dx) > Math.abs(dy) * 1.5) t0 = null;
+          else if (dy > 55 && dy > Math.abs(dx) * 1.1 && Date.now() - t0.at < 1500) {
             t0.done = true;
             if (window.__ytxNative) window.__ytxNative({ a: "minimize" });
             else history.back();
-          } else if (dy < -90 && -dy > Math.abs(dx) * 1.6 && Date.now() - t0.at < 900) {
+          } else if (dy < -70 && -dy > Math.abs(dx) * 1.2 && Date.now() - t0.at < 1500) {
             t0.done = true;
             document.querySelector("#movie_player")?.toggleFullscreen?.();
           }
@@ -11526,6 +11668,26 @@ html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #m
     return () => clearInterval(timer2);
   }
 
+  // src/features/youtube/downloads.js
+  var BUCKET = "downloads";
+  var normalize2 = (b) => {
+    const items = Array.isArray(b?.items) ? b.items : [];
+    return { items: items.filter((i) => i && /^[\w-]{11}$/.test(i.id)).map((i) => ({ id: i.id, title: String(i.title || i.id), at: Number(i.at) || 0 })).slice(0, 500) };
+  };
+  var downloadList = () => store.bucket(BUCKET, normalize2).items;
+  function addDownload(id, title) {
+    store.updateBucket(BUCKET, (d) => {
+      d.items = d.items.filter((i) => i.id !== id);
+      d.items.unshift({ id, title: String(title || id).slice(0, 200), at: Date.now() });
+    }, normalize2);
+  }
+  function removeDownload(id) {
+    store.updateBucket(BUCKET, (d) => d.items = d.items.filter((i) => i.id !== id), normalize2);
+  }
+  function openInYoutubeApp(id) {
+    window.__ytxNative?.({ a: `openyt:${id}` });
+  }
+
   // src/sites/mobile.js
   var BASE_TOKENS = `html {
   --yt-sys-color-baseline--base-background: #fff; --yt-sys-color-baseline--raised-background: #fff; --yt-sys-color-baseline--menu-background: #fff;
@@ -11558,6 +11720,9 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
     ["channel", "Kanal"]
   ];
   var OPEN_YT_CSS = `
+.ytx-watch-row:not([data-open]) > :not(.ytx-row-toggle) { display: none !important; }
+.ytx-watch-row .ytx-row-toggle { all: unset; box-sizing: border-box; margin: 4px 12px; padding: 4px 12px; border-radius: 14px; font: 500 13px/18px Roboto, sans-serif; cursor: pointer; opacity: .8; background: var(--yt-spec-badge-chip-background, rgba(255,255,255,.1)); color: var(--yt-spec-text-primary, #f1f1f1); }
+.ytx-watch-row[data-open] { display: flex; flex-wrap: wrap; align-items: center; }
 .ytx-open-yt { all: unset; box-sizing: border-box; margin: 6px 12px; padding: 8px 14px; border-radius: 18px; font: 500 14px/20px Roboto, sans-serif; cursor: pointer; background: var(--yt-spec-badge-chip-background, rgba(255,255,255,.1)); color: var(--yt-spec-text-primary, #f1f1f1); }`;
   function ensureWatchRow() {
     if (pageFromUrl(location.href) !== "watch") return;
@@ -11565,13 +11730,22 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
     if (!bar || bar.nextElementSibling?.classList.contains("ytx-watch-row")) return;
     const row2 = h("div", { class: "ytx-watch-row", "data-ytx-own": "" }, h("span", { class: "ytx-row-end" }));
     if (window.__ytxNative) {
-      const open = h("button", { class: "ytx-open-yt", type: "button", text: "In der YouTube-App öffnen" });
+      const open = h("button", { class: "ytx-open-yt", type: "button", text: "Herunterladen (YouTube-App)" });
       open.addEventListener("click", () => {
+        const id = videoIdFromUrl(location.href);
+        if (!id) return;
         document.getElementById("movie_player")?.pauseVideo?.();
-        window.__ytxNative({ a: "openyt" });
+        addDownload(id, document.title.replace(/ - YouTube$/, ""));
+        openInYoutubeApp(id);
       });
       row2.append(open);
     }
+    const toggle2 = h("button", { class: "ytx-row-toggle", type: "button", text: "ytx ▾" });
+    toggle2.addEventListener("click", () => {
+      const on = row2.toggleAttribute("data-open");
+      toggle2.textContent = on ? "ytx ▴" : "ytx ▾";
+    });
+    row2.prepend(toggle2);
     bar.after(row2);
   }
   function pageIsDark() {
@@ -11602,7 +11776,7 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
     filters: { pages: FILTER_PAGES2, CARD_SELECTORS: CARD_SELECTORS2, CARD_PARENT: CARD_PARENT2, readCard: readCard2, activePageRoots: activePageRoots2 },
     channels: { channelRefOf, channelPageInfo: channelPageInfo2, subscribedChannels: subscribedChannels2 },
     playback: { activePlayback: activePlayback2, pauseActive: pauseActive2 },
-    panelTabs: ["display", "look", "behavior", "filters", "features", "subGroups", "watchStats", "profiles", "diagnose"],
+    panelTabs: ["display", "look", "behavior", "filters", "features", "subGroups", "watchStats", "downloads", "profiles", "diagnose"],
     boot() {
       setCss("mobile.baseTokens", BASE_TOKENS + OPEN_YT_CSS);
       initTimedtextCapture();
@@ -11978,10 +12152,10 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
         res.push({ id: "layout.order", label: "Reihenfolge Aktionsleiste", status: ok ? "ok" : "warn", detail: ok ? "Buttons getaggt, Reihenfolge aktiv" : "Keine getaggten Buttons gefunden" });
       }
       if (nav.page === "watch" && id && P().presetById[id]?.resize) {
-        const video = qs("#movie_player video");
+        const video2 = qs("#movie_player video");
         const primary = qs("ytd-watch-flexy #primary");
-        if (video && primary) {
-          const vw = video.getBoundingClientRect().width;
+        if (video2 && primary) {
+          const vw = video2.getBoundingClientRect().width;
           const pw = primary.getBoundingClientRect().width;
           res.push({ id: "layout.player", label: "Playergröße passt zum Layout", status: vw > 0 && vw <= pw + 40 ? "ok" : "warn", detail: `Video ${Math.round(vw)} px · Spalte ${Math.round(pw)} px` });
         }
@@ -13728,6 +13902,32 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     ));
     return root;
   }
+  function downloadsTab(app) {
+    const root = h("div");
+    const list = downloadList();
+    if (!list.length) {
+      root.append(h("p", { class: "hint", text: "Noch leer. Auf einer Videoseite unter „ytx“ auf „Herunterladen (YouTube-App)“ tippen, dann steht das Video hier und öffnet sich in der YouTube-App, wo du es herunterladen und offline schauen kannst." }));
+      return root;
+    }
+    for (const it of list) {
+      const open = h("button", { type: "button", class: "btn", text: "Öffnen" });
+      open.addEventListener("click", () => openInYoutubeApp(it.id));
+      const del = h("button", { type: "button", class: "btn tiny danger", text: "✕", title: "Aus der Liste entfernen" });
+      del.addEventListener("click", () => {
+        removeDownload(it.id);
+        app.rerender();
+      });
+      root.append(h(
+        "div",
+        { class: "row" },
+        h("img", { src: `https://i.ytimg.com/vi/${it.id}/mqdefault.jpg`, alt: "", loading: "lazy", style: { width: "96px", height: "54px", objectFit: "cover", borderRadius: "6px", flex: "none" } }),
+        h("div", { class: "label", text: it.title }),
+        open,
+        del
+      ));
+    }
+    return root;
+  }
 
   // src/panel/geometry.js
   var MIN_W = 300;
@@ -13806,6 +14006,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     features: ["Features", featuresTab],
     subGroups: ["Abo-Gruppen", subGroupsTab],
     watchStats: ["Schauzeit", watchStatsTab],
+    downloads: ["Downloads", downloadsTab],
     music: ["Musik", musicTab],
     musicData: ["Verlauf & Daten", musicDataTab],
     musicStats: ["Statistik", musicStatsTab],

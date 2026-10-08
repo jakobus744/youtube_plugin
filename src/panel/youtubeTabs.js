@@ -7,6 +7,7 @@ import { groupsOf, toggleChannel } from '../features/youtube/subGroups/logic.js'
 import { ytDb } from '../features/youtube/watchtime/db.js'
 import { watchStats, startOfDay, DAY } from '../features/youtube/watchtime/logic.js'
 import { watchTime } from '../features/youtube/watchtime/index.js'
+import { downloadList, removeDownload, openInYoutubeApp } from '../features/youtube/downloads.js'
 
 // panel tabs nur fuer youtube
 
@@ -195,3 +196,26 @@ export function watchStatsTab(app) {
   return root
 }
 
+
+// videos die in der offiziellen youtube app heruntergeladen werden, antippen oeffnet sie dort
+export function downloadsTab(app) {
+  const root = h('div')
+  const list = downloadList()
+  if (!list.length) {
+    root.append(h('p', { class: 'hint', text: 'Noch leer. Auf einer Videoseite unter „ytx“ auf „Herunterladen (YouTube-App)“ tippen, dann steht das Video hier und öffnet sich in der YouTube-App, wo du es herunterladen und offline schauen kannst.' }))
+    return root
+  }
+  for (const it of list) {
+    const open = h('button', { type: 'button', class: 'btn', text: 'Öffnen' })
+    open.addEventListener('click', () => openInYoutubeApp(it.id))
+    const del = h('button', { type: 'button', class: 'btn tiny danger', text: '✕', title: 'Aus der Liste entfernen' })
+    del.addEventListener('click', () => {
+      removeDownload(it.id)
+      app.rerender()
+    })
+    root.append(h('div', { class: 'row' },
+      h('img', { src: `https://i.ytimg.com/vi/${it.id}/mqdefault.jpg`, alt: '', loading: 'lazy', style: { width: '96px', height: '54px', objectFit: 'cover', borderRadius: '6px', flex: 'none' } }),
+      h('div', { class: 'label', text: it.title }), open, del))
+  }
+  return root
+}

@@ -29,6 +29,7 @@ const tidyFeatures = {
   'm.smartQueue': { enabled: true },
   'm.queueInfo': { enabled: true },
   'm.lyrics': { enabled: true },
+  'm.sleepTimer': { enabled: true },
   'm.audio': { enabled: false }
 }
 

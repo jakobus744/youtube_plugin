@@ -11,6 +11,7 @@ import { initTimedtextCapture } from '../features/youtube/transcript/source.js'
 import { bootHashTokens } from './hashBoot.js'
 import { setCss } from '../core/css.js'
 import { onSweep } from '../core/observer.js'
+import { initMiniMode } from './miniMode.js'
 import { qs, h } from '../core/dom.js'
 
 // die mobilseite kennt die youtube farbtokens nicht, ytx elemente brauchen sie fuer hell und dunkel
@@ -52,11 +53,24 @@ const FILTER_PAGES = [
 ]
 
 // zeile direkt unter der aktionsleiste, features docken am end marker an
+const OPEN_YT_CSS = `
+.ytx-open-yt { all: unset; box-sizing: border-box; margin: 6px 12px; padding: 8px 14px; border-radius: 18px; font: 500 14px/20px Roboto, sans-serif; cursor: pointer; background: var(--yt-spec-badge-chip-background, rgba(255,255,255,.1)); color: var(--yt-spec-text-primary, #f1f1f1); }`
+
 function ensureWatchRow() {
   if (pageFromUrl(location.href) !== 'watch') return
   const bar = qs('ytm-slim-video-metadata-section-renderer ytm-slim-video-action-bar-renderer')
   if (!bar || bar.nextElementSibling?.classList.contains('ytx-watch-row')) return
-  bar.after(h('div', { class: 'ytx-watch-row', 'data-ytx-own': '' }, h('span', { class: 'ytx-row-end' })))
+  const row = h('div', { class: 'ytx-watch-row', 'data-ytx-own': '' }, h('span', { class: 'ytx-row-end' }))
+  // zum herunterladen oder offline schauen geht es in die offizielle youtube app, das gehoert dort zu premium
+  if (window.__ytxNative) {
+    const open = h('button', { class: 'ytx-open-yt', type: 'button', text: 'In der YouTube-App öffnen' })
+    open.addEventListener('click', () => {
+      document.getElementById('movie_player')?.pauseVideo?.()
+      window.__ytxNative({ a: 'openyt' })
+    })
+    row.append(open)
+  }
+  bar.after(row)
 }
 
 function pageIsDark() {
@@ -90,8 +104,9 @@ export const mobileSite = {
   playback: { activePlayback, pauseActive },
   panelTabs: ['display', 'look', 'behavior', 'filters', 'features', 'subGroups', 'watchStats', 'profiles', 'diagnose'],
   boot() {
-    setCss('mobile.baseTokens', BASE_TOKENS)
+    setCss('mobile.baseTokens', BASE_TOKENS + OPEN_YT_CSS)
     initTimedtextCapture()
+    initMiniMode()
     onSweep('mobile.watchRow', ensureWatchRow)
     bootHashTokens(pageIsDark, 'mobil', (dark) => document.documentElement.toggleAttribute('data-ytx-dark', dark))
   }

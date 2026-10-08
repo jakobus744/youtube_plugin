@@ -15,6 +15,10 @@
 // @connect      musicbrainz.org
 // @connect      ws.audioscrobbler.com
 // @connect      localhost
+// @connect      pi.tail5f332e.ts.net
+// @connect      100.116.11.12
+// @connect      192.168.178.56
+// @connect      jakobpi.duckdns.org
 // @grant        unsafeWindow
 // @sandbox      JavaScript
 // @inject-into  page
@@ -4711,7 +4715,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     },
     exportJson(all = false) {
       const p = activeProfile();
-      const out = all ? { ...data, buckets: void 0 } : { schema: SCHEMA, profile: { name: p.name, config: normalizeProfile(p.config, sites) } };
+      const out = all ? { ...data, buckets: void 0, settings: { ...data.settings, cloud: void 0 } } : { schema: SCHEMA, profile: { name: p.name, config: normalizeProfile(p.config, sites) } };
       return JSON.stringify(out, null, 2);
     },
     importJson(text) {
@@ -5020,22 +5024,22 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
   };
 
   // src/core/idb.js
-  var req = (r) => new Promise((ok, fail) => {
+  var req = (r) => new Promise((ok, fail2) => {
     r.onsuccess = () => ok(r.result);
-    r.onerror = () => fail(r.error);
+    r.onerror = () => fail2(r.error);
   });
-  var done = (tx) => new Promise((ok, fail) => {
+  var done = (tx) => new Promise((ok, fail2) => {
     tx.oncomplete = () => ok();
-    tx.onerror = () => fail(tx.error);
-    tx.onabort = () => fail(tx.error || new Error("transaction abgebrochen"));
+    tx.onerror = () => fail2(tx.error);
+    tx.onabort = () => fail2(tx.error || new Error("transaction abgebrochen"));
   });
   function openDatabase(name, migrations) {
     const status = { name, version: migrations.length, open: false, error: null, openedAt: 0, upgradedFrom: null, blocked: false };
     let dbp = null;
     const open = () => {
       if (dbp) return dbp;
-      dbp = new Promise((ok, fail) => {
-        if (typeof indexedDB === "undefined") return fail(new Error("IndexedDB nicht verfügbar"));
+      dbp = new Promise((ok, fail2) => {
+        if (typeof indexedDB === "undefined") return fail2(new Error("IndexedDB nicht verfügbar"));
         const r = indexedDB.open(name, migrations.length);
         r.onupgradeneeded = (e) => {
           const db3 = r.result;
@@ -5069,7 +5073,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         r.onerror = () => {
           status.error = r.error?.message || "unbekannt";
           dbp = null;
-          fail(r.error);
+          fail2(r.error);
         };
       });
       return dbp;
@@ -5102,7 +5106,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       latest: (store2, index, limit = 50) => withStore(
         store2,
         "readonly",
-        (s) => new Promise((ok, fail) => {
+        (s) => new Promise((ok, fail2) => {
           const out = [];
           const c = s.index(index).openCursor(null, "prev");
           c.onsuccess = () => {
@@ -5111,13 +5115,13 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
             out.push(cur.value);
             cur.continue();
           };
-          c.onerror = () => fail(c.error);
+          c.onerror = () => fail2(c.error);
         })
       ),
       deleteWhere: (store2, index, range2) => withStore(
         store2,
         "readwrite",
-        (s) => new Promise((ok, fail) => {
+        (s) => new Promise((ok, fail2) => {
           let n = 0;
           const c = s.index(index).openCursor(range2);
           c.onsuccess = () => {
@@ -5127,7 +5131,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
             n++;
             cur.continue();
           };
-          c.onerror = () => fail(c.error);
+          c.onerror = () => fail2(c.error);
         })
       ),
       async exportAll(stores) {
@@ -11418,8 +11422,8 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
   var SHARED = ["shortsRedirect", "homeRedirect", "autoplayOff", "forceQuality", "speedMemory", "pauseOnBlur", "channelTrailerPause"];
   var swipeDownBack = {
     id: "swipeDownBack",
-    label: "Video nach unten wischen, um zurückzukehren",
-    description: "Wie in der YouTube-App: Das Video auf der Videoseite nach unten ziehen bringt dich zur vorherigen Seite zurück. Nicht im Vollbild und nicht an der Zeitleiste",
+    label: "Video nach unten wischen, um zu verkleinern",
+    description: "Wie in der YouTube-App: Das Video nach unten ziehen bringt dich zur vorherigen Seite zurück. In der ytx-App läuft das Video dabei klein unten rechts weiter, antippen holt es zurück. Nicht im Vollbild und nicht an der Zeitleiste",
     type: "toggle",
     default: true,
     start() {
@@ -11442,7 +11446,11 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)) t0 = null;
           else if (dy > 90 && dy > Math.abs(dx) * 1.6 && Date.now() - t0.at < 900) {
             t0.done = true;
-            history.back();
+            if (window.__ytxNative) window.__ytxNative({ a: "minimize" });
+            else history.back();
+          } else if (dy < -90 && -dy > Math.abs(dx) * 1.6 && Date.now() - t0.at < 900) {
+            t0.done = true;
+            document.querySelector("#movie_player")?.toggleFullscreen?.();
           }
         }, { passive: true, capture: true })
       ];
@@ -11451,6 +11459,72 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
   };
   var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
+
+  // src/sites/miniMode.js
+  var CSS3 = `html[data-ytx-mini], html[data-ytx-mini] body { overflow: hidden !important; background: #000 !important; }
+html[data-ytx-mini] ytm-mobile-topbar-renderer, html[data-ytx-mini] .mobile-topbar-header-background, html[data-ytx-mini] ytm-pivot-bar-renderer,
+html[data-ytx-mini] .watch-below-the-player, html[data-ytx-mini] ytm-consent-bump-v2-renderer, html[data-ytx-mini] ytm-custom-control, html[data-ytx-mini] [data-ytx-mount], html[data-ytx-mini] .ytx-watch-row { display: none !important; }
+html[data-ytx-mini] #player-container-id { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 2147483000 !important; }
+html[data-ytx-mini] #player, html[data-ytx-mini] #movie_player { width: 100% !important; height: 100% !important; padding: 0 !important; margin: 0 !important; }
+html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #movie_player video { width: 100% !important; height: 100% !important; left: 0 !important; top: 0 !important; }
+#ytx-mini-ui { position: fixed; inset: 0; z-index: 2147483600; background: transparent; }
+#ytx-mini-ui button { all: initial; position: absolute; width: 36px; height: 36px; border-radius: 18px; background: rgba(0,0,0,.6); color: #fff; font: 700 16px/36px sans-serif; text-align: center; cursor: pointer; }
+#ytx-mini-ui .ytx-mini-play { left: 6px; bottom: 6px; }
+#ytx-mini-ui .ytx-mini-close { right: 6px; top: 6px; }
+#ytx-mini-ui .ytx-mini-next { right: 6px; bottom: 6px; }`;
+  var native = (a) => window.__ytxNative?.({ a });
+  function initMiniMode() {
+    let ui = null;
+    let timer2 = null;
+    const isMini = () => innerWidth <= 480 && innerHeight <= 300;
+    const player2 = () => document.getElementById("movie_player");
+    function build() {
+      const play = h("button", { class: "ytx-mini-play", type: "button", text: "❚❚", "aria-label": "Abspielen oder pausieren" });
+      const close = h("button", { class: "ytx-mini-close", type: "button", text: "✕", "aria-label": "Schließen" });
+      play.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const p = player2();
+        if (!p) return;
+        if (p.getPlayerState?.() === 1) p.pauseVideo();
+        else p.playVideo();
+      });
+      close.addEventListener("click", (e) => {
+        e.stopPropagation();
+        native("close");
+      });
+      const next = h("button", { class: "ytx-mini-next", type: "button", text: "⏭", "aria-label": "Nächstes Video" });
+      next.addEventListener("click", (e) => {
+        e.stopPropagation();
+        player2()?.nextVideo?.();
+      });
+      const box = h("div", { id: "ytx-mini-ui", "data-ytx-own": "" }, play, next, close);
+      box.addEventListener("click", () => native("expand"));
+      box.__play = play;
+      return box;
+    }
+    function tick2() {
+      const on = isMini() && pageFromUrl(location.href) === "watch";
+      const html = document.documentElement;
+      if (on === html.hasAttribute("data-ytx-mini")) {
+        if (on && ui) ui.__play.textContent = player2()?.getPlayerState?.() === 1 ? "❚❚" : "▶";
+        return;
+      }
+      html.toggleAttribute("data-ytx-mini", on);
+      if (on) {
+        setCss("mobile.mini", CSS3);
+        ui = build();
+        (document.body || html).append(ui);
+      } else {
+        removeCss("mobile.mini");
+        ui?.remove();
+        ui = null;
+      }
+    }
+    timer2 = setInterval(tick2, 400);
+    addEventListener("resize", tick2);
+    tick2();
+    return () => clearInterval(timer2);
+  }
 
   // src/sites/mobile.js
   var BASE_TOKENS = `html {
@@ -11483,11 +11557,22 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
     ["watch", "Empfehlungen auf Videoseite"],
     ["channel", "Kanal"]
   ];
+  var OPEN_YT_CSS = `
+.ytx-open-yt { all: unset; box-sizing: border-box; margin: 6px 12px; padding: 8px 14px; border-radius: 18px; font: 500 14px/20px Roboto, sans-serif; cursor: pointer; background: var(--yt-spec-badge-chip-background, rgba(255,255,255,.1)); color: var(--yt-spec-text-primary, #f1f1f1); }`;
   function ensureWatchRow() {
     if (pageFromUrl(location.href) !== "watch") return;
     const bar = qs("ytm-slim-video-metadata-section-renderer ytm-slim-video-action-bar-renderer");
     if (!bar || bar.nextElementSibling?.classList.contains("ytx-watch-row")) return;
-    bar.after(h("div", { class: "ytx-watch-row", "data-ytx-own": "" }, h("span", { class: "ytx-row-end" })));
+    const row2 = h("div", { class: "ytx-watch-row", "data-ytx-own": "" }, h("span", { class: "ytx-row-end" }));
+    if (window.__ytxNative) {
+      const open = h("button", { class: "ytx-open-yt", type: "button", text: "In der YouTube-App öffnen" });
+      open.addEventListener("click", () => {
+        document.getElementById("movie_player")?.pauseVideo?.();
+        window.__ytxNative({ a: "openyt" });
+      });
+      row2.append(open);
+    }
+    bar.after(row2);
   }
   function pageIsDark() {
     const m = getComputedStyle(document.documentElement).color.match(/\d+/g);
@@ -11519,8 +11604,9 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
     playback: { activePlayback: activePlayback2, pauseActive: pauseActive2 },
     panelTabs: ["display", "look", "behavior", "filters", "features", "subGroups", "watchStats", "profiles", "diagnose"],
     boot() {
-      setCss("mobile.baseTokens", BASE_TOKENS);
+      setCss("mobile.baseTokens", BASE_TOKENS + OPEN_YT_CSS);
       initTimedtextCapture();
+      initMiniMode();
       onSweep("mobile.watchRow", ensureWatchRow);
       bootHashTokens(pageIsDark, "mobil", (dark) => document.documentElement.toggleAttribute("data-ytx-dark", dark));
     }
@@ -12046,7 +12132,7 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
   var rules = null;
   var version = 0;
   var filterStats = { page: "", checked: 0, hits: 0, reasons: {}, unreadable: 0 };
-  var CSS3 = `
+  var CSS4 = `
 [${ATTR4}="hide"] { display: none !important; }
 [${ATTR4}="dim"]:not([data-ytx-f-open]) { opacity: var(--ytx-dim-opacity, .3) !important; transition: opacity .15s ease !important; }
 [${ATTR4}="dim"]:not([data-ytx-f-open]):hover { opacity: 1 !important; }
@@ -12133,7 +12219,7 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
     sweep2();
   }
   function initFilters() {
-    setCss("filters", CSS3);
+    setCss("filters", CSS4);
     onSweep("filters", sweep2);
     onDispose(() => {
       for (const el of qsa(`[${ATTR4}]`)) clearCard(el);
@@ -12377,6 +12463,54 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
 .kbd.rec { outline: 2px solid var(--accent); }
 .log { font-family: ui-monospace, Consolas, monospace; font-size: 11px; white-space: pre-wrap; word-break: break-word; color: var(--fg2); max-height: 200px; overflow: auto; }
 `;
+
+  // src/core/cloudSync.js
+  var CLOUD_DEFAULT_URL = "http://pi.tail5f332e.ts.net:8181";
+  function cloudConfig() {
+    const c = store.settings.cloud || {};
+    return { url: c.url || CLOUD_DEFAULT_URL, user: c.user || "", pass: c.pass || "" };
+  }
+  function cloudReady() {
+    const c = cloudConfig();
+    return !!(c.url && c.user && c.pass);
+  }
+  function davBase(c) {
+    return `${c.url.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(c.user)}/ytx`;
+  }
+  function request(method, url, c, body) {
+    return new Promise((resolve, reject) => {
+      if (typeof GM_xmlhttpRequest !== "function") return reject(new Error("GM_xmlhttpRequest nicht verfügbar"));
+      const headers = { Authorization: `Basic ${btoa(unescape(encodeURIComponent(`${c.user}:${c.pass}`)))}` };
+      if (body != null) headers["Content-Type"] = "application/json";
+      GM_xmlhttpRequest({
+        url,
+        method,
+        headers,
+        data: body ?? null,
+        timeout: 2e4,
+        onload: (r) => resolve({ status: r.status, text: r.responseText }),
+        onerror: () => reject(new Error("Server nicht erreichbar (VPN/Tailscale an?)")),
+        ontimeout: () => reject(new Error("Zeitüberschreitung"))
+      });
+    });
+  }
+  var fail = (r) => new Error(r.status === 401 ? "Anmeldung abgelehnt, App-Passwort prüfen" : `HTTP ${r.status}`);
+  async function cloudPush() {
+    const c = cloudConfig();
+    const base2 = davBase(c);
+    const mk = await request("MKCOL", base2, c);
+    if (![201, 405].includes(mk.status)) throw fail(mk);
+    const put = await request("PUT", `${base2}/profiles.json`, c, store.exportJson(true));
+    if (put.status < 200 || put.status >= 300) throw fail(put);
+    return "Profile hochgeladen";
+  }
+  async function cloudPull() {
+    const c = cloudConfig();
+    const r = await request("GET", `${davBase(c)}/profiles.json`, c);
+    if (r.status === 404) throw new Error("Noch nichts hochgeladen");
+    if (r.status < 200 || r.status >= 300) throw fail(r);
+    return store.importJson(r.text);
+  }
 
   // src/panel/controls.js
   function row(label, control, { note, badges = [], stack = false } = {}) {
@@ -12833,6 +12967,29 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       root.append(row(a.label, b, { note: a.id === "panel.toggle" ? "Esc/Backspace entfernt ein Kürzel" : void 0 }));
     }
     root.append(row("ytx-Button in der Kopfzeile", toggle(st.settings.panelButton !== false, (v) => st.updateSettings((s) => s.panelButton = v))));
+    root.append(h("h3", { text: "Nextcloud-Abgleich" }));
+    const cc = cloudConfig();
+    const field = (key, ph, type = "text") => {
+      const i = h("input", { type, placeholder: ph, value: cc[key] || "", autocomplete: "off", spellcheck: "false" });
+      i.addEventListener("change", () => st.updateSettings((s) => (s.cloud ||= {})[key] = i.value.trim()));
+      return i;
+    };
+    const sync = (fn) => async () => {
+      if (!cloudReady()) return app.flash("Zuerst Adresse, Benutzer und App-Passwort eintragen");
+      try {
+        app.flash(await fn());
+        app.rerender();
+      } catch (e) {
+        app.flash(e.message);
+      }
+    };
+    root.append(
+      row("Server", field("url", "http://pi.tail5f332e.ts.net:8181"), { note: "Adresse deiner Nextcloud, auf dem Handy muss Tailscale an sein", stack: true }),
+      row("Benutzer", field("user", "Nextcloud-Benutzer"), { stack: true }),
+      row("App-Passwort", field("pass", "In Nextcloud unter Sicherheit erzeugen", "password"), { note: "Bleibt auf diesem Gerät und steht nie im Export", stack: true }),
+      h("div", { class: "btns" }, btn("Hochladen", sync(cloudPush), "primary"), btn("Herunterladen", sync(cloudPull))),
+      h("small", { class: "muted", text: "Legt die Datei ytx/profiles.json in deiner Nextcloud ab. Herunterladen überschreibt Profile mit gleichem Namen auf diesem Gerät." })
+    );
     root.append(h("h3", { text: "Export / Import" }));
     const out = h("textarea", { readonly: true, style: { minHeight: "90px" } });
     let all = false;

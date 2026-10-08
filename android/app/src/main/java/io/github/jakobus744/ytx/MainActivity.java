@@ -54,6 +54,20 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     private FrameLayout root;
     private GeckoView view;
     private GeckoSession session;
+    // laufendes video im kleinen fenster, daneben laedt die hauptansicht weiter
+    private GeckoSession mini;
+    private GeckoView miniView;
+    private FrameLayout miniBox;
+    private String lastBrowse;
+    private boolean pip;
+    // vorbereitete leere sitzung, damit das verkleinern nicht ruckelt
+    private GeckoSession spare;
+    // sitzungen in denen gerade medien laufen, sie bleiben auch im hintergrund aktiv
+    private final java.util.Set<GeckoSession> playing = new java.util.HashSet<>();
+    private final java.util.Map<GeckoSession, org.mozilla.geckoview.MediaSession> medias = new java.util.HashMap<>();
+    // sitzung die zuletzt abgespielt hat, ihr gehoeren die tasten der benachrichtigung
+    private GeckoSession lastPlayed;
+    private boolean paused;
     private boolean canGoBack;
     private boolean fullscreen;
     private String currentUrl;
@@ -87,18 +101,126 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         setContentView(root);
         setupEdgeToEdge();
         setupBack();
+        if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED && !prefs().getBoolean("askedNotif", false)) {
+            prefs().edit().putBoolean("askedNotif", true).apply();
+            requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 7);
+        }
 
-        session = new GeckoSession(new GeckoSessionSettings.Builder()
-                .userAgentMode(GeckoSessionSettings.USER_AGENT_MODE_MOBILE)
-                .viewportMode(GeckoSessionSettings.VIEWPORT_MODE_MOBILE)
-                .build());
-        installDelegates();
-        session.open(runtime);
+        session = newSession();
         view.setSession(session);
 
         String url = urlFrom(getIntent());
         if (url == null) url = lastUrl();
         session.loadUri(url != null ? url : homeUrl());
+        // erst wenn die seite steht, eine leere sitzung fuers verkleinern vorbereiten
+        view.postDelayed(() -> {
+            if (spare == null && !isFinishing()) {
+                spare = newSession();
+                spare.loadUri("about:blank");
+            }
+        }, 6000);
+    }
+
+    private GeckoSession newSession() {
+        GeckoSession s = new GeckoSession(new GeckoSessionSettings.Builder()
+                .userAgentMode(GeckoSessionSettings.USER_AGENT_MODE_MOBILE)
+                .viewportMode(GeckoSessionSettings.VIEWPORT_MODE_MOBILE)
+                .build());
+        installDelegates(s);
+        s.setMediaSessionDelegate(new org.mozilla.geckoview.MediaSession.Delegate() {
+            @Override
+            public void onActivated(GeckoSession gs, org.mozilla.geckoview.MediaSession ms) {
+                medias.put(gs, ms);
+            }
+
+            @Override
+            public void onMetadata(GeckoSession gs, org.mozilla.geckoview.MediaSession ms, org.mozilla.geckoview.MediaSession.Metadata m) {
+                PlaybackService.title = m.title != null ? m.title : "";
+                PlaybackService.artist = m.artist != null ? m.artist : "";
+                PlaybackService.art = null;
+                if (m.artwork != null) {
+                    m.artwork.getBitmap(256).accept(bmp -> {
+                        PlaybackService.art = bmp;
+                        updateService();
+                    }, e -> {
+                    });
+                }
+                updateService();
+            }
+
+            @Override
+            public void onPlay(GeckoSession gs, org.mozilla.geckoview.MediaSession ms) {
+                playing.add(gs);
+                lastPlayed = gs;
+                paused = false;
+                updateService();
+            }
+
+            @Override
+            public void onPause(GeckoSession gs, org.mozilla.geckoview.MediaSession ms) {
+                // pause bleibt in der benachrichtigung stehen, damit man wieder starten kann
+                paused = true;
+                updateService();
+            }
+
+            @Override
+            public void onStop(GeckoSession gs, org.mozilla.geckoview.MediaSession ms) {
+                playing.remove(gs);
+                updateService();
+            }
+
+            @Override
+            public void onDeactivated(GeckoSession gs, org.mozilla.geckoview.MediaSession ms) {
+                playing.remove(gs);
+                medias.remove(gs);
+                updateService();
+            }
+        });
+        s.open(YtxRuntime.get(this));
+        return s;
+    }
+
+    // dienst haelt die app am leben solange medien laufen, mit benachrichtigung
+    private void updateService() {
+        runOnUiThread(() -> {
+            Intent i = new Intent(this, PlaybackService.class);
+            if (playing.isEmpty()) {
+                stopService(i);
+                return;
+            }
+            PlaybackService.playing = !paused;
+            PlaybackService.control = this::mediaKey;
+            startForegroundService(i);
+        });
+    }
+
+    // tasten der benachrichtigung, des sperrbildschirms und der kopfhoerer
+    private void mediaKey(String what) {
+        runOnUiThread(() -> {
+            GeckoSession gs = lastPlayed != null && medias.containsKey(lastPlayed) ? lastPlayed : (playing.isEmpty() ? null : playing.iterator().next());
+            org.mozilla.geckoview.MediaSession ms = gs != null ? medias.get(gs) : null;
+            if (ms == null) return;
+            if ("next".equals(what)) ms.nextTrack();
+            else if ("prev".equals(what)) ms.previousTrack();
+            else if (paused) {
+                ms.play();
+            } else {
+                ms.pause();
+            }
+        });
+    }
+
+    // aufgewaermte sitzung nehmen und eine neue vorbereiten
+    private GeckoSession takeSession() {
+        GeckoSession s = spare != null ? spare : newSession();
+        spare = null;
+        view.postDelayed(() -> {
+            if (spare == null && !isFinishing()) {
+                spare = newSession();
+                spare.loadUri("about:blank");
+            }
+        }, 1500);
+        return s;
     }
 
     @Override
@@ -113,6 +235,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     protected void onStart() {
         super.onStart();
         if (session != null) session.setActive(true);
+        if (mini != null) mini.setActive(true);
     }
 
     @Override
@@ -158,6 +281,39 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         }
     }
 
+    // app verlassen waehrend ein video laeuft: kleines fenster ueber anderen apps
+    @Override
+    protected void onUserLeaveHint() {
+        super.onUserLeaveHint();
+        if (playing.isEmpty() || isInPictureInPictureMode()) return;
+        boolean watching = mini != null || (currentUrl != null && currentUrl.contains("/watch"));
+        if (!watching) return;
+        try {
+            enterPictureInPictureMode(new android.app.PictureInPictureParams.Builder().setAspectRatio(new android.util.Rational(16, 9)).build());
+        } catch (RuntimeException ignored) {
+        }
+    }
+
+    @Override
+    public void onPictureInPictureModeChanged(boolean in, android.content.res.Configuration cfg) {
+        super.onPictureInPictureModeChanged(in, cfg);
+        pip = in;
+        if (miniBox == null || mini == null) return;
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) miniBox.getLayoutParams();
+        if (in) {
+            view.setVisibility(View.INVISIBLE);
+            lp.width = FrameLayout.LayoutParams.MATCH_PARENT;
+            lp.height = FrameLayout.LayoutParams.MATCH_PARENT;
+            lp.setMargins(0, 0, 0, 0);
+        } else {
+            view.setVisibility(View.VISIBLE);
+            lp.width = dp(240);
+            lp.height = dp(135);
+            lp.setMargins(0, 0, dp(10), dp(86));
+        }
+        miniBox.setLayoutParams(lp);
+    }
+
     @Override
     protected void onPause() {
         if (session != null) session.setFocused(false);
@@ -166,13 +322,19 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
 
     @Override
     protected void onStop() {
-        if (session != null) session.setActive(false);
+        // wo medien laufen bleibt die sitzung aktiv, damit der ton weiterlaeuft
+        if (session != null && !playing.contains(session)) session.setActive(false);
+        if (mini != null && !playing.contains(mini)) mini.setActive(false);
         super.onStop();
     }
 
     @Override
     protected void onDestroy() {
+        if (mini != null) mini.close();
+        if (spare != null) spare.close();
         if (session != null) session.close();
+        playing.clear();
+        stopService(new Intent(this, PlaybackService.class));
         super.onDestroy();
     }
 
@@ -238,16 +400,20 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
 
     // ---------- delegates ----------
 
-    private void installDelegates() {
+    private void installDelegates(GeckoSession session) {
         session.setNavigationDelegate(new GeckoSession.NavigationDelegate() {
             @Override
             public void onCanGoBack(GeckoSession s, boolean value) {
-                canGoBack = value;
+                if (s == MainActivity.this.session) canGoBack = value;
             }
 
             @Override
             public void onLocationChange(GeckoSession s, String url, List<ContentPermission> perms, Boolean hasUserGesture) {
+                if (s != MainActivity.this.session) return;
                 currentUrl = url;
+                // letzte seite die kein video ist, dorthin geht es beim verkleinern zurueck
+                if (url != null && url.startsWith("https://") && !url.contains("/watch")) lastBrowse = url;
+                if (url != null && url.contains("/watch") && mini != null) closeMini();
                 if (url != null && url.startsWith("https://")) prefs().edit().putString("lastUrl", url).putLong("lastAt", System.currentTimeMillis()).apply();
             }
 
@@ -301,18 +467,23 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         session.setContentDelegate(new GeckoSession.ContentDelegate() {
             @Override
             public void onFullScreen(GeckoSession s, boolean full) {
-                setFullscreen(full);
+                if (s == MainActivity.this.session) setFullscreen(full);
             }
 
             @Override
             public void onCrash(GeckoSession s) {
+                if (s == mini) {
+                    closeMini();
+                    return;
+                }
                 Toast.makeText(MainActivity.this, R.string.crashed, Toast.LENGTH_SHORT).show();
                 restart();
             }
 
             @Override
             public void onKill(GeckoSession s) {
-                restart();
+                if (s == mini) closeMini();
+                else restart();
             }
         });
 
@@ -337,15 +508,91 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
 
     private void restart() {
         String url = currentUrl != null ? currentUrl : homeUrl();
+        view.releaseSession();
         session.close();
-        session = new GeckoSession(new GeckoSessionSettings.Builder()
-                .userAgentMode(GeckoSessionSettings.USER_AGENT_MODE_MOBILE)
-                .viewportMode(GeckoSessionSettings.VIEWPORT_MODE_MOBILE)
-                .build());
-        installDelegates();
-        session.open(YtxRuntime.get(this));
+        session = newSession();
         view.setSession(session);
         session.loadUri(url);
+    }
+
+    // ---------- mini player ----------
+
+    @Override
+    public void onApp(String action) {
+        runOnUiThread(() -> {
+            if ("minimize".equals(action)) minimize();
+            else if ("expand".equals(action)) expand();
+            else if ("close".equals(action)) closeMini();
+            else if ("openyt".equals(action)) openInYoutubeApp();
+        });
+    }
+
+    // aktuelles video in der offiziellen app, dort laesst es sich herunterladen und offline schauen
+    private void openInYoutubeApp() {
+        String url = currentUrl;
+        if (url == null || !url.startsWith("https://")) return;
+        Intent i = new Intent(Intent.ACTION_VIEW, Uri.parse(url)).setPackage("com.google.android.youtube");
+        try {
+            startActivity(i);
+        } catch (android.content.ActivityNotFoundException e) {
+            Toast.makeText(this, R.string.no_youtube_app, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private int dp(int v) {
+        return Math.round(v * getResources().getDisplayMetrics().density);
+    }
+
+    // das video bleibt in seiner sitzung und spielt weiter, die hauptansicht geht zur vorherigen seite
+    private void minimize() {
+        if (session == null || fullscreen) return;
+        if (currentUrl == null || !currentUrl.contains("/watch")) return;
+        // nur ein kleines fenster, ein neues video ersetzt das alte
+        closeMini();
+        if (miniBox == null) {
+            miniBox = new FrameLayout(this);
+            miniBox.setBackgroundColor(0xFF000000);
+            miniBox.setElevation(dp(8));
+            miniView = new GeckoView(this);
+            miniBox.addView(miniView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+            FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(240), dp(135), android.view.Gravity.BOTTOM | android.view.Gravity.END);
+            lp.setMargins(0, 0, dp(10), dp(86));
+            root.addView(miniBox, lp);
+        }
+        GeckoSession video = session;
+        view.releaseSession();
+        session = takeSession();
+        view.setSession(session);
+        session.loadUri(lastBrowse != null ? lastBrowse : homeUrl());
+        canGoBack = false;
+        mini = video;
+        miniView.setSession(mini);
+        miniBox.setVisibility(View.VISIBLE);
+    }
+
+    // tippen auf das kleine fenster holt das video zurueck, die hauptansicht wird dabei geschlossen
+    private void expand() {
+        if (mini == null) return;
+        GeckoSession video = mini;
+        mini = null;
+        miniView.releaseSession();
+        miniBox.setVisibility(View.GONE);
+        GeckoSession old = session;
+        view.releaseSession();
+        view.setSession(video);
+        session = video;
+        old.close();
+        canGoBack = true;
+        currentUrl = null;
+    }
+
+    private void closeMini() {
+        if (mini == null) return;
+        GeckoSession video = mini;
+        mini = null;
+        miniView.releaseSession();
+        miniBox.setVisibility(View.GONE);
+        video.close();
     }
 
     // ---------- dialoge der seite: alert, confirm, prompt, auswahllisten, teilen ----------

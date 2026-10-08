@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- eigene updates aus github releases installieren, android fragt vorher nach -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <!-- ton im hintergrund: dienst mit benachrichtigung solange etwas spielt -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="false"
@@ -20,6 +24,7 @@
             android:name=".MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:supportsPictureInPicture="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -54,6 +59,7 @@
             android:roundIcon="@mipmap/ic_music"
             android:taskAffinity="io.github.jakobus744.ytx.music"
             android:launchMode="singleTask"
+            android:supportsPictureInPicture="true"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
@@ -69,6 +75,7 @@
             </intent-filter>
         </activity>
         <!-- antwort des paket installers bei app updates, von aussen nicht erreichbar -->
+        <service android:name=".PlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <receiver android:name=".InstallReceiver" android:exported="false" />
     </application>
 </manifest>

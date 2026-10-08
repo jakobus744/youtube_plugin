@@ -24,6 +24,7 @@ final class YtxRuntime {
     interface Listener {
         void onTheme(String bg, String host);
         void onUpdated(String version);
+        void onApp(String action);
     }
 
     private static GeckoRuntime runtime;
@@ -64,6 +65,11 @@ final class YtxRuntime {
                         ClipboardManager cm = (ClipboardManager) appContext.getSystemService(Context.CLIPBOARD_SERVICE);
                         if (cm != null) cm.setPrimaryClip(ClipData.newPlainText("ytx", text));
                     });
+                    return null;
+                }
+                if ("app".equals(type)) {
+                    Listener target = listener;
+                    if (target != null) target.onApp(m.optString("a"));
                     return null;
                 }
                 if ("log".equals(type)) {

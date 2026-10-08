@@ -464,7 +464,7 @@ export const store = {
 
   exportJson(all = false) {
     const p = activeProfile()
-    const out = all ? { ...data, buckets: undefined } : { schema: SCHEMA, profile: { name: p.name, config: normalizeProfile(p.config, sites) } }
+    const out = all ? { ...data, buckets: undefined, settings: { ...data.settings, cloud: undefined } } : { schema: SCHEMA, profile: { name: p.name, config: normalizeProfile(p.config, sites) } }
     return JSON.stringify(out, null, 2)
   },
 

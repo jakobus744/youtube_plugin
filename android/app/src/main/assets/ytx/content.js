@@ -73,6 +73,8 @@ function pageShim(CH, VALUES, VERSION) {
     send({ t: 'clip', text: String(text) })
   })
   // meldungen fuer das android protokoll (adb logcat -s ytx-page)
+  // kurze befehle an die app, etwa den mini player steuern
+  def('__ytxNative', (o) => send({ t: 'app', a: String(o && o.a).slice(0, 20) }))
   def('__ytxAppLog', (...a) => send({ t: 'log', text: a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ') }))
   def('__ytxBrowserCopy', (text) => {
     const s = String(text)
@@ -118,6 +120,8 @@ function pageShim(CH, VALUES, VERSION) {
     } else if (m.t === 'del') {
       own.set(m.k, undefined)
       browser.storage.local.remove(`gm:${m.k}`)
+    } else if (m.t === 'app') {
+      browser.runtime.sendMessage({ t: 'app', a: m.a }).catch(() => {})
     } else if (m.t === 'clip' || m.t === 'log') {
       browser.runtime.sendMessage({ t: m.t, text: String(m.text).slice(0, m.t === 'log' ? 2000 : 4000000) }).catch(() => {})
     } else if (m.t === 'xhr') {

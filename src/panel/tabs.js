@@ -12,6 +12,7 @@ import { mountStatus, getAnchorStatus } from '../core/mount.js'
 import { sweepStats } from '../core/observer.js'
 import { cssStats } from '../core/css.js'
 import { log } from '../core/log.js'
+import { cloudConfig, cloudReady, cloudPush, cloudPull } from '../core/cloudSync.js'
 import { row, badge, segmented, toggle, select, range, color, number, lines, textarea, chips, btn, settingControl } from './controls.js'
 
 const PAGE_LABEL = site.PAGE_LABELS
@@ -375,6 +376,30 @@ export function profilesTab(app) {
     root.append(row(a.label, b, { note: a.id === 'panel.toggle' ? 'Esc/Backspace entfernt ein Kürzel' : undefined }))
   }
   root.append(row('ytx-Button in der Kopfzeile', toggle(st.settings.panelButton !== false, (v) => st.updateSettings((s) => (s.panelButton = v)))))
+
+  root.append(h('h3', { text: 'Nextcloud-Abgleich' }))
+  const cc = cloudConfig()
+  const field = (key, ph, type = 'text') => {
+    const i = h('input', { type, placeholder: ph, value: cc[key] || '', autocomplete: 'off', spellcheck: 'false' })
+    i.addEventListener('change', () => st.updateSettings((s) => ((s.cloud ||= {})[key] = i.value.trim())))
+    return i
+  }
+  const sync = (fn) => async () => {
+    if (!cloudReady()) return app.flash('Zuerst Adresse, Benutzer und App-Passwort eintragen')
+    try {
+      app.flash(await fn())
+      app.rerender()
+    } catch (e) {
+      app.flash(e.message)
+    }
+  }
+  root.append(
+    row('Server', field('url', 'http://pi.tail5f332e.ts.net:8181'), { note: 'Adresse deiner Nextcloud, auf dem Handy muss Tailscale an sein', stack: true }),
+    row('Benutzer', field('user', 'Nextcloud-Benutzer'), { stack: true }),
+    row('App-Passwort', field('pass', 'In Nextcloud unter Sicherheit erzeugen', 'password'), { note: 'Bleibt auf diesem Gerät und steht nie im Export', stack: true }),
+    h('div', { class: 'btns' }, btn('Hochladen', sync(cloudPush), 'primary'), btn('Herunterladen', sync(cloudPull))),
+    h('small', { class: 'muted', text: 'Legt die Datei ytx/profiles.json in deiner Nextcloud ab. Herunterladen überschreibt Profile mit gleichem Namen auf diesem Gerät.' })
+  )
 
   root.append(h('h3', { text: 'Export / Import' }))
   const out = h('textarea', { readonly: true, style: { minHeight: '90px' } })

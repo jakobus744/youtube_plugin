@@ -18,4 +18,12 @@
     <string name="update_allow">Bitte „Apps aus dieser Quelle zulassen“ einschalten und zurück zu ytx wechseln</string>
     <string name="update_loading">Update wird geladen …</string>
     <string name="update_failed">Update fehlgeschlagen: %1$s</string>
+    <string name="playing_channel">Wiedergabe</string>
+    <string name="playing_title">ytx spielt</string>
+    <string name="no_youtube_app">Die YouTube-App ist nicht installiert</string>
+    <string name="playing_prev">Zurück</string>
+    <string name="playing_next">Weiter</string>
+    <string name="playing_play">Abspielen</string>
+    <string name="playing_pause">Pause</string>
+    <string name="playing_text">Tippen, um zur App zurückzukehren</string>
 </resources>

@@ -10,8 +10,8 @@ const SHARED = ['shortsRedirect', 'homeRedirect', 'autoplayOff', 'forceQuality',
 // video nach unten wischen bringt zur vorherigen seite zurueck, wie das herunterziehen in der youtube app
 const swipeDownBack = {
   id: 'swipeDownBack',
-  label: 'Video nach unten wischen, um zurückzukehren',
-  description: 'Wie in der YouTube-App: Das Video auf der Videoseite nach unten ziehen bringt dich zur vorherigen Seite zurück. Nicht im Vollbild und nicht an der Zeitleiste',
+  label: 'Video nach unten wischen, um zu verkleinern',
+  description: 'Wie in der YouTube-App: Das Video nach unten ziehen bringt dich zur vorherigen Seite zurück. In der ytx-App läuft das Video dabei klein unten rechts weiter, antippen holt es zurück. Nicht im Vollbild und nicht an der Zeitleiste',
   type: 'toggle',
   default: true,
   start() {
@@ -35,7 +35,13 @@ const swipeDownBack = {
         if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)) t0 = null
         else if (dy > 90 && dy > Math.abs(dx) * 1.6 && Date.now() - t0.at < 900) {
           t0.done = true
-          history.back()
+          // in der app wird das video klein weitergespielt, sonst geht es nur zurueck
+          if (window.__ytxNative) window.__ytxNative({ a: 'minimize' })
+          else history.back()
+        } else if (dy < -90 && -dy > Math.abs(dx) * 1.6 && Date.now() - t0.at < 900) {
+          // nach oben wischen: vollbild, wie in der youtube app
+          t0.done = true
+          document.querySelector('#movie_player')?.toggleFullscreen?.()
         }
       }, { passive: true, capture: true })
     ]

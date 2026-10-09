@@ -61,6 +61,7 @@ let current = {}
 export function applyDisplay(cfg) {
   current = cfg.display
   const root = document.documentElement
+  root.toggleAttribute('data-ytx-noshorts', !!(cfg.filters && cfg.filters.shorts))
   for (const t of site.targets) {
     const name = attrName(t.id)
     const mode = cfg.display[t.id]

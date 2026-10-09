@@ -233,6 +233,17 @@ const MIGRATIONS = [
       m.display ||= {}
       if (!('mb.pivot.shorts' in m.display)) m.display['mb.pivot.shorts'] = 'hide'
     }
+  ],
+  [
+    'music-bottom-nav-on',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        const m = p.config?.music
+        if (!m) continue
+        const b = (m.behavior ||= {})
+        if (!('m.bottomNav' in b)) b['m.bottomNav'] = true
+      }
+    }
   ]
 ]
 

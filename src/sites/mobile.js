@@ -60,9 +60,15 @@ const OPEN_YT_CSS = `
 html:not([data-ytx-fs]) #ytx-fs-exit { display: none; }
 /* echtes vollbild in der app: nur das video, ohne leisten und einblendungen */
 html[data-ytx-fs] ytm-mobile-topbar-renderer, html[data-ytx-fs] .mobile-topbar-header-background, html[data-ytx-fs] ytm-pivot-bar-renderer, html[data-ytx-fs] [class*="paid-content-overlay"], html[data-ytx-fs] ytm-paid-content-overlay-renderer, html[data-ytx-fs] ytm-custom-control .ytp-paid-content-overlay, html[data-ytx-fs] #movie_player .ytp-paid-content-overlay, html[data-ytx-fs] .ytp-title-channel-logo, html[data-ytx-fs] .ytm-autonav-bar { display: none !important; }
+/* hinweisbalken wie „Weitere Informationen zu diesen Ergebnissen“ immer weg */
+ytm-info-panel-container-renderer { display: none !important; }
+/* filter shorts an: ganze shorts regale samt ueberschrift weg */
+html[data-ytx-noshorts] ytm-reel-shelf-renderer, html[data-ytx-noshorts] grid-shelf-view-model:has(ytm-shorts-lockup-view-model), html[data-ytx-noshorts] ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model), html[data-ytx-noshorts] ytm-shorts-lockup-view-model, html[data-ytx-noshorts] ytm-video-with-context-renderer:has(a[href^="/shorts/"]), html[data-ytx-noshorts] ytm-compact-video-renderer:has(a[href^="/shorts/"]), html[data-ytx-noshorts] ytm-pivot-bar-item-renderer[data-ytx-mbpivot="shorts"], html[data-ytx-noshorts] yt-tab-shape[data-ytx-mbtab="shorts"] { display: none !important; }
+/* suchvorschlaege wie in der app: kein hellerer streifen hinter den pfeilen */
+.ytSuggestionComponentQueryBuilderButton { background: transparent !important; }
 /* beim suchen braucht das suchfeld den platz */
 ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.watchtime"] { display: none !important; }
-ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 6px !important; }
+ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin: 0 2px 0 8px !important; padding: 0 6px !important; }
 /* die leiste dient nur als anker fuer ytx knoepfe, transkript steht im menue des videos */
 .ytx-watch-row { display: none !important; }
 .ytx-dl-icon { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; cursor: pointer; color: var(--yt-spec-text-primary, #f1f1f1); -webkit-tap-highlight-color: transparent; }

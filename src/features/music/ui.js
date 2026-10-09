@@ -2,6 +2,7 @@ import { h } from '../../core/dom.js'
 import { setCss } from '../../core/css.js'
 import { formatDuration } from '../../core/format.js'
 import { listen, onDispose } from '../../core/lifecycle.js'
+import { dataOf } from '../../core/bridge.js'
 
 // bausteine fuer music, farben ueber music tokens damit themes greifen
 
@@ -40,6 +41,8 @@ html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hid
 /* markierung in der warteschlange: eine farbe fuer alle gruende, nur so breit wie der text, auch wenn youtube die zeile als raster baut */
 .ytx-m-mark { all: initial; display: inline-block; width: max-content; max-width: 100%; justify-self: start; align-self: flex-start; flex: none; margin: 2px 0 0 6px; padding: 0 6px; border-radius: 4px;
   font: 500 10px/15px Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); border: 1px solid currentColor; opacity: .8; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* auf dem handy deckt diese ebene die titelbilder der karten komplett ab */
+.image-wrapper ytmusic-background-overlay-renderer { display: none !important; }
 ytmusic-player-queue-item[data-ytx-skip] { opacity: .55; }
 ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 .ytx-m-bar-btns { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; }
@@ -54,12 +57,48 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
   /* playerleiste nimmt wie in der music app die farbe des titels an */
   ytmusic-app-layout #player-bar-background { background: transparent !important; }
   ytmusic-player-bar { background: color-mix(in srgb, var(--ytx-tint, #212121) 78%, #000) !important; }
+  ytmusic-nav-bar a.app-install-link { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
   .ytx-m-shelf { max-width: none; padding-inline: 16px; }
   .ytx-m-chips { flex-wrap: nowrap; overflow-x: auto; }
 }
 `
+
+// titelbilder: music laedt sie erst beim einblenden und laesst sie bei fehlern leer
+// leere bilder bekommen die adresse aus den daten, fehlgeschlagene werden bis zu dreimal neu geladen
+const imgTries = new WeakMap()
+
+function thumbUrl(img) {
+  let el = img.closest('ytmusic-thumbnail-renderer, yt-img-shadow')
+  for (let i = 0; el && i < 3; i++, el = el.parentElement) {
+    const d = dataOf(el)
+    const list = d?.thumbnail?.thumbnails || d?.thumbnails || d?.musicThumbnailRenderer?.thumbnail?.thumbnails
+    if (list?.length) return list[list.length - 1].url
+  }
+  return ''
+}
+
+function fixImages() {
+  for (const img of document.querySelectorAll('ytmusic-app img')) {
+    if (img.closest('[data-ytx-own]')) continue
+    const tries = imgTries.get(img) || 0
+    if (tries >= 3) continue
+    const src = img.getAttribute('src') || ''
+    if (!src || src.startsWith('data:')) {
+      const r = img.getBoundingClientRect()
+      if (r.width < 8 || r.bottom < -200 || r.top > innerHeight + 400) continue
+      const url = thumbUrl(img)
+      if (!url) continue
+      imgTries.set(img, tries + 1)
+      img.src = url
+    } else if (img.complete && img.naturalWidth === 0) {
+      imgTries.set(img, tries + 1)
+      img.removeAttribute('src')
+      setTimeout(() => (img.src = src), 50)
+    }
+  }
+}
 
 // farbton der seite, ihn nimmt auf dem handy auch die playerleiste an
 function syncTint() {
@@ -73,6 +112,8 @@ function syncTint() {
 export function initMusicUiCss() {
   setCss('music.ui', PAGE_CSS)
   const t = setInterval(syncTint, 1500)
+  const ti = setInterval(fixImages, 2000)
+  onDispose(() => clearInterval(ti))
   onDispose(() => clearInterval(t))
 }
 

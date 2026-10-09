@@ -4516,6 +4516,17 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         m.display ||= {};
         if (!("mb.pivot.shorts" in m.display)) m.display["mb.pivot.shorts"] = "hide";
       }
+    ],
+    [
+      "music-bottom-nav-on",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.music;
+          if (!m) continue;
+          const b = m.behavior ||= {};
+          if (!("m.bottomNav" in b)) b["m.bottomNav"] = true;
+        }
+      }
     ]
   ];
   var data = null;
@@ -7146,7 +7157,93 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   }
   var SWIPE_ZONE = "ytmusic-player-bar, ytmusic-player-page #song-image, ytmusic-player-page ytmusic-player, ytmusic-player-page #player";
   var SWIPE_SKIP = "tp-yt-paper-slider, #progress-bar, button, a, .middle-controls-buttons, .right-controls, .volume-slider";
+  var NAV_ITEMS = [
+    ["home", "Startseite", "M12 3 3 10.5V21h6v-6h6v6h6V10.5z"],
+    ["explore", "Entdecken", "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm3.6 6.4-2 5.2-5.2 2 2-5.2z"],
+    ["search", "Suchen", "M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"],
+    ["library", "Mediathek", "M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"]
+  ];
+  var NAV_CSS = "#ytx-mnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3000; display: flex; height: calc(56px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; background: color-mix(in srgb, var(--ytx-tint, #212121) 55%, #000); }\n#ytx-mnav[hidden] { display: none; }\n#ytx-mnav button { all: unset; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ytmusic-text-secondary, #aaa); font: 500 11px/1 Roboto, Arial, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }\n#ytx-mnav button[aria-current] { color: var(--ytmusic-text-primary, #fff); }\n#ytx-mnav svg { width: 24px; height: 24px; fill: currentColor; }\nhtml[data-ytx-mnav] ytmusic-player-bar, html[data-ytx-mnav] #player-bar-background { position: fixed !important; left: 0 !important; right: 0 !important; bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important; top: auto !important; transform: none !important; }\nhtml[data-ytx-mnav] ytmusic-player#player { transform: translateY(-56px); }\nhtml[data-ytx-mnav] ytmusic-app-layout #content, html[data-ytx-mnav] ytmusic-browse-response, html[data-ytx-mnav] ytmusic-search-page { padding-bottom: 56px; }";
+  function navIcon(path) {
+    const ns = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    const p = document.createElementNS(ns, "path");
+    p.setAttribute("d", path);
+    svg.append(p);
+    return svg;
+  }
+  function tapEl(el) {
+    if (!el) return;
+    el.dispatchEvent(new CustomEvent("tap", { bubbles: true, composed: true, detail: { x: 0, y: 0 } }));
+    el.click();
+  }
+  function openNavTarget(key) {
+    if (key === "search") {
+      const sb = document.querySelector("ytmusic-nav-bar yt-icon-button.search-button");
+      tapEl(sb?.querySelector("button") || sb);
+      const box = document.querySelector("ytmusic-nav-bar ytmusic-search-box");
+      try {
+        if (box) box.opened = true;
+        if (box?.polymerController) box.polymerController.opened = true;
+      } catch {
+      }
+      setTimeout(() => document.querySelector("ytmusic-search-box input#input, ytmusic-search-box input")?.focus(), 250);
+      return;
+    }
+    const entries2 = () => Array.from(document.querySelectorAll(`ytmusic-guide-entry-renderer[data-ytx-mguide="${key}"]`));
+    const pick2 = () => {
+      const list = entries2();
+      const entry = list.find((e) => e.offsetParent !== null) || list[list.length - 1];
+      const item = entry?.querySelector("tp-yt-paper-item") || entry;
+      if (!item) return;
+      item.dispatchEvent(new CustomEvent("tap", { bubbles: true, composed: true, detail: { x: 0, y: 0 } }));
+      item.click();
+    };
+    if (entries2().some((e) => e.offsetParent !== null)) return pick2();
+    const burger = document.querySelector("ytmusic-nav-bar #guide-button");
+    (burger?.querySelector("button") || burger)?.click();
+    setTimeout(pick2, 450);
+  }
   var behaviors2 = [
+    {
+      id: "m.bottomNav",
+      label: "Navigationsleiste unten (App)",
+      description: "Startseite, Entdecken, Suchen und Mediathek unten wie in der YouTube-Music-App",
+      type: "toggle",
+      default: true,
+      start() {
+        if (!window.__ytxNative) return () => {
+        };
+        setCss("m.bottomNav", NAV_CSS);
+        const buttons = NAV_ITEMS.map(([key, label, path]) => {
+          const b = h("button", { type: "button", "data-key": key }, navIcon(path), label);
+          b.addEventListener("click", (e) => {
+            e.preventDefault();
+            openNavTarget(key);
+          });
+          return b;
+        });
+        const nav2 = h("nav", { id: "ytx-mnav", "data-ytx-own": "" }, ...buttons);
+        document.documentElement.append(nav2);
+        const sync = () => {
+          const layout = document.querySelector("ytmusic-app-layout");
+          const full = layout?.getAttribute("player-ui-state") === "FULL_PLAYER" || layout?.hasAttribute("player-page-open");
+          nav2.hidden = !!full;
+          document.documentElement.toggleAttribute("data-ytx-mnav", !full);
+          const page = document.documentElement.getAttribute("data-ytx-page");
+          for (const b of buttons) b.toggleAttribute("aria-current", b.dataset.key === page);
+        };
+        sync();
+        const t = setInterval(sync, 400);
+        return () => {
+          clearInterval(t);
+          nav2.remove();
+          document.documentElement.removeAttribute("data-ytx-mnav");
+          setCss("m.bottomNav", "");
+        };
+      }
+    },
     {
       id: "m.keepPlaying",
       label: "Musik im Hintergrund weiterspielen (App)",
@@ -8426,6 +8523,8 @@ html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hid
 /* markierung in der warteschlange: eine farbe fuer alle gruende, nur so breit wie der text, auch wenn youtube die zeile als raster baut */
 .ytx-m-mark { all: initial; display: inline-block; width: max-content; max-width: 100%; justify-self: start; align-self: flex-start; flex: none; margin: 2px 0 0 6px; padding: 0 6px; border-radius: 4px;
   font: 500 10px/15px Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); border: 1px solid currentColor; opacity: .8; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* auf dem handy deckt diese ebene die titelbilder der karten komplett ab */
+.image-wrapper ytmusic-background-overlay-renderer { display: none !important; }
 ytmusic-player-queue-item[data-ytx-skip] { opacity: .55; }
 ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 .ytx-m-bar-btns { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; }
@@ -8440,12 +8539,43 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
   /* playerleiste nimmt wie in der music app die farbe des titels an */
   ytmusic-app-layout #player-bar-background { background: transparent !important; }
   ytmusic-player-bar { background: color-mix(in srgb, var(--ytx-tint, #212121) 78%, #000) !important; }
+  ytmusic-nav-bar a.app-install-link { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
   .ytx-m-shelf { max-width: none; padding-inline: 16px; }
   .ytx-m-chips { flex-wrap: nowrap; overflow-x: auto; }
 }
 `;
+  var imgTries = /* @__PURE__ */ new WeakMap();
+  function thumbUrl(img) {
+    let el = img.closest("ytmusic-thumbnail-renderer, yt-img-shadow");
+    for (let i = 0; el && i < 3; i++, el = el.parentElement) {
+      const d = dataOf(el);
+      const list = d?.thumbnail?.thumbnails || d?.thumbnails || d?.musicThumbnailRenderer?.thumbnail?.thumbnails;
+      if (list?.length) return list[list.length - 1].url;
+    }
+    return "";
+  }
+  function fixImages() {
+    for (const img of document.querySelectorAll("ytmusic-app img")) {
+      if (img.closest("[data-ytx-own]")) continue;
+      const tries = imgTries.get(img) || 0;
+      if (tries >= 3) continue;
+      const src2 = img.getAttribute("src") || "";
+      if (!src2 || src2.startsWith("data:")) {
+        const r = img.getBoundingClientRect();
+        if (r.width < 8 || r.bottom < -200 || r.top > innerHeight + 400) continue;
+        const url = thumbUrl(img);
+        if (!url) continue;
+        imgTries.set(img, tries + 1);
+        img.src = url;
+      } else if (img.complete && img.naturalWidth === 0) {
+        imgTries.set(img, tries + 1);
+        img.removeAttribute("src");
+        setTimeout(() => img.src = src2, 50);
+      }
+    }
+  }
   function syncTint() {
     const g = document.querySelector(".background-gradient");
     if (!g) return;
@@ -8456,6 +8586,8 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
   function initMusicUiCss() {
     setCss("music.ui", PAGE_CSS);
     const t = setInterval(syncTint, 1500);
+    const ti = setInterval(fixImages, 2e3);
+    onDispose(() => clearInterval(ti));
     onDispose(() => clearInterval(t));
   }
   function iconButton({ icon, label, title, pressed, onClick }) {
@@ -11961,9 +12093,15 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
 html:not([data-ytx-fs]) #ytx-fs-exit { display: none; }
 /* echtes vollbild in der app: nur das video, ohne leisten und einblendungen */
 html[data-ytx-fs] ytm-mobile-topbar-renderer, html[data-ytx-fs] .mobile-topbar-header-background, html[data-ytx-fs] ytm-pivot-bar-renderer, html[data-ytx-fs] [class*="paid-content-overlay"], html[data-ytx-fs] ytm-paid-content-overlay-renderer, html[data-ytx-fs] ytm-custom-control .ytp-paid-content-overlay, html[data-ytx-fs] #movie_player .ytp-paid-content-overlay, html[data-ytx-fs] .ytp-title-channel-logo, html[data-ytx-fs] .ytm-autonav-bar { display: none !important; }
+/* hinweisbalken wie „Weitere Informationen zu diesen Ergebnissen“ immer weg */
+ytm-info-panel-container-renderer { display: none !important; }
+/* filter shorts an: ganze shorts regale samt ueberschrift weg */
+html[data-ytx-noshorts] ytm-reel-shelf-renderer, html[data-ytx-noshorts] grid-shelf-view-model:has(ytm-shorts-lockup-view-model), html[data-ytx-noshorts] ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model), html[data-ytx-noshorts] ytm-shorts-lockup-view-model, html[data-ytx-noshorts] ytm-video-with-context-renderer:has(a[href^="/shorts/"]), html[data-ytx-noshorts] ytm-compact-video-renderer:has(a[href^="/shorts/"]), html[data-ytx-noshorts] ytm-pivot-bar-item-renderer[data-ytx-mbpivot="shorts"], html[data-ytx-noshorts] yt-tab-shape[data-ytx-mbtab="shorts"] { display: none !important; }
+/* suchvorschlaege wie in der app: kein hellerer streifen hinter den pfeilen */
+.ytSuggestionComponentQueryBuilderButton { background: transparent !important; }
 /* beim suchen braucht das suchfeld den platz */
 ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.watchtime"] { display: none !important; }
-ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 6px !important; }
+ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin: 0 2px 0 8px !important; padding: 0 6px !important; }
 /* die leiste dient nur als anker fuer ytx knoepfe, transkript steht im menue des videos */
 .ytx-watch-row { display: none !important; }
 .ytx-dl-icon { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; cursor: pointer; color: var(--yt-spec-text-primary, #f1f1f1); -webkit-tap-highlight-color: transparent; }
@@ -12240,6 +12378,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   function applyDisplay(cfg) {
     current2 = cfg.display;
     const root = document.documentElement;
+    root.toggleAttribute("data-ytx-noshorts", !!(cfg.filters && cfg.filters.shorts));
     for (const t of site.targets) {
       const name = attrName(t.id);
       const mode = cfg.display[t.id];

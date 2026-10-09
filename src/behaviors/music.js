@@ -1,4 +1,5 @@
-import { qsa } from '../core/dom.js'
+import { qsa, h } from '../core/dom.js'
+import { setCss } from '../core/css.js'
 import { listen } from '../core/lifecycle.js'
 import { audioFocus } from './appAudio.js'
 
@@ -16,7 +17,96 @@ function clickConfirm(dialog) {
 const SWIPE_ZONE = 'ytmusic-player-bar, ytmusic-player-page #song-image, ytmusic-player-page ytmusic-player, ytmusic-player-page #player'
 const SWIPE_SKIP = 'tp-yt-paper-slider, #progress-bar, button, a, .middle-controls-buttons, .right-controls, .volume-slider'
 
+// untere navigationsleiste wie in der music app, nutzt die eintraege der seitenleiste
+const NAV_ITEMS = [
+  ['home', 'Startseite', 'M12 3 3 10.5V21h6v-6h6v6h6V10.5z'],
+  ['explore', 'Entdecken', 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm3.6 6.4-2 5.2-5.2 2 2-5.2z'],
+  ['search', 'Suchen', 'M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z'],
+  ['library', 'Mediathek', 'M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z']
+]
+const NAV_CSS = "#ytx-mnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3000; display: flex; height: calc(56px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; background: color-mix(in srgb, var(--ytx-tint, #212121) 55%, #000); }\n#ytx-mnav[hidden] { display: none; }\n#ytx-mnav button { all: unset; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ytmusic-text-secondary, #aaa); font: 500 11px/1 Roboto, Arial, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }\n#ytx-mnav button[aria-current] { color: var(--ytmusic-text-primary, #fff); }\n#ytx-mnav svg { width: 24px; height: 24px; fill: currentColor; }\nhtml[data-ytx-mnav] ytmusic-player-bar, html[data-ytx-mnav] #player-bar-background { position: fixed !important; left: 0 !important; right: 0 !important; bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important; top: auto !important; transform: none !important; }\nhtml[data-ytx-mnav] ytmusic-player#player { transform: translateY(-56px); }\nhtml[data-ytx-mnav] ytmusic-app-layout #content, html[data-ytx-mnav] ytmusic-browse-response, html[data-ytx-mnav] ytmusic-search-page { padding-bottom: 56px; }"
+
+function navIcon(path) {
+  const ns = 'http://www.w3.org/2000/svg'
+  const svg = document.createElementNS(ns, 'svg')
+  svg.setAttribute('viewBox', '0 0 24 24')
+  const p = document.createElementNS(ns, 'path')
+  p.setAttribute('d', path)
+  svg.append(p)
+  return svg
+}
+
+function tapEl(el) {
+  if (!el) return
+  el.dispatchEvent(new CustomEvent('tap', { bubbles: true, composed: true, detail: { x: 0, y: 0 } }))
+  el.click()
+}
+
+function openNavTarget(key) {
+  if (key === 'search') {
+    const sb = document.querySelector('ytmusic-nav-bar yt-icon-button.search-button')
+    tapEl(sb?.querySelector('button') || sb)
+    const box = document.querySelector('ytmusic-nav-bar ytmusic-search-box')
+    try {
+      if (box) box.opened = true
+      if (box?.polymerController) box.polymerController.opened = true
+    } catch {}
+    setTimeout(() => document.querySelector('ytmusic-search-box input#input, ytmusic-search-box input')?.focus(), 250)
+    return
+  }
+  const entries = () => Array.from(document.querySelectorAll(`ytmusic-guide-entry-renderer[data-ytx-mguide="${key}"]`))
+  const pick = () => {
+    const list = entries()
+    const entry = list.find((e) => e.offsetParent !== null) || list[list.length - 1]
+    const item = entry?.querySelector('tp-yt-paper-item') || entry
+    if (!item) return
+    item.dispatchEvent(new CustomEvent('tap', { bubbles: true, composed: true, detail: { x: 0, y: 0 } }))
+    item.click()
+  }
+  if (entries().some((e) => e.offsetParent !== null)) return pick()
+  const burger = document.querySelector('ytmusic-nav-bar #guide-button')
+  ;(burger?.querySelector('button') || burger)?.click()
+  setTimeout(pick, 450)
+}
+
 export const behaviors = [
+  {
+    id: 'm.bottomNav',
+    label: 'Navigationsleiste unten (App)',
+    description: 'Startseite, Entdecken, Suchen und Mediathek unten wie in der YouTube-Music-App',
+    type: 'toggle',
+    default: true,
+    start() {
+      if (!window.__ytxNative) return () => {}
+      setCss('m.bottomNav', NAV_CSS)
+      const buttons = NAV_ITEMS.map(([key, label, path]) => {
+        const b = h('button', { type: 'button', 'data-key': key }, navIcon(path), label)
+        b.addEventListener('click', (e) => {
+          e.preventDefault()
+          openNavTarget(key)
+        })
+        return b
+      })
+      const nav = h('nav', { id: 'ytx-mnav', 'data-ytx-own': '' }, ...buttons)
+      document.documentElement.append(nav)
+      const sync = () => {
+        const layout = document.querySelector('ytmusic-app-layout')
+        const full = layout?.getAttribute('player-ui-state') === 'FULL_PLAYER' || layout?.hasAttribute('player-page-open')
+        nav.hidden = !!full
+        document.documentElement.toggleAttribute('data-ytx-mnav', !full)
+        const page = document.documentElement.getAttribute('data-ytx-page')
+        for (const b of buttons) b.toggleAttribute('aria-current', b.dataset.key === page)
+      }
+      sync()
+      const t = setInterval(sync, 400)
+      return () => {
+        clearInterval(t)
+        nav.remove()
+        document.documentElement.removeAttribute('data-ytx-mnav')
+        setCss('m.bottomNav', '')
+      }
+    }
+  },
   {
     id: 'm.keepPlaying',
     label: 'Musik im Hintergrund weiterspielen (App)',

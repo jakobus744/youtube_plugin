@@ -34,6 +34,11 @@ public class PlaybackService extends Service {
     static volatile Class<?> owner;
     // wird von den tasten aufgerufen: "toggle", "next", "prev"
     static volatile java.util.function.Consumer<String> control;
+    // andere apps duerfen ytx pausieren, sonst spielt ytx weiter bis man selbst stoppt
+    static volatile boolean respectFocus;
+
+    private android.media.AudioFocusRequest focus;
+    private boolean pausedByFocus;
 
     private MediaSession session;
     private final Handler ui = new Handler(Looper.getMainLooper());
@@ -78,6 +83,7 @@ public class PlaybackService extends Service {
         else if (ACT_NEXT.equals(act)) send("next");
         else if (ACT_PREV.equals(act)) send("prev");
         refresh();
+        syncFocus();
         return START_NOT_STICKY;
     }
 
@@ -116,8 +122,36 @@ public class PlaybackService extends Service {
         startForeground(41, b.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
     }
 
+    private void syncFocus() {
+        android.media.AudioManager am = getSystemService(android.media.AudioManager.class);
+        if (respectFocus && playing && focus == null) {
+            focus = new android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN)
+                    .setAudioAttributes(new android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_MEDIA).setContentType(android.media.AudioAttributes.CONTENT_TYPE_MUSIC).build())
+                    .setOnAudioFocusChangeListener(change -> {
+                        if (change == android.media.AudioManager.AUDIOFOCUS_LOSS || change == android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+                            pausedByFocus = change == android.media.AudioManager.AUDIOFOCUS_LOSS_TRANSIENT;
+                            send("pause");
+                            // dauerhaft verloren: beim naechsten abspielen neu anfragen
+                            if (!pausedByFocus && focus != null) {
+                                getSystemService(android.media.AudioManager.class).abandonAudioFocusRequest(focus);
+                                focus = null;
+                            }
+                        } else if (change == android.media.AudioManager.AUDIOFOCUS_GAIN && pausedByFocus) {
+                            pausedByFocus = false;
+                            send("play");
+                        }
+                    }, ui)
+                    .build();
+            am.requestAudioFocus(focus);
+        } else if (!respectFocus && focus != null) {
+            am.abandonAudioFocusRequest(focus);
+            focus = null;
+        }
+    }
+
     @Override
     public void onDestroy() {
+        if (focus != null) getSystemService(android.media.AudioManager.class).abandonAudioFocusRequest(focus);
         session.release();
         super.onDestroy();
     }

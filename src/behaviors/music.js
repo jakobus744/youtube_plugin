@@ -1,5 +1,6 @@
 import { qsa } from '../core/dom.js'
 import { listen } from '../core/lifecycle.js'
+import { audioFocus } from './appAudio.js'
 
 // verhalten fuer music
 // start(ctx, value) liefert eine stop funktion
@@ -130,7 +131,8 @@ export const behaviors = [
       if (location.pathname === '/' && !location.search) location.replace(target)
       return () => {}
     }
-  }
+  },
+  audioFocus
 ]
 
 export const behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]))

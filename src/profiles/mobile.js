@@ -13,6 +13,7 @@ const tidyDisplay = {
   'mb.watch.carousel': H,
   'mb.watch.endscreen': H,
   'mb.search.shorts': H,
+  'mb.infoPanel': H,
   'mb.search.shelves': C,
   'mb.channel.shortsTab': H,
   'mb.channel.shorts': H,
@@ -37,7 +38,7 @@ export const tidyFeatures = {
 }
 
 export const mobileTemplates = {
-  youtube: () => ({}),
+  youtube: () => ({ display: { 'mb.pivot.shorts': H } }),
   aufgeraeumt: () => ({
     display: { ...tidyDisplay },
     behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, swipeDownBack: true },

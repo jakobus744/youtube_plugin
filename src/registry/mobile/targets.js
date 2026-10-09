@@ -9,7 +9,7 @@ export const targets = [
   // navigation unten
   {
     id: 'mb.pivot.shorts',
-    label: 'Shorts-Tab unten',
+    label: 'Shorts-Knopf in der Leiste unten',
     group: 'Navigation',
     modes: SH,
     sel: ['ytm-pivot-bar-item-renderer[data-ytx-mbpivot="shorts"]']
@@ -61,7 +61,7 @@ export const targets = [
     group: 'Startseite',
     pages: ['home'],
     modes: SDCH,
-    sel: ['ytm-browse ytm-reel-shelf-renderer', 'ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)']
+    sel: ['ytm-browse ytm-reel-shelf-renderer', 'ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)', 'ytm-browse grid-shelf-view-model:has(ytm-shorts-lockup-view-model)']
   },
   {
     id: 'mb.home.sections',
@@ -112,7 +112,7 @@ export const targets = [
     group: 'Videoseite',
     pages: ['watch'],
     modes: SH,
-    sel: ['ytm-watch ytm-reel-shelf-renderer', 'ytm-watch ytm-shorts-lockup-view-model']
+    sel: ['ytm-watch ytm-reel-shelf-renderer', 'ytm-watch grid-shelf-view-model:has(ytm-shorts-lockup-view-model)', 'ytm-watch ytm-shorts-lockup-view-model']
   },
   {
     id: 'mb.watch.carousel',
@@ -138,7 +138,8 @@ export const targets = [
     group: 'Suche',
     pages: ['search'],
     modes: SDCH,
-    sel: ['ytm-search ytm-reel-shelf-renderer', 'ytm-search ytm-shorts-lockup-view-model', 'ytm-search ytm-video-with-context-renderer:has(a[href^="/shorts/"])']
+    // shorts regale mit ueberschrift ganz ausblenden, nicht nur die kacheln
+    sel: ['ytm-search ytm-reel-shelf-renderer', 'ytm-search grid-shelf-view-model:has(ytm-shorts-lockup-view-model)', 'ytm-search ytm-shorts-lockup-view-model', 'ytm-search ytm-video-with-context-renderer:has(a[href^="/shorts/"])']
   },
   {
     id: 'mb.search.shelves',
@@ -174,7 +175,16 @@ export const targets = [
     group: 'Abo-Feed',
     pages: ['subscriptions'],
     modes: SDCH,
-    sel: ['ytm-browse ytm-reel-shelf-renderer', 'ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)']
+    sel: ['ytm-browse ytm-reel-shelf-renderer', 'ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)', 'ytm-browse grid-shelf-view-model:has(ytm-shorts-lockup-view-model)']
+  },
+
+  // youtube hinweise
+  {
+    id: 'mb.infoPanel',
+    label: 'Info-Hinweise (z. B. „Weitere Informationen zu diesen Ergebnissen“)',
+    group: 'Suche',
+    modes: SH,
+    sel: ['ytm-info-panel-container-renderer']
   },
 
   // werbung

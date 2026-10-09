@@ -211,6 +211,28 @@ const MIGRATIONS = [
         if (!('keepPlaying' in b) && !('m.keepPlaying' in (p.config?.music?.behavior || {}))) (p.config.music ||= {}).behavior = { ...(p.config.music.behavior || {}), 'm.keepPlaying': true }
       }
     }
+  ],
+  [
+    'mobile-info-panel-shorts-pivot',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        const m = p.config?.mobile
+        if (!m || p.template === 'youtube') continue
+        m.display ||= {}
+        if (!('mb.infoPanel' in m.display)) m.display['mb.infoPanel'] = 'hide'
+        if (!('mb.pivot.shorts' in m.display)) m.display['mb.pivot.shorts'] = 'hide'
+      }
+    }
+  ],
+  [
+    'mobile-original-shorts-pivot-off',
+    (d) => {
+      const p = d.profiles?.youtube
+      const m = p?.config?.mobile
+      if (!m) return
+      m.display ||= {}
+      if (!('mb.pivot.shorts' in m.display)) m.display['mb.pivot.shorts'] = 'hide'
+    }
   ]
 ]
 

@@ -4241,6 +4241,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     "mb.watch.carousel": H3,
     "mb.watch.endscreen": H3,
     "mb.search.shorts": H3,
+    "mb.infoPanel": H3,
     "mb.search.shelves": C3,
     "mb.channel.shortsTab": H3,
     "mb.channel.shorts": H3,
@@ -4262,7 +4263,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     "thumb.progressBadge": { enabled: true }
   };
   var mobileTemplates = {
-    youtube: () => ({}),
+    youtube: () => ({ display: { "mb.pivot.shorts": H3 } }),
     aufgeraeumt: () => ({
       display: { ...tidyDisplay3 },
       behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, swipeDownBack: true },
@@ -4492,6 +4493,28 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           if (!("appFullscreen" in b)) b.appFullscreen = true;
           if (!("keepPlaying" in b) && !("m.keepPlaying" in (p.config?.music?.behavior || {}))) (p.config.music ||= {}).behavior = { ...p.config.music.behavior || {}, "m.keepPlaying": true };
         }
+      }
+    ],
+    [
+      "mobile-info-panel-shorts-pivot",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.mobile;
+          if (!m || p.template === "youtube") continue;
+          m.display ||= {};
+          if (!("mb.infoPanel" in m.display)) m.display["mb.infoPanel"] = "hide";
+          if (!("mb.pivot.shorts" in m.display)) m.display["mb.pivot.shorts"] = "hide";
+        }
+      }
+    ],
+    [
+      "mobile-original-shorts-pivot-off",
+      (d) => {
+        const p = d.profiles?.youtube;
+        const m = p?.config?.mobile;
+        if (!m) return;
+        m.display ||= {};
+        if (!("mb.pivot.shorts" in m.display)) m.display["mb.pivot.shorts"] = "hide";
       }
     ]
   ];
@@ -7097,6 +7120,23 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     return { browseId: data2.browseId, params: data2.params || null, response: main.response };
   }
 
+  // src/behaviors/appAudio.js
+  var audioFocus = {
+    id: "appAudioFocus",
+    label: "Wenn eine andere App Ton abspielt (App)",
+    description: "Weiterspielen: ytx läuft weiter, bis du selbst stoppst. Pausieren: wie bei normalen Musik-Apps, eine andere Wiedergabe (Spotify, Anruf, Sprachnachricht) pausiert ytx, nach kurzen Unterbrechungen geht es weiter",
+    type: "select",
+    options: [
+      ["", "Weiterspielen, bis ich stoppe"],
+      ["pause", "Pausieren, wenn etwas anderes spielt"]
+    ],
+    default: "",
+    start(ctx, mode) {
+      window.__ytxNative?.({ a: mode === "pause" ? "af1" : "af0" });
+      return () => window.__ytxNative?.({ a: "af0" });
+    }
+  };
+
   // src/behaviors/music.js
   function clickConfirm(dialog) {
     const btn2 = dialog.querySelector("yt-button-renderer#confirm-button button, #confirm-button button, yt-button-renderer button, button");
@@ -7224,7 +7264,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         return () => {
         };
       }
-    }
+    },
+    audioFocus
   ];
   var behaviorById2 = Object.fromEntries(behaviors2.map((b) => [b.id, b]));
 
@@ -11269,7 +11310,7 @@ ${data2.source}` : ""].join("\n").trim();
     // navigation unten
     {
       id: "mb.pivot.shorts",
-      label: "Shorts-Tab unten",
+      label: "Shorts-Knopf in der Leiste unten",
       group: "Navigation",
       modes: SH,
       sel: ['ytm-pivot-bar-item-renderer[data-ytx-mbpivot="shorts"]']
@@ -11320,7 +11361,7 @@ ${data2.source}` : ""].join("\n").trim();
       group: "Startseite",
       pages: ["home"],
       modes: SDCH,
-      sel: ["ytm-browse ytm-reel-shelf-renderer", "ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)"]
+      sel: ["ytm-browse ytm-reel-shelf-renderer", "ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)", "ytm-browse grid-shelf-view-model:has(ytm-shorts-lockup-view-model)"]
     },
     {
       id: "mb.home.sections",
@@ -11370,7 +11411,7 @@ ${data2.source}` : ""].join("\n").trim();
       group: "Videoseite",
       pages: ["watch"],
       modes: SH,
-      sel: ["ytm-watch ytm-reel-shelf-renderer", "ytm-watch ytm-shorts-lockup-view-model"]
+      sel: ["ytm-watch ytm-reel-shelf-renderer", "ytm-watch grid-shelf-view-model:has(ytm-shorts-lockup-view-model)", "ytm-watch ytm-shorts-lockup-view-model"]
     },
     {
       id: "mb.watch.carousel",
@@ -11395,7 +11436,8 @@ ${data2.source}` : ""].join("\n").trim();
       group: "Suche",
       pages: ["search"],
       modes: SDCH,
-      sel: ["ytm-search ytm-reel-shelf-renderer", "ytm-search ytm-shorts-lockup-view-model", 'ytm-search ytm-video-with-context-renderer:has(a[href^="/shorts/"])']
+      // shorts regale mit ueberschrift ganz ausblenden, nicht nur die kacheln
+      sel: ["ytm-search ytm-reel-shelf-renderer", "ytm-search grid-shelf-view-model:has(ytm-shorts-lockup-view-model)", "ytm-search ytm-shorts-lockup-view-model", 'ytm-search ytm-video-with-context-renderer:has(a[href^="/shorts/"])']
     },
     {
       id: "mb.search.shelves",
@@ -11429,7 +11471,15 @@ ${data2.source}` : ""].join("\n").trim();
       group: "Abo-Feed",
       pages: ["subscriptions"],
       modes: SDCH,
-      sel: ["ytm-browse ytm-reel-shelf-renderer", "ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)"]
+      sel: ["ytm-browse ytm-reel-shelf-renderer", "ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)", "ytm-browse grid-shelf-view-model:has(ytm-shorts-lockup-view-model)"]
+    },
+    // youtube hinweise
+    {
+      id: "mb.infoPanel",
+      label: "Info-Hinweise (z. B. „Weitere Informationen zu diesen Ergebnissen“)",
+      group: "Suche",
+      modes: SH,
+      sel: ["ytm-info-panel-container-renderer"]
     },
     // werbung
     {
@@ -11687,28 +11737,105 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       };
       let last2 = false;
       let wasLand = innerWidth > innerHeight;
+      let autoFor = "";
+      let exitedFor = "";
+      let wasFull = false;
+      let exitBtn = null;
+      let hideTimer = 0;
+      const leave = () => {
+        const p = document.getElementById("movie_player");
+        exitedFor = autoFor = new URLSearchParams(location.search).get("v") || "";
+        p?.toggleFullscreen?.();
+        exitBtn?.classList.remove("show");
+        verifyExit();
+      };
+      const verifyExit = () => {
+        setTimeout(() => {
+          if (document.fullscreenElement) document.exitFullscreen?.().catch?.(() => {
+          });
+          scrollTo(0, 0);
+        }, 800);
+      };
+      const showBtn = () => {
+        if (!isFull()) return;
+        if (!exitBtn) {
+          exitBtn = document.createElement("button");
+          exitBtn.type = "button";
+          exitBtn.id = "ytx-fs-exit";
+          exitBtn.setAttribute("data-ytx-own", "");
+          exitBtn.setAttribute("aria-label", "Vollbild verlassen");
+          exitBtn.textContent = "⤡";
+          exitBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            leave();
+          });
+        }
+        const host2 = document.fullscreenElement || document.body || document.documentElement;
+        if (exitBtn.parentElement !== host2) host2.append(exitBtn);
+        exitBtn.classList.add("show");
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => exitBtn?.classList.remove("show"), 3500);
+      };
+      const offTouch = listen(document, "touchstart", showBtn, { passive: true, capture: true });
+      const offClick = listen(document, "click", (e) => {
+        if (isFull() && e.target?.closest?.(".fullscreen-icon")) {
+          e.stopPropagation();
+          e.preventDefault();
+          leave();
+        }
+      }, { capture: true });
+      const origRequest = Element.prototype.requestFullscreen;
+      let allowEnter = false;
+      if (origRequest) {
+        Element.prototype.requestFullscreen = function(...a) {
+          const vid = new URLSearchParams(location.search).get("v") || "";
+          const click = window.event && window.event.type === "click";
+          if (!allowEnter && !click && exitedFor && exitedFor === vid) return Promise.reject(new Error("ytx: vollbild nach dem Beenden gesperrt"));
+          return origRequest.apply(this, a);
+        };
+      }
+      const enterFs = (p) => {
+        const box = document.getElementById("player-container-id");
+        allowEnter = true;
+        setTimeout(() => allowEnter = false, 600);
+        if (box?.requestFullscreen) box.requestFullscreen().catch(() => p.toggleFullscreen?.());
+        else p.toggleFullscreen?.();
+      };
       const isFull = () => !!document.fullscreenElement || document.body?.getAttribute("faux-fullscreen") === "true";
       const t = setInterval(() => {
         const land = innerWidth > innerHeight;
         const p = document.getElementById("movie_player");
         const watching = pageFromUrl(location.href) === "watch" && p;
+        const vid = watching ? new URLSearchParams(location.search).get("v") || "" : "";
         if (land !== wasLand && watching) {
           wasLand = land;
-          if (land && !isFull()) p.toggleFullscreen?.();
+          if (land && !isFull()) enterFs(p);
           if (!land && isFull()) p.toggleFullscreen?.();
+          autoFor = land ? vid : "";
+          exitedFor = "";
+        } else if (land && watching && vid && vid !== autoFor && vid !== exitedFor && p.getPlayerState?.() === 1 && !isFull()) {
+          autoFor = vid;
+          enterFs(p);
         } else wasLand = land;
+        if (wasFull && !isFull() && land) exitedFor = autoFor = vid;
+        wasFull = isFull();
         const on = isFull() && land;
+        document.documentElement.toggleAttribute("data-ytx-fs", on);
         if (on === last2) return;
         last2 = on;
         window.__ytxNative({ a: on ? "fsOn" : "fsOff" });
       }, 250);
       return () => {
         clearInterval(t);
+        offTouch();
+        offClick();
+        if (origRequest) Element.prototype.requestFullscreen = origRequest;
+        exitBtn?.remove();
         if (last2) window.__ytxNative({ a: "fsOff" });
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, appFullscreen];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, appFullscreen, audioFocus];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js
@@ -11829,6 +11956,14 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
     ["channel", "Kanal"]
   ];
   var OPEN_YT_CSS = `
+#ytx-fs-exit { all: initial; position: fixed; top: 14px; right: 14px; z-index: 2147483647; width: 48px; height: 48px; border-radius: 24px; background: rgba(0,0,0,.55); color: #fff; font: 700 26px/48px sans-serif; text-align: center; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .2s; }
+#ytx-fs-exit.show { opacity: 1; pointer-events: auto; }
+html:not([data-ytx-fs]) #ytx-fs-exit { display: none; }
+/* echtes vollbild in der app: nur das video, ohne leisten und einblendungen */
+html[data-ytx-fs] ytm-mobile-topbar-renderer, html[data-ytx-fs] .mobile-topbar-header-background, html[data-ytx-fs] ytm-pivot-bar-renderer, html[data-ytx-fs] [class*="paid-content-overlay"], html[data-ytx-fs] ytm-paid-content-overlay-renderer, html[data-ytx-fs] ytm-custom-control .ytp-paid-content-overlay, html[data-ytx-fs] #movie_player .ytp-paid-content-overlay, html[data-ytx-fs] .ytp-title-channel-logo, html[data-ytx-fs] .ytm-autonav-bar { display: none !important; }
+/* beim suchen braucht das suchfeld den platz */
+ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.watchtime"] { display: none !important; }
+ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 6px !important; }
 /* die leiste dient nur als anker fuer ytx knoepfe, transkript steht im menue des videos */
 .ytx-watch-row { display: none !important; }
 .ytx-dl-icon { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; cursor: pointer; color: var(--yt-spec-text-primary, #f1f1f1); -webkit-tap-highlight-color: transparent; }
@@ -14182,9 +14317,27 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       nav2.append(b);
     }
     function fillProfiles() {
-      profileSelect.replaceChildren(...app.store.profiles().map((p) => h("option", { value: p.id, text: p.name, selected: p.active })));
+      profileSelect.replaceChildren(
+        ...app.store.profiles().map((p) => h("option", { value: p.id, text: p.name, selected: p.active })),
+        h("option", { value: "__new", text: "+ Neues Profil …" }),
+        h("option", { value: "__manage", text: "⚙ Profile verwalten …" })
+      );
     }
-    profileSelect.addEventListener("change", () => app.store.setActive(profileSelect.value));
+    profileSelect.addEventListener("change", () => {
+      const v = profileSelect.value;
+      if (v === "__new") {
+        const name = window.prompt("Name des neuen Profils (Kopie des aktuellen)", `${app.store.data.profiles[app.store.activeId].name} 2`);
+        if (name && name.trim()) app.store.createProfile(name.trim());
+        fillProfiles();
+        return;
+      }
+      if (v === "__manage") {
+        fillProfiles();
+        select2("profiles");
+        return;
+      }
+      app.store.setActive(v);
+    });
     closeBtn.addEventListener("click", () => close());
     function select2(id) {
       tab = id;

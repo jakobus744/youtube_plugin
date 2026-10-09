@@ -210,6 +210,8 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
             org.mozilla.geckoview.MediaSession ms = gs != null ? medias.get(gs) : null;
             if (ms == null) return;
             if ("next".equals(what)) ms.nextTrack();
+            else if ("pause".equals(what)) ms.pause();
+            else if ("play".equals(what)) ms.play();
             else if ("prev".equals(what)) ms.previousTrack();
             else if (paused) {
                 ms.play();
@@ -551,6 +553,10 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
             else if ("expand".equals(action)) expand();
             else if ("close".equals(action)) closeMini();
             else if ("fsOn".equals(action)) setFullscreen(true);
+            else if ("af1".equals(action) || "af0".equals(action)) {
+                PlaybackService.respectFocus = "af1".equals(action);
+                updateService();
+            }
             else if ("fsOff".equals(action) && fullscreen) setFullscreen(false);
             else if (action != null && action.startsWith("openyt:")) openInYoutubeApp(action.substring(7));
         });

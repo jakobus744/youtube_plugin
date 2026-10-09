@@ -65,9 +65,28 @@ export function createPanel(app) {
   }
 
   function fillProfiles() {
-    profileSelect.replaceChildren(...app.store.profiles().map((p) => h('option', { value: p.id, text: p.name, selected: p.active })))
+    profileSelect.replaceChildren(
+      ...app.store.profiles().map((p) => h('option', { value: p.id, text: p.name, selected: p.active })),
+      h('option', { value: '__new', text: '+ Neues Profil …' }),
+      h('option', { value: '__manage', text: '⚙ Profile verwalten …' })
+    )
   }
-  profileSelect.addEventListener('change', () => app.store.setActive(profileSelect.value))
+  profileSelect.addEventListener('change', () => {
+    const v = profileSelect.value
+    if (v === '__new') {
+      // kopie des aktiven profils unter neuem namen, danach direkt aktiv
+      const name = window.prompt('Name des neuen Profils (Kopie des aktuellen)', `${app.store.data.profiles[app.store.activeId].name} 2`)
+      if (name && name.trim()) app.store.createProfile(name.trim())
+      fillProfiles()
+      return
+    }
+    if (v === '__manage') {
+      fillProfiles()
+      select('profiles')
+      return
+    }
+    app.store.setActive(v)
+  })
   closeBtn.addEventListener('click', () => close())
 
   function select(id) {

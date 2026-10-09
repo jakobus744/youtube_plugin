@@ -1,6 +1,7 @@
 import { behaviors as yt } from './youtube.js'
 import { listen } from '../core/lifecycle.js'
 import { pageFromUrl } from '../registry/youtube/pages.js'
+import { audioFocus } from './appAudio.js'
 
 // verhalten fuer m.youtube.com
 // umleitungen arbeiten mit urls, der rest mit der player api, beides gibt es auch mobil
@@ -60,29 +61,117 @@ const appFullscreen = {
     if (!window.__ytxNative) return () => {}
     let last = false
     let wasLand = innerWidth > innerHeight
+    let autoFor = ''
+    let exitedFor = ''
+    let wasFull = false
+    // eigener knopf zum verlassen, weil die leiste von youtube im vollbild nicht immer reagiert
+    let exitBtn = null
+    let hideTimer = 0
+    const leave = () => {
+      const p = document.getElementById('movie_player')
+      exitedFor = autoFor = new URLSearchParams(location.search).get('v') || ''
+      // derselbe weg wie beim hochkant kippen
+      p?.toggleFullscreen?.()
+      exitBtn?.classList.remove('show')
+      verifyExit()
+    }
+    // hat es nicht geklappt, den browser selbst aus dem vollbild holen und die seite nach oben setzen
+    const verifyExit = () => {
+      setTimeout(() => {
+        if (document.fullscreenElement) document.exitFullscreen?.().catch?.(() => {})
+        scrollTo(0, 0)
+      }, 800)
+    }
+    const showBtn = () => {
+      if (!isFull()) return
+      if (!exitBtn) {
+        exitBtn = document.createElement('button')
+        exitBtn.type = 'button'
+        exitBtn.id = 'ytx-fs-exit'
+        exitBtn.setAttribute('data-ytx-own', '')
+        exitBtn.setAttribute('aria-label', 'Vollbild verlassen')
+        exitBtn.textContent = '⤡'
+        exitBtn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          leave()
+        })
+      }
+      // im echten vollbild liegt nur das vollbildelement vorne, der knopf muss darin stehen
+      const host = document.fullscreenElement || document.body || document.documentElement
+      if (exitBtn.parentElement !== host) host.append(exitBtn)
+      exitBtn.classList.add('show')
+      clearTimeout(hideTimer)
+      hideTimer = setTimeout(() => exitBtn?.classList.remove('show'), 3500)
+    }
+    const offTouch = listen(document, 'touchstart', showBtn, { passive: true, capture: true })
+    // das vollbild symbol von youtube selbst soll ebenfalls zuverlaessig beenden
+    const offClick = listen(document, 'click', (e) => {
+      // das vollbild symbol von youtube macht genau das gleiche wie das hochkant kippen
+      if (isFull() && e.target?.closest?.('.fullscreen-icon')) {
+        e.stopPropagation()
+        e.preventDefault()
+        leave()
+      }
+    }, { capture: true })
+    // nach dem beenden darf youtube das video nicht von selbst (z. b. beim scrollen im querformat) wieder ins vollbild holen
+    // erlaubt ist nur ein echter klick auf den knopf oder unser eigener aufruf
+    const origRequest = Element.prototype.requestFullscreen
+    let allowEnter = false
+    if (origRequest) {
+      Element.prototype.requestFullscreen = function (...a) {
+        const vid = new URLSearchParams(location.search).get('v') || ''
+        const click = window.event && window.event.type === 'click'
+        if (!allowEnter && !click && exitedFor && exitedFor === vid) return Promise.reject(new Error('ytx: vollbild nach dem Beenden gesperrt'))
+        return origRequest.apply(this, a)
+      }
+    }
+    // das vollbildelement der youtube leiste ist der container um player und bedienung, nicht der player allein
+    const enterFs = (p) => {
+      const box = document.getElementById('player-container-id')
+      allowEnter = true
+      setTimeout(() => (allowEnter = false), 600)
+      if (box?.requestFullscreen) box.requestFullscreen().catch(() => p.toggleFullscreen?.())
+      else p.toggleFullscreen?.()
+    }
     const isFull = () => !!document.fullscreenElement || document.body?.getAttribute('faux-fullscreen') === 'true'
     const t = setInterval(() => {
       const land = innerWidth > innerHeight
       const p = document.getElementById('movie_player')
       const watching = pageFromUrl(location.href) === 'watch' && p
       // wie in der youtube app: quer gehalten ist das video im vollbild, hochkant wieder normal
+      // auch ein video das erst im querformat geladen wird geht ins vollbild, einmal pro video
+      // nur die video id zaehlt, die adresse aendert sich beim abspielen sonst weiter
+      const vid = watching ? new URLSearchParams(location.search).get('v') || '' : ''
       if (land !== wasLand && watching) {
         wasLand = land
-        if (land && !isFull()) p.toggleFullscreen?.()
+        if (land && !isFull()) enterFs(p)
         if (!land && isFull()) p.toggleFullscreen?.()
+        autoFor = land ? vid : ''
+        exitedFor = ''
+      } else if (land && watching && vid && vid !== autoFor && vid !== exitedFor && p.getPlayerState?.() === 1 && !isFull()) {
+        autoFor = vid
+        enterFs(p)
       } else wasLand = land
+      // selbst beendet: fuer dieses video nicht wieder automatisch hinein
+      if (wasFull && !isFull() && land) exitedFor = autoFor = vid
+      wasFull = isFull()
       const on = isFull() && land
+      document.documentElement.toggleAttribute('data-ytx-fs', on)
       if (on === last) return
       last = on
       window.__ytxNative({ a: on ? 'fsOn' : 'fsOff' })
     }, 250)
     return () => {
       clearInterval(t)
+      offTouch()
+      offClick()
+      if (origRequest) Element.prototype.requestFullscreen = origRequest
+      exitBtn?.remove()
       if (last) window.__ytxNative({ a: 'fsOff' })
     }
   }
 }
 
-export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, appFullscreen]
+export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, appFullscreen, audioFocus]
 
 export const behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]))

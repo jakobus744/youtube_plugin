@@ -75,6 +75,14 @@
             </intent-filter>
         </activity>
         <!-- antwort des paket installers bei app updates, von aussen nicht erreichbar -->
+        <!-- verknuepfungen laufen hierueber, damit android die laufende app nicht neu startet -->
+        <activity
+            android:name=".ShortcutActivity"
+            android:exported="true"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay" />
         <service android:name=".PlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <receiver android:name=".InstallReceiver" android:exported="false" />
     </application>

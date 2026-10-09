@@ -49,6 +49,40 @@ const swipeDownBack = {
   }
 }
 
-export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack]
+// beim kippen des handys schaltet youtube auf eine seiteneigene vollbildansicht, die app blendet dazu die systemleisten aus
+const appFullscreen = {
+  id: 'appFullscreen',
+  label: 'Echtes Vollbild beim Kippen (App)',
+  description: 'In der ytx-App blendet das Vollbild von YouTube auch Status- und Navigationsleiste aus, wie in der YouTube-App',
+  type: 'toggle',
+  default: true,
+  start() {
+    if (!window.__ytxNative) return () => {}
+    let last = false
+    let wasLand = innerWidth > innerHeight
+    const isFull = () => !!document.fullscreenElement || document.body?.getAttribute('faux-fullscreen') === 'true'
+    const t = setInterval(() => {
+      const land = innerWidth > innerHeight
+      const p = document.getElementById('movie_player')
+      const watching = pageFromUrl(location.href) === 'watch' && p
+      // wie in der youtube app: quer gehalten ist das video im vollbild, hochkant wieder normal
+      if (land !== wasLand && watching) {
+        wasLand = land
+        if (land && !isFull()) p.toggleFullscreen?.()
+        if (!land && isFull()) p.toggleFullscreen?.()
+      } else wasLand = land
+      const on = isFull() && land
+      if (on === last) return
+      last = on
+      window.__ytxNative({ a: on ? 'fsOn' : 'fsOff' })
+    }, 250)
+    return () => {
+      clearInterval(t)
+      if (last) window.__ytxNative({ a: 'fsOff' })
+    }
+  }
+}
+
+export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, appFullscreen]
 
 export const behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]))

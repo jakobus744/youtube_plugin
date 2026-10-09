@@ -9,7 +9,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="io.github.jakobus744.ytx"
-            android:targetClass="io.github.jakobus744.ytx.MainActivity"
+            android:targetClass="io.github.jakobus744.ytx.ShortcutActivity"
             android:data="https://m.youtube.com/feed/subscriptions" />
     </shortcut>
     <shortcut
@@ -20,7 +20,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="io.github.jakobus744.ytx"
-            android:targetClass="io.github.jakobus744.ytx.MainActivity"
+            android:targetClass="io.github.jakobus744.ytx.ShortcutActivity"
             android:data="https://m.youtube.com/playlist?list=WL" />
     </shortcut>
     <shortcut
@@ -31,7 +31,7 @@
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="io.github.jakobus744.ytx"
-            android:targetClass="io.github.jakobus744.ytx.MusicActivity"
+            android:targetClass="io.github.jakobus744.ytx.ShortcutActivity"
             android:data="https://music.youtube.com/" />
     </shortcut>
 </shortcuts>

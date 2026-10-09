@@ -4481,6 +4481,18 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         d.settings ||= {};
         if (!("linkLook" in d.settings)) d.settings.linkLook = true;
       }
+    ],
+    [
+      "mobile-app-fullscreen",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.mobile;
+          if (!m || p.template === "youtube") continue;
+          const b = m.behavior ||= {};
+          if (!("appFullscreen" in b)) b.appFullscreen = true;
+          if (!("keepPlaying" in b) && !("m.keepPlaying" in (p.config?.music?.behavior || {}))) (p.config.music ||= {}).behavior = { ...p.config.music.behavior || {}, "m.keepPlaying": true };
+        }
+      }
     ]
   ];
   var data = null;
@@ -7095,6 +7107,36 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   var SWIPE_ZONE = "ytmusic-player-bar, ytmusic-player-page #song-image, ytmusic-player-page ytmusic-player, ytmusic-player-page #player";
   var SWIPE_SKIP = "tp-yt-paper-slider, #progress-bar, button, a, .middle-controls-buttons, .right-controls, .volume-slider";
   var behaviors2 = [
+    {
+      id: "m.keepPlaying",
+      label: "Musik im Hintergrund weiterspielen (App)",
+      description: "In der ytx-App meldet die Seite nicht mehr, dass sie im Hintergrund ist. Sonst entlädt YouTube Music den Player beim Verlassen der App und die Wiedergabe stoppt",
+      type: "toggle",
+      default: true,
+      start() {
+        if (!window.__ytxNative) return () => {
+        };
+        const d = document;
+        const redefine = (key, value) => {
+          try {
+            Object.defineProperty(d, key, { configurable: true, get: () => value });
+          } catch {
+          }
+        };
+        redefine("hidden", false);
+        redefine("webkitHidden", false);
+        redefine("visibilityState", "visible");
+        redefine("webkitVisibilityState", "visible");
+        const block = (e) => e.stopImmediatePropagation();
+        d.addEventListener("visibilitychange", block, true);
+        window.addEventListener("visibilitychange", block, true);
+        return () => {
+          d.removeEventListener("visibilitychange", block, true);
+          window.removeEventListener("visibilitychange", block, true);
+          for (const k of ["hidden", "webkitHidden", "visibilityState", "webkitVisibilityState"]) delete d[k];
+        };
+      }
+    },
     {
       id: "m.swipeSkip",
       label: "Cover und Playerleiste wischen: nächster oder vorheriger Titel",
@@ -9810,7 +9852,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         const card2 = h(
           "div",
           { style: { flex: "none", width: "150px", cursor: "pointer", color: T2.primary, font: "400 13px/1.35 Roboto, Arial, sans-serif" } },
-          img ? h("img", { src: img, loading: "lazy", alt: "", style: { width: "150px", height: "150px", borderRadius: "4px", objectFit: "cover", background: "rgba(255,255,255,.08)" } }) : h("div", { style: { width: "150px", height: "150px", borderRadius: "4px", background: "rgba(255,255,255,.08)" } }),
+          img ? h("img", { src: img, loading: "eager", decoding: "async", alt: "", style: { width: "150px", height: "150px", borderRadius: "4px", objectFit: "cover", background: "rgba(255,255,255,.08)" } }) : h("div", { style: { width: "150px", height: "150px", borderRadius: "4px", background: "rgba(255,255,255,.08)" } }),
           h("div", { text: title, style: { marginTop: "6px", fontWeight: "500", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: highlight ? "#ffc83d" : "inherit" } }),
           h("div", { text: sub, title: sub, style: { color: T2.secondary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } })
         );
@@ -9820,6 +9862,16 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         });
         return card2;
       };
+      const warmed = /* @__PURE__ */ new Set();
+      function warmImages(items) {
+        const urls = items.map((i) => i.thumbnail).filter((u) => u && !warmed.has(u)).slice(0, 48);
+        urls.forEach((u, i) => setTimeout(() => {
+          warmed.add(u);
+          const im = new Image();
+          im.decoding = "async";
+          im.src = u;
+        }, i * 150));
+      }
       const SHOWN = "m.hub.shown";
       const home = { pool: null, poolAt: 0, step: 0, turns: 0, picked: [], loading: false, picking: false, note: "", mode: ctx.state.get("m.hub.homeMode", "forYou") };
       const HOME_MODES = [
@@ -9868,6 +9920,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           }
         }
         home.pool = res.items || [];
+        warmImages(home.pool);
         home.poolAt = Date.now();
       }
       async function shuffle(target, rebuild = false) {
@@ -11325,7 +11378,8 @@ ${data2.source}` : ""].join("\n").trim();
       group: "Videoseite",
       pages: ["watch"],
       modes: SH,
-      sel: ["ytm-watch yt-video-metadata-carousel-view-model"]
+      // das karussell mit der kommentar vorschau gehoert zu den kommentaren und wird dort geregelt
+      sel: ["ytm-watch yt-video-metadata-carousel-view-model:not(:has(yt-comment-teaser-carousel-item-view-model))"]
     },
     {
       id: "mb.watch.endscreen",
@@ -11622,7 +11676,39 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       return () => offs.forEach((off) => off());
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack];
+  var appFullscreen = {
+    id: "appFullscreen",
+    label: "Echtes Vollbild beim Kippen (App)",
+    description: "In der ytx-App blendet das Vollbild von YouTube auch Status- und Navigationsleiste aus, wie in der YouTube-App",
+    type: "toggle",
+    default: true,
+    start() {
+      if (!window.__ytxNative) return () => {
+      };
+      let last2 = false;
+      let wasLand = innerWidth > innerHeight;
+      const isFull = () => !!document.fullscreenElement || document.body?.getAttribute("faux-fullscreen") === "true";
+      const t = setInterval(() => {
+        const land = innerWidth > innerHeight;
+        const p = document.getElementById("movie_player");
+        const watching = pageFromUrl(location.href) === "watch" && p;
+        if (land !== wasLand && watching) {
+          wasLand = land;
+          if (land && !isFull()) p.toggleFullscreen?.();
+          if (!land && isFull()) p.toggleFullscreen?.();
+        } else wasLand = land;
+        const on = isFull() && land;
+        if (on === last2) return;
+        last2 = on;
+        window.__ytxNative({ a: on ? "fsOn" : "fsOff" });
+      }, 250);
+      return () => {
+        clearInterval(t);
+        if (last2) window.__ytxNative({ a: "fsOff" });
+      };
+    }
+  };
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, appFullscreen];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js
@@ -11743,32 +11829,40 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
     ["channel", "Kanal"]
   ];
   var OPEN_YT_CSS = `
-.ytx-watch-row:not([data-open]) > :not(.ytx-row-toggle) { display: none !important; }
-.ytx-watch-row .ytx-row-toggle { all: unset; box-sizing: border-box; margin: 4px 12px; padding: 4px 12px; border-radius: 14px; font: 500 13px/18px Roboto, sans-serif; cursor: pointer; opacity: .8; background: var(--yt-spec-badge-chip-background, rgba(255,255,255,.1)); color: var(--yt-spec-text-primary, #f1f1f1); }
-.ytx-watch-row[data-open] { display: flex; flex-wrap: wrap; align-items: center; }
-.ytx-open-yt { all: unset; box-sizing: border-box; margin: 6px 12px; padding: 8px 14px; border-radius: 18px; font: 500 14px/20px Roboto, sans-serif; cursor: pointer; background: var(--yt-spec-badge-chip-background, rgba(255,255,255,.1)); color: var(--yt-spec-text-primary, #f1f1f1); }`;
+/* die leiste dient nur als anker fuer ytx knoepfe, transkript steht im menue des videos */
+.ytx-watch-row { display: none !important; }
+.ytx-dl-icon { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; cursor: pointer; color: var(--yt-spec-text-primary, #f1f1f1); -webkit-tap-highlight-color: transparent; }
+.ytx-dl-icon svg { width: 24px; height: 24px; fill: currentColor; }`;
+  function ensureDownloadIcon(bar) {
+    if (!window.__ytxNative || bar.querySelector(".ytx-dl-icon")) return;
+    const buttons = [...bar.querySelectorAll("button")].filter((b) => !b.closest("[data-ytx-own]"));
+    const last2 = buttons[buttons.length - 1];
+    if (!last2) return;
+    let slot = last2;
+    while (slot.parentElement && slot.parentElement !== bar && slot.parentElement.children.length < 3) slot = slot.parentElement;
+    const NS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    const path = document.createElementNS(NS, "path");
+    path.setAttribute("d", "M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z");
+    svg.append(path);
+    const icon = h("button", { class: "ytx-dl-icon", type: "button", title: "In der YouTube-App herunterladen", "aria-label": "In der YouTube-App herunterladen", "data-ytx-own": "" }, svg);
+    icon.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = videoIdFromUrl(location.href);
+      if (!id) return;
+      document.getElementById("movie_player")?.pauseVideo?.();
+      addDownload(id, document.title.replace(/ - YouTube$/, ""));
+      openInYoutubeApp(id);
+    });
+    slot.after(icon);
+  }
   function ensureWatchRow() {
     if (pageFromUrl(location.href) !== "watch") return;
     const bar = qs("ytm-slim-video-metadata-section-renderer ytm-slim-video-action-bar-renderer");
+    if (bar) ensureDownloadIcon(bar);
     if (!bar || bar.nextElementSibling?.classList.contains("ytx-watch-row")) return;
     const row2 = h("div", { class: "ytx-watch-row", "data-ytx-own": "" }, h("span", { class: "ytx-row-end" }));
-    if (window.__ytxNative) {
-      const open = h("button", { class: "ytx-open-yt", type: "button", text: "Herunterladen (YouTube-App)" });
-      open.addEventListener("click", () => {
-        const id = videoIdFromUrl(location.href);
-        if (!id) return;
-        document.getElementById("movie_player")?.pauseVideo?.();
-        addDownload(id, document.title.replace(/ - YouTube$/, ""));
-        openInYoutubeApp(id);
-      });
-      row2.append(open);
-    }
-    const toggle2 = h("button", { class: "ytx-row-toggle", type: "button", text: "ytx ▾" });
-    toggle2.addEventListener("click", () => {
-      const on = row2.toggleAttribute("data-open");
-      toggle2.textContent = on ? "ytx ▴" : "ytx ▾";
-    });
-    row2.prepend(toggle2);
     bar.after(row2);
   }
   function pageIsDark() {
@@ -11983,7 +12077,7 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
           for (const sel of good) {
             const full = `${scope} ${sel}`;
             if (mode === "hide") out.push(`${full} { display: none !important; }`);
-            else if (mode === "collapse") out.push(`${full}:not([data-ytx-open]) { display: none !important; }`);
+            else if (mode === "collapse") out.push(`${full}:not([data-ytx-open]):not([data-ytx-open] *) { display: none !important; }`);
             else if (mode === "dim") {
               if (t.dim === "grayscale") {
                 out.push(`${full} { filter: grayscale(1) contrast(.9) !important; opacity: .75 !important; transition: filter .2s ease, opacity .2s ease !important; }`);
@@ -12059,7 +12153,13 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
         bar.removeAttribute("data-open");
       }
       hint.textContent = open ? "zuklappen" : "aufklappen";
-      window.dispatchEvent(new Event("resize"));
+      const nudge = () => {
+        window.dispatchEvent(new Event("resize"));
+        window.dispatchEvent(new Event("scroll"));
+        document.documentElement.dispatchEvent(new Event("scroll"));
+      };
+      nudge();
+      if (open) for (const ms of [60, 250, 700, 1500]) setTimeout(nudge, ms);
     };
     bar.addEventListener("click", toggle2);
     bar.addEventListener("keydown", (e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), toggle2()));

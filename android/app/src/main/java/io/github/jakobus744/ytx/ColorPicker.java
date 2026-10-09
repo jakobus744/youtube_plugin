@@ -67,6 +67,12 @@ final class ColorPicker {
         glp.topMargin = dp(12);
         root.addView(grid, glp);
 
+        // farbflaeche: links nach rechts der farbton, oben blass und unten kraeftig
+        Spectrum spectrum = new Spectrum(ctx);
+        LinearLayout.LayoutParams splp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(130));
+        splp.topMargin = dp(12);
+        root.addView(spectrum, splp);
+
         // 0 dunkel, 100 hell, 50 ist die gewaehlte farbe
         light = new SeekBar(ctx);
         light.setMax(100);
@@ -124,6 +130,43 @@ final class ColorPicker {
             hex.setText(format(c));
             hex.setSelection(hex.getText().length());
             updating = false;
+        }
+    }
+
+    private final class Spectrum extends View {
+        private final android.graphics.Bitmap bmp;
+        private final android.graphics.Rect dst = new android.graphics.Rect();
+
+        Spectrum(Context c) {
+            super(c);
+            int w = 360;
+            int h = 120;
+            bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888);
+            float[] hsv = new float[3];
+            for (int x = 0; x < w; x++) {
+                for (int y = 0; y < h; y++) {
+                    hsv[0] = x;
+                    hsv[1] = 0.1f + 0.9f * y / (h - 1);
+                    hsv[2] = 1f;
+                    bmp.setPixel(x, y, Color.HSVToColor(hsv));
+                }
+            }
+        }
+
+        @Override
+        protected void onDraw(android.graphics.Canvas canvas) {
+            dst.set(0, 0, getWidth(), getHeight());
+            canvas.drawBitmap(bmp, null, dst, null);
+        }
+
+        @Override
+        public boolean onTouchEvent(android.view.MotionEvent e) {
+            getParent().requestDisallowInterceptTouchEvent(true);
+            float fx = Math.max(0f, Math.min(1f, e.getX() / Math.max(1, getWidth())));
+            float fy = Math.max(0f, Math.min(1f, e.getY() / Math.max(1, getHeight())));
+            float[] hsv = {fx * 359f, 0.1f + 0.9f * fy, 1f};
+            set(Color.HSVToColor(hsv), true);
+            return true;
         }
     }
 

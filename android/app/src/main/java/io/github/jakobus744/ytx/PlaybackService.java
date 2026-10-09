@@ -30,6 +30,8 @@ public class PlaybackService extends Service {
     static volatile String artist = "";
     static volatile Bitmap art;
     static volatile boolean playing;
+    // activity der gerade spielenden sitzung, ihr gehoert der tipp auf die benachrichtigung
+    static volatile Class<?> owner;
     // wird von den tasten aufgerufen: "toggle", "next", "prev"
     static volatile java.util.function.Consumer<String> control;
 
@@ -97,7 +99,8 @@ public class PlaybackService extends Service {
                 .setActions(PlaybackState.ACTION_PLAY | PlaybackState.ACTION_PAUSE | PlaybackState.ACTION_PLAY_PAUSE | PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS)
                 .setState(playing ? PlaybackState.STATE_PLAYING : PlaybackState.STATE_PAUSED, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f)
                 .build());
-        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE);
+        PendingIntent open = PendingIntent.getActivity(this, 0, new Intent(this, owner != null ? owner : MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE);
+        session.setSessionActivity(open);
         Notification.Builder b = new Notification.Builder(this, CHANNEL)
                 .setSmallIcon(R.drawable.ic_ytx_mono)
                 .setContentTitle(t)

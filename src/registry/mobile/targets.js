@@ -120,7 +120,8 @@ export const targets = [
     group: 'Videoseite',
     pages: ['watch'],
     modes: SH,
-    sel: ['ytm-watch yt-video-metadata-carousel-view-model']
+    // das karussell mit der kommentar vorschau gehoert zu den kommentaren und wird dort geregelt
+    sel: ['ytm-watch yt-video-metadata-carousel-view-model:not(:has(yt-comment-teaser-carousel-item-view-model))']
   },
   {
     id: 'mb.watch.endscreen',

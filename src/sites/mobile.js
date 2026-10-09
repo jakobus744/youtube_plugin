@@ -55,35 +55,44 @@ const FILTER_PAGES = [
 
 // zeile direkt unter der aktionsleiste, features docken am end marker an
 const OPEN_YT_CSS = `
-.ytx-watch-row:not([data-open]) > :not(.ytx-row-toggle) { display: none !important; }
-.ytx-watch-row .ytx-row-toggle { all: unset; box-sizing: border-box; margin: 4px 12px; padding: 4px 12px; border-radius: 14px; font: 500 13px/18px Roboto, sans-serif; cursor: pointer; opacity: .8; background: var(--yt-spec-badge-chip-background, rgba(255,255,255,.1)); color: var(--yt-spec-text-primary, #f1f1f1); }
-.ytx-watch-row[data-open] { display: flex; flex-wrap: wrap; align-items: center; }
-.ytx-open-yt { all: unset; box-sizing: border-box; margin: 6px 12px; padding: 8px 14px; border-radius: 18px; font: 500 14px/20px Roboto, sans-serif; cursor: pointer; background: var(--yt-spec-badge-chip-background, rgba(255,255,255,.1)); color: var(--yt-spec-text-primary, #f1f1f1); }`
+/* die leiste dient nur als anker fuer ytx knoepfe, transkript steht im menue des videos */
+.ytx-watch-row { display: none !important; }
+.ytx-dl-icon { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; cursor: pointer; color: var(--yt-spec-text-primary, #f1f1f1); -webkit-tap-highlight-color: transparent; }
+.ytx-dl-icon svg { width: 24px; height: 24px; fill: currentColor; }`
+
+// kleines herunterladen symbol hinter den anderen symbolen der aktionsleiste
+// zum herunterladen oder offline schauen geht es in die offizielle youtube app, das gehoert dort zu premium
+function ensureDownloadIcon(bar) {
+  if (!window.__ytxNative || bar.querySelector('.ytx-dl-icon')) return
+  const buttons = [...bar.querySelectorAll('button')].filter((b) => !b.closest('[data-ytx-own]'))
+  const last = buttons[buttons.length - 1]
+  if (!last) return
+  let slot = last
+  while (slot.parentElement && slot.parentElement !== bar && slot.parentElement.children.length < 3) slot = slot.parentElement
+  const NS = 'http://www.w3.org/2000/svg'
+  const svg = document.createElementNS(NS, 'svg')
+  svg.setAttribute('viewBox', '0 0 24 24')
+  const path = document.createElementNS(NS, 'path')
+  path.setAttribute('d', 'M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z')
+  svg.append(path)
+  const icon = h('button', { class: 'ytx-dl-icon', type: 'button', title: 'In der YouTube-App herunterladen', 'aria-label': 'In der YouTube-App herunterladen', 'data-ytx-own': '' }, svg)
+  icon.addEventListener('click', (e) => {
+    e.stopPropagation()
+    const id = videoIdFromUrl(location.href)
+    if (!id) return
+    document.getElementById('movie_player')?.pauseVideo?.()
+    addDownload(id, document.title.replace(/ - YouTube$/, ''))
+    openInYoutubeApp(id)
+  })
+  slot.after(icon)
+}
 
 function ensureWatchRow() {
   if (pageFromUrl(location.href) !== 'watch') return
   const bar = qs('ytm-slim-video-metadata-section-renderer ytm-slim-video-action-bar-renderer')
+  if (bar) ensureDownloadIcon(bar)
   if (!bar || bar.nextElementSibling?.classList.contains('ytx-watch-row')) return
   const row = h('div', { class: 'ytx-watch-row', 'data-ytx-own': '' }, h('span', { class: 'ytx-row-end' }))
-  // zum herunterladen oder offline schauen geht es in die offizielle youtube app, das gehoert dort zu premium
-  if (window.__ytxNative) {
-    const open = h('button', { class: 'ytx-open-yt', type: 'button', text: 'Herunterladen (YouTube-App)' })
-    open.addEventListener('click', () => {
-      const id = videoIdFromUrl(location.href)
-      if (!id) return
-      document.getElementById('movie_player')?.pauseVideo?.()
-      addDownload(id, document.title.replace(/ - YouTube$/, ''))
-      openInYoutubeApp(id)
-    })
-    row.append(open)
-  }
-  // standardmaessig zu, damit unter dem video Ruhe ist
-  const toggle = h('button', { class: 'ytx-row-toggle', type: 'button', text: 'ytx ▾' })
-  toggle.addEventListener('click', () => {
-    const on = row.toggleAttribute('data-open')
-    toggle.textContent = on ? 'ytx ▴' : 'ytx ▾'
-  })
-  row.prepend(toggle)
   bar.after(row)
 }
 

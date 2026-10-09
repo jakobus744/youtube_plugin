@@ -199,6 +199,18 @@ const MIGRATIONS = [
       d.settings ||= {}
       if (!('linkLook' in d.settings)) d.settings.linkLook = true
     }
+  ],
+  [
+    'mobile-app-fullscreen',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        const m = p.config?.mobile
+        if (!m || p.template === 'youtube') continue
+        const b = (m.behavior ||= {})
+        if (!('appFullscreen' in b)) b.appFullscreen = true
+        if (!('keepPlaying' in b) && !('m.keepPlaying' in (p.config?.music?.behavior || {}))) (p.config.music ||= {}).behavior = { ...(p.config.music.behavior || {}), 'm.keepPlaying': true }
+      }
+    }
   ]
 ]
 

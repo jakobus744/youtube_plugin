@@ -60,15 +60,21 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     private FrameLayout miniBox;
     private String lastBrowse;
     private boolean pip;
+    private boolean pipWanted;
+    private float miniTx;
+    private float miniTy;
+    private float dragBaseX;
+    private float dragBaseY;
     private final java.util.Map<GeckoSession, String> urls = new java.util.HashMap<>();
     // vorbereitete leere sitzung, damit das verkleinern nicht ruckelt
     private GeckoSession spare;
     // sitzungen in denen gerade medien laufen, sie bleiben auch im hintergrund aktiv
-    private final java.util.Set<GeckoSession> playing = new java.util.HashSet<>();
-    private final java.util.Map<GeckoSession, org.mozilla.geckoview.MediaSession> medias = new java.util.HashMap<>();
+    // youtube und music laufen im selben prozess und teilen den dienst, darum gilt der zustand fuer beide
+    private static final java.util.Set<GeckoSession> playing = new java.util.HashSet<>();
+    private static final java.util.Map<GeckoSession, org.mozilla.geckoview.MediaSession> medias = new java.util.HashMap<>();
     // sitzung die zuletzt abgespielt hat, ihr gehoeren die tasten der benachrichtigung
-    private GeckoSession lastPlayed;
-    private boolean paused;
+    private static GeckoSession lastPlayed;
+    private static boolean paused;
     private boolean canGoBack;
     private boolean fullscreen;
     private String currentUrl;
@@ -160,7 +166,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
             @Override
             public void onPause(GeckoSession gs, org.mozilla.geckoview.MediaSession ms) {
                 // pause bleibt in der benachrichtigung stehen, damit man wieder starten kann
-                paused = true;
+                if (gs == lastPlayed) paused = true;
                 updateService();
             }
 
@@ -185,10 +191,12 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     private void updateService() {
         runOnUiThread(() -> {
             Intent i = new Intent(this, PlaybackService.class);
+            updatePip();
             if (playing.isEmpty()) {
                 stopService(i);
                 return;
             }
+            PlaybackService.owner = getClass();
             PlaybackService.playing = !paused;
             PlaybackService.control = this::mediaKey;
             startForegroundService(i);
@@ -229,6 +237,8 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         super.onNewIntent(intent);
         setIntent(intent);
         String url = urlFrom(intent);
+        // nur die startseite angefragt: app ist schon offen, nichts neu laden
+        if (url != null && url.replaceAll("/+$", "").equals(homeUrl().replaceAll("/+$", ""))) return;
         if (url != null) session.loadUri(url);
     }
 
@@ -287,10 +297,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     protected void onUserLeaveHint() {
         super.onUserLeaveHint();
         // bei musik gibt es kein video, dort reicht die benachrichtigung
-        if (homeUrl().contains("music.")) return;
-        if (playing.isEmpty() || isInPictureInPictureMode()) return;
-        boolean watching = mini != null || (currentUrl != null && currentUrl.contains("/watch"));
-        if (!watching) return;
+        if (Build.VERSION.SDK_INT >= 31 || !pipWanted || isInPictureInPictureMode()) return;
         try {
             enterPictureInPictureMode(new android.app.PictureInPictureParams.Builder().setAspectRatio(new android.util.Rational(16, 9)).build());
         } catch (RuntimeException ignored) {
@@ -315,6 +322,17 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
             lp.setMargins(0, 0, dp(10), dp(86));
         }
         miniBox.setLayoutParams(lp);
+        miniBox.setTranslationX(in ? 0 : miniTx);
+        miniBox.setTranslationY(in ? 0 : miniTy);
+        // die flaeche zeichnet nach dem groessenwechsel oft nicht neu
+        for (int ms : new int[]{50, 300, 800}) {
+            miniBox.postDelayed(() -> {
+                if (mini == null) return;
+                mini.setActive(true);
+                miniView.requestLayout();
+                miniBox.requestLayout();
+            }, ms);
+        }
     }
 
     @Override
@@ -336,8 +354,11 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         if (mini != null) mini.close();
         if (spare != null) spare.close();
         if (session != null) session.close();
-        playing.clear();
-        stopService(new Intent(this, PlaybackService.class));
+        // nur die eigenen sitzungen abmelden, die andere app spielt vielleicht noch
+        playing.remove(session);
+        playing.remove(mini);
+        playing.remove(spare);
+        if (playing.isEmpty()) stopService(new Intent(this, PlaybackService.class));
         super.onDestroy();
     }
 
@@ -419,6 +440,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
                 // letzte seite die kein video ist, dorthin geht es beim verkleinern zurueck
                 if (url != null && url.startsWith("https://") && !url.contains("/watch")) lastBrowse = url;
                 if (url != null && url.contains("/watch") && mini != null) closeMini();
+                updatePip();
                 if (url != null && url.startsWith("https://")) prefs().edit().putString("lastUrl", url).putLong("lastAt", System.currentTimeMillis()).apply();
             }
 
@@ -528,6 +550,8 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
             if ("minimize".equals(action)) minimize();
             else if ("expand".equals(action)) expand();
             else if ("close".equals(action)) closeMini();
+            else if ("fsOn".equals(action)) setFullscreen(true);
+            else if ("fsOff".equals(action) && fullscreen) setFullscreen(false);
             else if (action != null && action.startsWith("openyt:")) openInYoutubeApp(action.substring(7));
         });
     }
@@ -555,11 +579,53 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         // nur ein kleines fenster, ein neues video ersetzt das alte
         closeMini();
         if (miniBox == null) {
-            miniBox = new FrameLayout(this);
+            miniBox = new FrameLayout(this) {
+                private float downX;
+                private float downY;
+                private boolean dragging;
+
+                // gecko meldet beruehrungen als eigene, deshalb hier trotzdem abfangen sobald gezogen wird
+                @Override
+                public void requestDisallowInterceptTouchEvent(boolean disallow) {
+                }
+
+                @Override
+                public boolean onInterceptTouchEvent(android.view.MotionEvent e) {
+                    switch (e.getActionMasked()) {
+                        case android.view.MotionEvent.ACTION_DOWN:
+                            downX = e.getRawX();
+                            downY = e.getRawY();
+                            dragging = false;
+                            dragBaseX = miniTx;
+                            dragBaseY = miniTy;
+                            break;
+                        case android.view.MotionEvent.ACTION_MOVE:
+                            if (!dragging && Math.hypot(e.getRawX() - downX, e.getRawY() - downY) > dp(10)) dragging = true;
+                            break;
+                        default:
+                            break;
+                    }
+                    return dragging;
+                }
+
+                @Override
+                public boolean onTouchEvent(android.view.MotionEvent e) {
+                    if (e.getActionMasked() == android.view.MotionEvent.ACTION_MOVE) {
+                        moveMini(dragBaseX + e.getRawX() - downX, dragBaseY + e.getRawY() - downY);
+                    } else if (e.getActionMasked() == android.view.MotionEvent.ACTION_UP || e.getActionMasked() == android.view.MotionEvent.ACTION_CANCEL) {
+                        dragging = false;
+                    }
+                    return true;
+                }
+            };
             miniBox.setBackgroundColor(0xFF000000);
             miniBox.setElevation(dp(8));
             miniView = new GeckoView(this);
             miniBox.addView(miniView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+            FrameLayout.LayoutParams glp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(26), android.view.Gravity.TOP);
+            // rechts bleibt das kreuz der seite frei
+            glp.rightMargin = dp(48);
+            miniBox.addView(makeGrip(), glp);
             FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(dp(240), dp(135), android.view.Gravity.BOTTOM | android.view.Gravity.END);
             lp.setMargins(0, 0, dp(10), dp(86));
             root.addView(miniBox, lp);
@@ -572,7 +638,76 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         canGoBack = false;
         mini = video;
         miniView.setSession(mini);
+        miniBox.setTranslationX(miniTx);
+        miniBox.setTranslationY(miniTy);
         miniBox.setVisibility(View.VISIBLE);
+        updatePip();
+    }
+
+    // oberer streifen: ziehen verschiebt das kleine fenster, antippen holt das video zurueck
+    private View makeGrip() {
+        FrameLayout grip = new FrameLayout(this);
+        View bar = new View(this);
+        android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
+        d.setColor(0xB0FFFFFF);
+        d.setCornerRadius(dp(2));
+        bar.setBackground(d);
+        FrameLayout.LayoutParams blp = new FrameLayout.LayoutParams(dp(36), dp(4), android.view.Gravity.CENTER_HORIZONTAL | android.view.Gravity.TOP);
+        blp.topMargin = dp(8);
+        grip.addView(bar, blp);
+        final float[] st = new float[5];
+        grip.setOnTouchListener((v, e) -> {
+            switch (e.getActionMasked()) {
+                case android.view.MotionEvent.ACTION_DOWN:
+                    st[0] = e.getRawX();
+                    st[1] = e.getRawY();
+                    st[2] = miniBox.getTranslationX();
+                    st[3] = miniBox.getTranslationY();
+                    st[4] = 0;
+                    return true;
+                case android.view.MotionEvent.ACTION_MOVE: {
+                    float dx = e.getRawX() - st[0];
+                    float dy = e.getRawY() - st[1];
+                    if (st[4] == 0 && Math.hypot(dx, dy) < dp(8)) return true;
+                    st[4] = 1;
+                    moveMini(st[2] + dx, st[3] + dy);
+                    return true;
+                }
+                case android.view.MotionEvent.ACTION_UP:
+                    if (st[4] == 0) expand();
+                    return true;
+                default:
+                    return true;
+            }
+        });
+        return grip;
+    }
+
+    // im bild bleiben: links und oben nicht ueber den rand, rechts und unten bis zum rand
+    private void moveMini(float x, float y) {
+        int left = root.getWidth() - miniBox.getWidth() - dp(10);
+        int top = root.getHeight() - miniBox.getHeight() - dp(86);
+        miniTx = Math.max(-left, Math.min(dp(10), x));
+        miniTy = Math.max(-top, Math.min(dp(86), y));
+        miniBox.setTranslationX(miniTx);
+        miniBox.setTranslationY(miniTy);
+    }
+
+    // ab android 12 geht das bild in bild von selbst beim verlassen der app, nicht schon bei einem screenshot
+    private void updatePip() {
+        runOnUiThread(() -> {
+            boolean on = !homeUrl().contains("music.") && !playing.isEmpty() && (mini != null || (currentUrl != null && currentUrl.contains("/watch")));
+            pipWanted = on;
+            if (Build.VERSION.SDK_INT >= 31) {
+                try {
+                    setPictureInPictureParams(new android.app.PictureInPictureParams.Builder()
+                            .setAspectRatio(new android.util.Rational(16, 9))
+                            .setAutoEnterEnabled(on)
+                            .build());
+                } catch (RuntimeException ignored) {
+                }
+            }
+        });
     }
 
     // tippen auf das kleine fenster holt das video zurueck, die hauptansicht wird dabei geschlossen
@@ -589,6 +724,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         old.close();
         canGoBack = true;
         currentUrl = urls.get(video);
+        updatePip();
     }
 
     private void closeMini() {
@@ -598,6 +734,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         miniView.releaseSession();
         miniBox.setVisibility(View.GONE);
         video.close();
+        updatePip();
     }
 
     // ---------- dialoge der seite: alert, confirm, prompt, auswahllisten, teilen ----------
@@ -751,7 +888,8 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         if (fullscreen) session.exitFullScreen();
         else if (canGoBack) session.goBack();
         // kein verlauf mehr, aber nicht auf der startseite: erst dorthin, dann erst app schliessen
-        else if (currentUrl != null && !currentUrl.replaceAll("[?#].*$", "").replaceAll("/+$", "").equals(homeUrl().replaceAll("/+$", ""))) session.loadUri(homeUrl());
+        // spielt etwas, wuerde das neue laden der startseite die wiedergabe abbrechen
+        else if (playing.isEmpty() && currentUrl != null && !currentUrl.replaceAll("[?#].*$", "").replaceAll("/+$", "").equals(homeUrl().replaceAll("/+$", ""))) session.loadUri(homeUrl());
         else moveTaskToBack(true);
     }
 

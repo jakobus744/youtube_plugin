@@ -30,7 +30,8 @@ export function buildDisplayCss() {
         for (const sel of good) {
           const full = `${scope} ${sel}`
           if (mode === 'hide') out.push(`${full} { display: none !important; }`)
-          else if (mode === 'collapse') out.push(`${full}:not([data-ytx-open]) { display: none !important; }`)
+          // verschachtelte treffer bleiben sichtbar, solange der aeussere offen ist
+          else if (mode === 'collapse') out.push(`${full}:not([data-ytx-open]):not([data-ytx-open] *) { display: none !important; }`)
           else if (mode === 'dim') {
             if (t.dim === 'grayscale') {
               out.push(`${full} { filter: grayscale(1) contrast(.9) !important; opacity: .75 !important; transition: filter .2s ease, opacity .2s ease !important; }`)
@@ -116,7 +117,14 @@ function makeBar(t, el) {
     }
     hint.textContent = open ? 'zuklappen' : 'aufklappen'
     // player und kommentare brauchen ein resize damit youtube neu misst
-    window.dispatchEvent(new Event('resize'))
+    // die liste misst erst nach dem naechsten bild, deshalb mehrmals und mit kleinem scroll
+    const nudge = () => {
+      window.dispatchEvent(new Event('resize'))
+      window.dispatchEvent(new Event('scroll'))
+      document.documentElement.dispatchEvent(new Event('scroll'))
+    }
+    nudge()
+    if (open) for (const ms of [60, 250, 700, 1500]) setTimeout(nudge, ms)
   }
   bar.addEventListener('click', toggle)
   bar.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), toggle()))

@@ -408,7 +408,7 @@ export const hubFeature = {
       const card = h(
         'div',
         { style: { flex: 'none', width: '150px', cursor: 'pointer', color: T.primary, font: '400 13px/1.35 Roboto, Arial, sans-serif' } },
-        img ? h('img', { src: img, loading: 'lazy', alt: '', style: { width: '150px', height: '150px', borderRadius: '4px', objectFit: 'cover', background: 'rgba(255,255,255,.08)' } }) : h('div', { style: { width: '150px', height: '150px', borderRadius: '4px', background: 'rgba(255,255,255,.08)' } }),
+        img ? h('img', { src: img, loading: 'eager', decoding: 'async', alt: '', style: { width: '150px', height: '150px', borderRadius: '4px', objectFit: 'cover', background: 'rgba(255,255,255,.08)' } }) : h('div', { style: { width: '150px', height: '150px', borderRadius: '4px', background: 'rgba(255,255,255,.08)' } }),
         h('div', { text: title, style: { marginTop: '6px', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: highlight ? '#ffc83d' : 'inherit' } }),
         h('div', { text: sub, title: sub, style: { color: T.secondary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' } })
       )
@@ -420,6 +420,18 @@ export const hubFeature = {
     }
 
     // ---------- fuer dich (ytx) mit neu mischen ----------
+
+    // titelbilder vorab laden, damit sie beim weiterwischen und neu mischen schon im zwischenspeicher liegen
+    const warmed = new Set()
+    function warmImages(items) {
+      const urls = items.map((i) => i.thumbnail).filter((u) => u && !warmed.has(u)).slice(0, 48)
+      urls.forEach((u, i) => setTimeout(() => {
+        warmed.add(u)
+        const im = new Image()
+        im.decoding = 'async'
+        im.src = u
+      }, i * 150))
+    }
 
     const SHOWN = 'm.hub.shown'
     const home = { pool: null, poolAt: 0, step: 0, turns: 0, picked: [], loading: false, picking: false, note: '', mode: ctx.state.get('m.hub.homeMode', 'forYou') }
@@ -475,6 +487,7 @@ export const hubFeature = {
         }
       }
       home.pool = res.items || []
+      warmImages(home.pool)
       home.poolAt = Date.now()
     }
 

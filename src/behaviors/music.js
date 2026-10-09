@@ -17,6 +17,34 @@ const SWIPE_SKIP = 'tp-yt-paper-slider, #progress-bar, button, a, .middle-contro
 
 export const behaviors = [
   {
+    id: 'm.keepPlaying',
+    label: 'Musik im Hintergrund weiterspielen (App)',
+    description: 'In der ytx-App meldet die Seite nicht mehr, dass sie im Hintergrund ist. Sonst entlädt YouTube Music den Player beim Verlassen der App und die Wiedergabe stoppt',
+    type: 'toggle',
+    default: true,
+    start() {
+      if (!window.__ytxNative) return () => {}
+      const d = document
+      const redefine = (key, value) => {
+        try {
+          Object.defineProperty(d, key, { configurable: true, get: () => value })
+        } catch {}
+      }
+      redefine('hidden', false)
+      redefine('webkitHidden', false)
+      redefine('visibilityState', 'visible')
+      redefine('webkitVisibilityState', 'visible')
+      const block = (e) => e.stopImmediatePropagation()
+      d.addEventListener('visibilitychange', block, true)
+      window.addEventListener('visibilitychange', block, true)
+      return () => {
+        d.removeEventListener('visibilitychange', block, true)
+        window.removeEventListener('visibilitychange', block, true)
+        for (const k of ['hidden', 'webkitHidden', 'visibilityState', 'webkitVisibilityState']) delete d[k]
+      }
+    }
+  },
+  {
     id: 'm.swipeSkip',
     label: 'Cover und Playerleiste wischen: nächster oder vorheriger Titel',
     description: 'Nach links wischen spielt den nächsten Titel, nach rechts den vorherigen, wie in der YouTube-Music-App',

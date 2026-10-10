@@ -7163,7 +7163,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     ["search", "Suchen", "M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"],
     ["library", "Mediathek", "M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"]
   ];
-  var NAV_CSS = "#ytx-mnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3000; display: flex; height: calc(56px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; background: color-mix(in srgb, var(--ytx-tint, #212121) 55%, #000); }\n#ytx-mnav[hidden] { display: none; }\n#ytx-mnav button { all: unset; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ytmusic-text-secondary, #aaa); font: 500 11px/1 Roboto, Arial, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }\n#ytx-mnav button[aria-current] { color: var(--ytmusic-text-primary, #fff); }\n#ytx-mnav svg { width: 24px; height: 24px; fill: currentColor; }\nhtml[data-ytx-mnav] ytmusic-player-bar, html[data-ytx-mnav] #player-bar-background { position: fixed !important; left: 0 !important; right: 0 !important; bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important; top: auto !important; transform: none !important; }\nhtml[data-ytx-mnav] ytmusic-player#player { transform: translateY(-56px); }\nhtml[data-ytx-mnav] ytmusic-app-layout #content, html[data-ytx-mnav] ytmusic-browse-response, html[data-ytx-mnav] ytmusic-search-page { padding-bottom: 56px; }";
+  var NAV_CSS = "#ytx-mnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2100; display: flex; height: calc(56px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; background: color-mix(in srgb, var(--ytx-tint, #212121) 55%, #000); }\n#ytx-mnav[hidden] { display: none; }\n#ytx-mnav button { all: unset; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ytmusic-text-secondary, #aaa); font: 500 11px/1 Roboto, Arial, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }\n#ytx-mnav button[aria-current] { color: var(--ytmusic-text-primary, #fff); }\n#ytx-mnav svg { width: 24px; height: 24px; fill: currentColor; }\nhtml[data-ytx-mnav] ytmusic-player-bar, html[data-ytx-mnav] #player-bar-background { position: fixed !important; left: 0 !important; right: 0 !important; bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important; top: auto !important; transform: none !important; }\nhtml[data-ytx-mnav] ytmusic-player#player { transform: translateY(-56px); }\nhtml[data-ytx-mnav] ytmusic-app-layout #content, html[data-ytx-mnav] ytmusic-browse-response, html[data-ytx-mnav] ytmusic-search-page { padding-bottom: 56px; }";
   function navIcon(path) {
     const ns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(ns, "svg");
@@ -7228,7 +7228,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         document.documentElement.append(nav2);
         const sync = () => {
           const layout = document.querySelector("ytmusic-app-layout");
-          const full = layout?.getAttribute("player-ui-state") === "FULL_PLAYER" || layout?.hasAttribute("player-page-open");
+          const state = layout?.getAttribute("player-ui-state") || "";
+          const full = !!state && state !== "PLAYER_BAR_ONLY" && state !== "INACTIVE";
           nav2.hidden = !!full;
           document.documentElement.toggleAttribute("data-ytx-mnav", !full);
           const page = document.documentElement.getAttribute("data-ytx-page");
@@ -8523,8 +8524,6 @@ html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hid
 /* markierung in der warteschlange: eine farbe fuer alle gruende, nur so breit wie der text, auch wenn youtube die zeile als raster baut */
 .ytx-m-mark { all: initial; display: inline-block; width: max-content; max-width: 100%; justify-self: start; align-self: flex-start; flex: none; margin: 2px 0 0 6px; padding: 0 6px; border-radius: 4px;
   font: 500 10px/15px Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); border: 1px solid currentColor; opacity: .8; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* auf dem handy deckt diese ebene die titelbilder der karten komplett ab */
-.image-wrapper ytmusic-background-overlay-renderer { display: none !important; }
 ytmusic-player-queue-item[data-ytx-skip] { opacity: .55; }
 ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 .ytx-m-bar-btns { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; }
@@ -8535,6 +8534,8 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
 @media (max-width: 600px) {
   /* handy: das bunte titelbild oben laeuft sanft aus statt mit harter kante zu enden */
   ytmusic-fullbleed-thumbnail-renderer { display: none !important; }
+  /* diese ebene deckt auf dem handy die titelbilder der karten komplett ab */
+  .image-wrapper ytmusic-background-overlay-renderer { display: none !important; }
   .background-gradient { background-size: 100% 100% !important; background-repeat: no-repeat !important; }
   /* playerleiste nimmt wie in der music app die farbe des titels an */
   ytmusic-app-layout #player-bar-background { background: transparent !important; }

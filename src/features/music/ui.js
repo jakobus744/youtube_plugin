@@ -41,8 +41,6 @@ html[data-ytx-mchips-off][data-ytx-page="home"] ytmusic-browse-response:not([hid
 /* markierung in der warteschlange: eine farbe fuer alle gruende, nur so breit wie der text, auch wenn youtube die zeile als raster baut */
 .ytx-m-mark { all: initial; display: inline-block; width: max-content; max-width: 100%; justify-self: start; align-self: flex-start; flex: none; margin: 2px 0 0 6px; padding: 0 6px; border-radius: 4px;
   font: 500 10px/15px Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); border: 1px solid currentColor; opacity: .8; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* auf dem handy deckt diese ebene die titelbilder der karten komplett ab */
-.image-wrapper ytmusic-background-overlay-renderer { display: none !important; }
 ytmusic-player-queue-item[data-ytx-skip] { opacity: .55; }
 ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 .ytx-m-bar-btns { display: inline-flex; align-items: center; gap: 2px; margin: 0 4px; }
@@ -53,6 +51,8 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
 @media (max-width: 600px) {
   /* handy: das bunte titelbild oben laeuft sanft aus statt mit harter kante zu enden */
   ytmusic-fullbleed-thumbnail-renderer { display: none !important; }
+  /* diese ebene deckt auf dem handy die titelbilder der karten komplett ab */
+  .image-wrapper ytmusic-background-overlay-renderer { display: none !important; }
   .background-gradient { background-size: 100% 100% !important; background-repeat: no-repeat !important; }
   /* playerleiste nimmt wie in der music app die farbe des titels an */
   ytmusic-app-layout #player-bar-background { background: transparent !important; }

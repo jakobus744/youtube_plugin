@@ -76,6 +76,11 @@ function thumbUrl(img) {
     const list = d?.thumbnail?.thumbnails || d?.thumbnails || d?.musicThumbnailRenderer?.thumbnail?.thumbnails
     if (list?.length) return list[list.length - 1].url
   }
+  // die playerleiste hat kein eigenes datenobjekt, das cover steht in den mediensteuerungsdaten
+  if (img.closest('ytmusic-player-bar')) {
+    const art = navigator.mediaSession?.metadata?.artwork
+    if (art?.length) return art[art.length - 1].src
+  }
   return ''
 }
 
@@ -87,7 +92,8 @@ function fixImages() {
     const src = img.getAttribute('src') || ''
     if (!src || src.startsWith('data:')) {
       const r = img.getBoundingClientRect()
-      if (r.width < 8 || r.bottom < -200 || r.top > innerHeight + 400) continue
+      const inBar = !!img.closest('ytmusic-player-bar')
+      if (!inBar && (r.width < 8 || r.bottom < -200 || r.top > innerHeight + 400)) continue
       const url = thumbUrl(img)
       if (!url) continue
       imgTries.set(img, tries + 1)

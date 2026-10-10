@@ -1,6 +1,6 @@
 # ytx Android-App: Aufbau, Entscheidungen, Betrieb
 
-Stand: 2026-10-08, Version 0.4.0. Die Kurzanleitung zum Installieren steht in der [README](../README.md), hier steht, wie es gebaut ist und warum.
+Stand: 2026-10-10, Version 0.4.1. Die Kurzanleitung zum Installieren steht in der [README](../README.md), hier steht, wie es gebaut ist und warum.
 
 ## 1. Aufbau
 
@@ -26,7 +26,11 @@ Stand: 2026-10-08, Version 0.4.0. Die Kurzanleitung zum Installieren steht in de
 - **Mobil-Seite** (`src/sites/mobile.js`): ytx-Leiste unter dem Video, standardmäßig eingeklappt (Chip „ytx“). Dort Transkript, Playlist-Werkzeuge und der Knopf „Herunterladen (YouTube-App)“. Seiten-Daten kommen über `registry/mobile/paths.js`, ausgewählt per `SITE_ID` in `sitePaths.js`.
 - **Wischgesten** (`src/behaviors/mobile.js`, `swipeDownBack`): nach unten verkleinert, nach oben Vollbild. Gilt im ganzen Player außer an der Zeitleiste. Die Maße sind in CSS-Pixeln (55 CSS-Pixel entsprechen etwa 1,4 cm).
 - **Music** (`src/behaviors/music.js`, `src/features/music/sleepTimer.js`): Wischen auf Cover oder Leiste wechselt den Titel. Der Sleep-Timer (Mond-Knopf) steht neben dem Stern. Karten der Reihe „Für dich“ öffnen den Song über die Adresse, wenn der interne Weg nichts tut. Das Neu-Mischen gibt nach 25 s auf.
-- **Music-Aussehen auf dem Handy** (`src/features/music/ui.js`): Der Farbverlauf der Seite wiederholte sich auf Höhe des Titelbildes und erzeugte eine harte Kante. Er läuft jetzt in einem Stück, das Titelbild hinter der Kopfzeile ist aus. Die Playerleiste nimmt den Farbton der Seite an (`--ytx-tint`, alle 1,5 s aus dem Verlauf gelesen).
+- **Vorschau und Zeitleiste** (`src/behaviors/mobile.js`, `longPressPreview`, `tapSeek`): Die Vorschau legt ein Overlay mit dem offiziellen Einbett-Player (`youtube.com/embed`, stumm, `enablejsapi`) über das Thumbnail und steuert ihn per `postMessage`, 1,7-fach vergrößert, damit Titelzeile und Logo außerhalb liegen. Das lange Drücken löst in Gecko nach etwa 0,5 Sekunden das Kontextmenü aus und stoppt danach die Touch-Bewegungen. Deshalb setzt `YtxRuntime.java` die Einstellung `ui.click_hold_context_menus.delay` hoch. `tapSeek` springt bei einem kurzen Tipp (unter 0,6 s, unter 24 px Bewegung) mit `seekTo` an die Stelle.
+- **Vollbild per Knopf** (`MainActivity.watchOrientation`): Die Seite sperrt dabei die Ausrichtung auf quer. Ein `OrientationEventListener` hebt die Sperre auf, sobald das Handy einmal quer und dann wieder hochkant gehalten wurde.
+- **Music unten** (`src/behaviors/music.js`, `m.bottomNav`): Eigene Leiste, hängt an `documentElement` (beim Start gibt es noch kein `body`). Sie klickt die Einträge der Seitenleiste (`tap` und `click`), Suchen öffnet die Suchleiste. Die Playerleiste und ihr Titelbild werden um 56 Pixel nach oben geschoben, ab geöffnetem Player ist die Leiste weg.
+- **Music-Aussehen auf dem Handy**
+ (`src/features/music/ui.js`): Der Farbverlauf der Seite wiederholte sich auf Höhe des Titelbildes und erzeugte eine harte Kante. Er läuft jetzt in einem Stück, das Titelbild hinter der Kopfzeile ist aus. Die Playerleiste nimmt den Farbton der Seite an (`--ytx-tint`, alle 1,5 s aus dem Verlauf gelesen).
 - **Look koppeln**: Theme und Farben gelten für YouTube, Music und Mobil gemeinsam (Standard seit der Migration `link-look-default-on`, abschaltbar im Look-Tab).
 
 ## 4. Nextcloud-Abgleich der Profile

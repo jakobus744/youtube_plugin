@@ -8,6 +8,7 @@ import android.os.Looper;
 import android.util.Log;
 
 import org.json.JSONObject;
+import org.mozilla.geckoview.GeckoPreferenceController;
 import org.mozilla.geckoview.GeckoResult;
 import org.mozilla.geckoview.GeckoRuntime;
 import org.mozilla.geckoview.GeckoRuntimeSettings;
@@ -40,6 +41,9 @@ final class YtxRuntime {
                 .build();
         appContext = ctx.getApplicationContext();
         runtime = GeckoRuntime.create(appContext, settings);
+        // das lange Druecken loest sonst nach einer halben Sekunde das Kontextmenue aus und danach kommen keine Touch Bewegungen mehr an, die Vorschau braucht sie zum Spulen
+        GeckoPreferenceController.setGeckoPref("ui.click_hold_context_menus.delay", 6000, GeckoPreferenceController.PREF_BRANCH_USER)
+                .accept(v -> Log.i(TAG, "long press delay gesetzt"), e -> Log.e(TAG, "long press delay", e));
         runtime.getWebExtensionController()
                 .ensureBuiltIn(EXT_URI, EXT_ID)
                 .accept(YtxRuntime::onExtension, e -> Log.e(TAG, "erweiterung nicht installiert", e));

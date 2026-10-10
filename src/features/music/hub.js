@@ -326,7 +326,7 @@ export const hubFeature = {
         const grid = h('div', { class: 'grid' })
         for (const rel of r.releases.slice(0, 24)) {
           const card = h('div', { class: 'card', title: `${rel.artistName} · ${rel.title}` }, rel.thumbnail ? h('img', { src: rel.thumbnail, loading: 'lazy', alt: '' }) : h('img', { alt: '' }), h('div', { class: ['title', rel.fresh && 'new'], text: `${rel.fresh ? '● ' : ''}${rel.title}` }), h('div', { class: 'sub', text: `${rel.artistName}${rel.year ? ` · ${rel.year}` : ''}${rel.kind ? ` · ${rel.kind}` : ''}` }))
-          card.addEventListener('click', () => navigateEndpoint(endpoints.browse(rel.id, null, 'ALBUM')))
+          card.addEventListener('click', () => openAlbum(rel.id))
           grid.append(card)
         }
         main.append(grid)
@@ -403,6 +403,13 @@ export const hubFeature = {
     const T = { primary: 'var(--ytmusic-text-primary, #fff)', secondary: 'var(--ytmusic-text-secondary, #aaa)' }
     const shelfTitle = (text, ...buttons) =>
       h('div', { style: { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', margin: '8px 0 16px' } }, h('div', { text, style: { font: '700 24px/1.3 Roboto, Arial, sans-serif', color: T.primary, marginRight: '8px' } }), ...buttons)
+    // auf dem handy reagiert der interne weg manchmal nicht, dann geht es ueber die adresse
+    const openAlbum = async (id) => {
+      const before = location.href
+      const ok = await navigateEndpoint(endpoints.browse(id, null, 'ALBUM'))
+      if (ok) await new Promise((r) => setTimeout(r, 1500))
+      if (!ok || location.href === before) location.href = `https://music.youtube.com/browse/${id}`
+    }
     const shelfRow = () => h('div', { style: { display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '6px' } })
     const shelfCard = ({ img, title, sub, highlight, onClick }) => {
       const card = h(
@@ -672,7 +679,7 @@ export const hubFeature = {
         return
       }
       const row = shelfRow()
-      for (const r of list) row.append(shelfCard({ img: r.thumbnail, title: `${r.fresh ? '● ' : ''}${r.title}`, sub: `${r.artistName}${r.kind ? ` · ${r.kind}` : ''}`, highlight: r.fresh, onClick: () => navigateEndpoint(endpoints.browse(r.id, null, 'ALBUM')) }))
+      for (const r of list) row.append(shelfCard({ img: r.thumbnail, title: `${r.fresh ? '● ' : ''}${r.title}`, sub: `${r.artistName}${r.kind ? ` · ${r.kind}` : ''}`, highlight: r.fresh, onClick: () => openAlbum(r.id) }))
       node.replaceChildren(shelfTitle('Neu von deinen Künstlern'), row)
     }
 

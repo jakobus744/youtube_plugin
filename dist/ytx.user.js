@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.0
+// @version      0.4.1
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -39,7 +39,7 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.4.0",
+    version: "0.4.1",
     description: "YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen",
     private: true,
     type: "module",
@@ -8555,6 +8555,10 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
       const list = d?.thumbnail?.thumbnails || d?.thumbnails || d?.musicThumbnailRenderer?.thumbnail?.thumbnails;
       if (list?.length) return list[list.length - 1].url;
     }
+    if (img.closest("ytmusic-player-bar")) {
+      const art = navigator.mediaSession?.metadata?.artwork;
+      if (art?.length) return art[art.length - 1].src;
+    }
     return "";
   }
   function fixImages() {
@@ -8565,7 +8569,8 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
       const src2 = img.getAttribute("src") || "";
       if (!src2 || src2.startsWith("data:")) {
         const r = img.getBoundingClientRect();
-        if (r.width < 8 || r.bottom < -200 || r.top > innerHeight + 400) continue;
+        const inBar = !!img.closest("ytmusic-player-bar");
+        if (!inBar && (r.width < 8 || r.bottom < -200 || r.top > innerHeight + 400)) continue;
         const url = thumbUrl(img);
         if (!url) continue;
         imgTries.set(img, tries + 1);
@@ -9952,7 +9957,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           const grid = h("div", { class: "grid" });
           for (const rel of r.releases.slice(0, 24)) {
             const card2 = h("div", { class: "card", title: `${rel.artistName} · ${rel.title}` }, rel.thumbnail ? h("img", { src: rel.thumbnail, loading: "lazy", alt: "" }) : h("img", { alt: "" }), h("div", { class: ["title", rel.fresh && "new"], text: `${rel.fresh ? "● " : ""}${rel.title}` }), h("div", { class: "sub", text: `${rel.artistName}${rel.year ? ` · ${rel.year}` : ""}${rel.kind ? ` · ${rel.kind}` : ""}` }));
-            card2.addEventListener("click", () => navigateEndpoint(endpoints.browse(rel.id, null, "ALBUM")));
+            card2.addEventListener("click", () => openAlbum(rel.id));
             grid.append(card2);
           }
           main.append(grid);
@@ -10021,6 +10026,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       const offQueue = ytxQueue.on(() => drawer.isOpen && ui.tab === "queue" && drawQueue());
       const T2 = { primary: "var(--ytmusic-text-primary, #fff)", secondary: "var(--ytmusic-text-secondary, #aaa)" };
       const shelfTitle = (text, ...buttons) => h("div", { style: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px", margin: "8px 0 16px" } }, h("div", { text, style: { font: "700 24px/1.3 Roboto, Arial, sans-serif", color: T2.primary, marginRight: "8px" } }), ...buttons);
+      const openAlbum = async (id) => {
+        const before = location.href;
+        const ok = await navigateEndpoint(endpoints.browse(id, null, "ALBUM"));
+        if (ok) await new Promise((r) => setTimeout(r, 1500));
+        if (!ok || location.href === before) location.href = `https://music.youtube.com/browse/${id}`;
+      };
       const shelfRow = () => h("div", { style: { display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "6px" } });
       const shelfCard = ({ img, title, sub, highlight, onClick }) => {
         const card2 = h(
@@ -10272,7 +10283,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           return;
         }
         const row2 = shelfRow();
-        for (const r of list) row2.append(shelfCard({ img: r.thumbnail, title: `${r.fresh ? "● " : ""}${r.title}`, sub: `${r.artistName}${r.kind ? ` · ${r.kind}` : ""}`, highlight: r.fresh, onClick: () => navigateEndpoint(endpoints.browse(r.id, null, "ALBUM")) }));
+        for (const r of list) row2.append(shelfCard({ img: r.thumbnail, title: `${r.fresh ? "● " : ""}${r.title}`, sub: `${r.artistName}${r.kind ? ` · ${r.kind}` : ""}`, highlight: r.fresh, onClick: () => openAlbum(r.id) }));
         node.replaceChildren(shelfTitle("Neu von deinen Künstlern"), row2);
       }
       const shelf = ctx.mount({
@@ -11859,6 +11870,405 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       return () => offs.forEach((off) => off());
     }
   };
+  var EMBED = "https://www.youtube.com";
+  var HOLD_KEEP_MS = 1500;
+  var OVERLAY_MS = 3e3;
+  var thumbPreview = {
+    id: "thumbPreview",
+    label: "Video-Vorschau auf Thumbnails",
+    description: "Stumme Vorschau mit Untertiteln direkt auf dem Bild, wie in der YouTube-App. Gedrückt halten startet sie, nach 1,5 Sekunden läuft sie auch ohne Finger weiter. Sie beginnt am Anfang des Videos. Nach links oder rechts ziehen spult. „Beim Verweilen“ startet sie von selbst, wenn ein Video in Ruhe mitten im Bild liegt",
+    type: "select",
+    options: [["", "Aus"], ["press", "Gedrückt halten"], ["both", "Gedrückt halten und beim Verweilen"]],
+    default: "both",
+    start(ctx, mode) {
+      const auto = mode === "both";
+      let timer2 = 0;
+      let press = null;
+      let drag = null;
+      let suppressUntil = 0;
+      let scrollAt = Date.now();
+      let dwell = { link: null, since: 0 };
+      let ready = false;
+      let warmed = false;
+      let live = null;
+      let box = null;
+      let frame = null;
+      let bar = null;
+      let curId = "";
+      let hs = 0;
+      const idOf = (a) => (a?.getAttribute("href") || "").match(/[?&]v=([A-Za-z0-9_-]{11})/)?.[1] || "";
+      const thumbLink = (el) => {
+        const a = el?.closest?.('a[href*="/watch?v="]');
+        if (!a || !a.querySelector('img, [class*="thumbnail"], [class*="image"]')) return null;
+        const r = a.getBoundingClientRect();
+        return r.width > 80 && r.height > 40 ? a : null;
+      };
+      const cmd = (func, ...args) => {
+        try {
+          frame?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), EMBED);
+        } catch {
+        }
+      };
+      const ensurePlayer = (id) => {
+        if (box) return;
+        box = document.createElement("div");
+        box.setAttribute("data-ytx-own", "");
+        box.style.cssText = "position:fixed;z-index:2147483000;left:0;top:0;width:10px;height:10px;background:transparent;pointer-events:none;overflow:hidden;border-radius:8px;visibility:hidden";
+        frame = document.createElement("iframe");
+        frame.setAttribute("allow", "autoplay; encrypted-media");
+        frame.style.cssText = "width:100%;height:100%;border:0;pointer-events:none;transform:scale(1.25);transform-origin:50% 100%;opacity:0;transition:opacity .12s";
+        frame.src = `${EMBED}/embed/${id}?autoplay=0&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&fs=0&start=0&iv_load_policy=3&cc_load_policy=1&cc_lang_pref=de&hl=de&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+        curId = id;
+        const track = document.createElement("div");
+        track.style.cssText = "position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(255,255,255,.3)";
+        bar = document.createElement("div");
+        bar.style.cssText = "height:100%;width:0;background:#ff0033";
+        track.append(bar);
+        box.append(frame, track);
+        document.documentElement.append(box);
+        hs = setInterval(() => {
+          try {
+            frame.contentWindow.postMessage(JSON.stringify({ event: "listening", id: "ytx", channel: "widget" }), EMBED);
+          } catch {
+          }
+        }, 250);
+      };
+      const stopLive = () => {
+        clearTimeout(timer2);
+        if (live) {
+          cmd("pauseVideo");
+          live = null;
+        }
+        if (box) {
+          box.style.visibility = "hidden";
+          frame.style.opacity = "0";
+          bar.style.width = "0";
+        }
+        press = null;
+        drag = null;
+      };
+      const place2 = (r) => {
+        const top2 = document.querySelector("ytm-mobile-topbar-renderer, ytm-mobile-topbar")?.getBoundingClientRect().bottom || 0;
+        const bottom = document.querySelector("ytm-pivot-bar-renderer")?.getBoundingClientRect().top || innerHeight;
+        const cutTop = Math.max(0, top2 - r.top);
+        const cutBottom = Math.max(0, r.bottom - bottom);
+        Object.assign(box.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, clipPath: `inset(${cutTop}px 0 ${cutBottom}px 0)` });
+      };
+      const startVideo = (id) => {
+        if (curId !== id) {
+          cmd("mute");
+          cmd("loadVideoById", { videoId: id, startSeconds: 0 });
+          curId = id;
+        } else {
+          cmd("seekTo", 0, true);
+          cmd("playVideo");
+        }
+      };
+      const preload = () => {
+        const id = idOf(document.querySelector('a[href*="/watch?v="]'));
+        if (id) ensurePlayer(id);
+      };
+      const begin = (link, how) => {
+        const id = idOf(link);
+        if (!id) return;
+        warmed = false;
+        const t0 = press ? press.t0 : Date.now();
+        stopLive();
+        const r = link.getBoundingClientRect();
+        ensurePlayer(id);
+        const same2 = curId === id;
+        live = { link, id, how, t0, rect: r, dur: 0, state: -1, cur: 0, vidOk: same2, shown: false, target: -1, lastSeek: 0, seeking: false, showAt: 0, loadedAt: Date.now() };
+        place2(r);
+        box.style.visibility = "visible";
+        frame.style.opacity = "0";
+        bar.style.width = "0";
+        if (!ready) live.pending = true;
+        else startVideo(id);
+      };
+      const reveal = () => {
+        if (!live || !frame) return;
+        live.shown = !!(live.vidOk && live.state === 1 && live.dur > 0 && live.cur > 0.15 && !live.seeking && Date.now() >= live.showAt);
+        frame.style.opacity = live.shown ? "1" : "0";
+      };
+      const onMsg = (e) => {
+        if (!frame || e.source !== frame.contentWindow) return;
+        let d;
+        try {
+          d = JSON.parse(e.data);
+        } catch {
+          return;
+        }
+        if (!ready) {
+          ready = true;
+          if (live?.pending) {
+            live.pending = false;
+            startVideo(live.id);
+          }
+        }
+        if (!live) return;
+        if (d.event === "onError") return stopLive();
+        const state = d.event === "onStateChange" ? d.info : d.info?.playerState;
+        if (typeof state === "number") {
+          live.state = state;
+          if (state !== 1) live.notPlaying = true;
+          else if (live.notPlaying && live.showAt) {
+            live.notPlaying = false;
+            live.showAt = Date.now() + OVERLAY_MS;
+            setTimeout(reveal, OVERLAY_MS + 30);
+          }
+          if (state === 0 && !live.seeking) {
+            cmd("seekTo", 0, true);
+            cmd("playVideo");
+          }
+          if (state === 1 && !live.showAt) {
+            live.showAt = Date.now() + OVERLAY_MS;
+            setTimeout(reveal, OVERLAY_MS + 30);
+          }
+        }
+        const info2 = d.info;
+        const vid = info2?.videoData?.video_id;
+        if (vid) live.vidOk = vid === live.id;
+        else if (!live.vidOk && live.state === 1 && Date.now() - live.loadedAt > 2500) live.vidOk = true;
+        const dur = info2?.duration;
+        if (!live.dur && dur > 0 && live.vidOk) {
+          live.dur = dur;
+          cmd("playVideo");
+        }
+        const cur = info2?.currentTime;
+        if (typeof cur === "number") live.cur = cur;
+        if (!live.seeking && live.dur && cur >= 0) bar.style.width = `${Math.min(100, cur / live.dur * 100)}%`;
+        reveal();
+      };
+      window.addEventListener("message", onMsg);
+      const seekTo = (x) => {
+        if (!live || !live.dur) return;
+        live.seeking = true;
+        live.shown = false;
+        frame.style.opacity = "0";
+        const f = Math.min(1, Math.max(0, (x - live.rect.left) / live.rect.width));
+        bar.style.width = `${f * 100}%`;
+        live.target = f * live.dur;
+        const now = Date.now();
+        if (now - live.lastSeek < 300) return;
+        live.lastSeek = now;
+        cmd("seekTo", live.target, true);
+      };
+      const settleSeek = () => {
+        if (!live) return;
+        if (live.target >= 0) {
+          cmd("seekTo", live.target, true);
+          cmd("playVideo");
+          live.target = -1;
+        }
+        live.seeking = false;
+        live.shown = false;
+        live.showAt = Date.now() + OVERLAY_MS;
+        setTimeout(reveal, OVERLAY_MS + 30);
+        reveal();
+      };
+      const pickDwell = () => {
+        const vh = innerHeight;
+        let best = null;
+        for (const a of document.querySelectorAll('a[href*="/watch?v="]')) {
+          const r = a.getBoundingClientRect();
+          if (r.width < 150 || r.height < 80 || r.top < vh * 0.12 || r.bottom > vh * 0.92) continue;
+          const d = Math.abs(r.top + r.height / 2 - vh * 0.45);
+          if (d < vh * 0.22 && thumbLink(a) && (!best || d < best.d)) best = { a, d };
+        }
+        return best?.a || null;
+      };
+      const follow = () => {
+        if (!live) return;
+        const r = live.link.getBoundingClientRect();
+        const mid = r.top + r.height / 2;
+        if (!live.link.isConnected || mid < innerHeight * 0.1 || mid > innerHeight * 0.92) return stopLive();
+        live.rect = r;
+        place2(r);
+      };
+      const poll = setInterval(() => {
+        if (document.hidden || document.fullscreenElement || press || drag) return;
+        if (pageFromUrl(location.href) === "watch" || navigator.connection?.saveData) return live && stopLive();
+        const now = Date.now();
+        if (!box) preload();
+        if (live) follow();
+        if (!auto || now - scrollAt < 350) return;
+        const c = pickDwell();
+        if (c !== dwell.link) {
+          dwell = { link: c, since: now };
+          return;
+        }
+        if (c && (!live || live.how === "auto" && live.link !== c) && now - dwell.since > 200) begin(c, "auto");
+      }, 150);
+      const onScroll = (e) => {
+        const t = e.target;
+        if (t !== document && t !== document.documentElement && t !== document.body) return;
+        scrollAt = Date.now();
+        if (live && live.how === "auto") follow();
+      };
+      const inLive = (t) => live && t.clientX >= live.rect.left && t.clientX <= live.rect.right && t.clientY >= live.rect.top && t.clientY <= live.rect.bottom;
+      const offs = [
+        listen(window, "scroll", onScroll, { passive: true, capture: true }),
+        listen(document, "touchstart", (e) => {
+          if (e.touches.length !== 1) return stopLive();
+          const t = e.touches[0];
+          if (live && live.how === "auto" && inLive(t)) {
+            drag = { x: t.clientX, y: t.clientY, moved: false };
+            return;
+          }
+          press = null;
+          drag = null;
+          clearTimeout(timer2);
+          if (!(live && live.how === "auto")) stopLive();
+          const link = thumbLink(e.target);
+          if (!link) return;
+          press = { x: t.clientX, y: t.clientY, link, t0: Date.now() };
+          const wid = idOf(link);
+          if (ready && wid && curId !== wid && !live) {
+            startVideo(wid);
+            warmed = true;
+          }
+          timer2 = setTimeout(() => {
+            if (press) begin(press.link, "press");
+          }, 160);
+        }, { passive: true, capture: true }),
+        listen(document, "touchmove", (e) => {
+          const t = e.touches[0];
+          if (live && live.how === "press") {
+            e.preventDefault();
+            seekTo(t.clientX);
+          } else if (live && drag) {
+            const dx = t.clientX - drag.x;
+            const dy = t.clientY - drag.y;
+            if (!drag.moved && Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) {
+              drag = null;
+            } else if (drag.moved || Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+              drag.moved = true;
+              e.preventDefault();
+              seekTo(t.clientX);
+            }
+          } else if (press && (Math.abs(t.clientX - press.x) > 12 || Math.abs(t.clientY - press.y) > 12)) {
+            clearTimeout(timer2);
+            press = null;
+            if (warmed && !live) {
+              cmd("pauseVideo");
+              warmed = false;
+            }
+          }
+        }, { passive: false, capture: true }),
+        listen(document, "touchend", () => {
+          clearTimeout(timer2);
+          if (warmed && !live) {
+            cmd("pauseVideo");
+            warmed = false;
+          }
+          if (live && live.how === "press") {
+            const held = Date.now() - live.t0;
+            settleSeek();
+            if (held >= HOLD_KEEP_MS) live.how = "auto";
+            else stopLive();
+            suppressUntil = Date.now() + 500;
+          } else if (drag?.moved) {
+            settleSeek();
+            suppressUntil = Date.now() + 500;
+          }
+          press = null;
+          drag = null;
+        }, { passive: true, capture: true }),
+        listen(document, "touchcancel", () => {
+          press = null;
+          drag = null;
+          if (live && live.how === "press") stopLive();
+        }, { passive: true, capture: true }),
+        listen(document, "contextmenu", (e) => {
+          if (live || press) e.preventDefault();
+        }, { capture: true }),
+        // der Klick nach dem Spulen oder Halten soll das Video nicht oeffnen, ein normaler Tipp oeffnet es wie immer
+        listen(document, "click", (e) => {
+          if (Date.now() < suppressUntil) {
+            e.stopPropagation();
+            e.preventDefault();
+          } else if (live) stopLive();
+        }, { capture: true })
+      ];
+      return () => {
+        clearInterval(poll);
+        clearInterval(hs);
+        window.removeEventListener("message", onMsg);
+        offs.forEach((off) => off());
+        stopLive();
+        box?.remove();
+      };
+    }
+  };
+  var pullRefresh = {
+    id: "pullRefresh",
+    label: "Startseite durch Herunterziehen neu laden",
+    description: "Ist die Startseite ganz oben, laedt Herunterziehen und Loslassen neue Videos, wie in der YouTube-App",
+    type: "toggle",
+    default: true,
+    start() {
+      const TRIGGER = 130;
+      let t0 = null;
+      let dot = null;
+      const atTop = () => (document.scrollingElement?.scrollTop || window.scrollY || 0) <= 1;
+      const mk = () => {
+        if (dot) return dot;
+        dot = document.createElement("div");
+        dot.setAttribute("data-ytx-own", "");
+        dot.style.cssText = "position:fixed;left:50%;top:70px;z-index:2147483000;width:40px;height:40px;margin-left:-20px;border-radius:50%;background:var(--yt-spec-raised-background,#2a2a2a);box-shadow:0 2px 10px rgba(0,0,0,.5);color:var(--yt-spec-text-primary,#fff);font:700 22px/40px sans-serif;text-align:center;opacity:0;pointer-events:none;transform:translateY(-40px)";
+        dot.textContent = "↻";
+        document.documentElement.append(dot);
+        return dot;
+      };
+      const hide = () => {
+        if (!dot) return;
+        dot.style.transition = "opacity .15s, transform .15s";
+        dot.style.opacity = "0";
+        dot.style.transform = "translateY(-40px)";
+      };
+      const offs = [
+        listen(document, "touchstart", (e) => {
+          t0 = null;
+          if (e.touches.length !== 1 || pageFromUrl(location.href) !== "home" || !atTop()) return;
+          if (e.target.closest?.('ytm-mobile-topbar-renderer, ytm-pivot-bar-renderer, bottom-sheet-container, ytm-chip-cloud-renderer, [role="dialog"]')) return;
+          t0 = { x: e.touches[0].clientX, y: e.touches[0].clientY, active: false };
+        }, { passive: true, capture: true }),
+        listen(document, "touchmove", (e) => {
+          if (!t0) return;
+          const dy = e.touches[0].clientY - t0.y;
+          const dx = e.touches[0].clientX - t0.x;
+          if (!atTop() || dy < 0 || Math.abs(dx) > dy) {
+            t0 = null;
+            hide();
+            return;
+          }
+          if (dy > 20) {
+            t0.active = true;
+            const d = mk();
+            d.style.transition = "none";
+            const k = Math.min(1, dy / TRIGGER);
+            d.style.opacity = String(k);
+            d.style.transform = `translateY(${-40 + k * 60}px) rotate(${k * 270}deg)`;
+          }
+        }, { passive: true, capture: true }),
+        listen(document, "touchend", () => {
+          const s = t0;
+          t0 = null;
+          if (!s?.active) return hide();
+          const d = mk();
+          const done2 = parseFloat(d.style.opacity) >= 1;
+          if (!done2) return hide();
+          d.style.transition = "transform 1s linear";
+          d.style.transform = "translateY(20px) rotate(1080deg)";
+          location.reload();
+        }, { passive: true, capture: true })
+      ];
+      return () => {
+        offs.forEach((off) => off());
+        dot?.remove();
+      };
+    }
+  };
   var tapSeek = {
     id: "tapSeek",
     label: "Zeitleiste antippen springt zur Stelle",
@@ -12020,7 +12430,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, appFullscreen, audioFocus];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js
@@ -12152,6 +12562,9 @@ ytm-info-panel-container-renderer { display: none !important; }
 html[data-ytx-noshorts] ytm-reel-shelf-renderer, html[data-ytx-noshorts] grid-shelf-view-model:has(ytm-shorts-lockup-view-model), html[data-ytx-noshorts] ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model), html[data-ytx-noshorts] ytm-shorts-lockup-view-model, html[data-ytx-noshorts] ytm-video-with-context-renderer:has(a[href^="/shorts/"]), html[data-ytx-noshorts] ytm-compact-video-renderer:has(a[href^="/shorts/"]), html[data-ytx-noshorts] ytm-pivot-bar-item-renderer[data-ytx-mbpivot="shorts"], html[data-ytx-noshorts] yt-tab-shape[data-ytx-mbtab="shorts"] { display: none !important; }
 /* suchvorschlaege wie in der app: kein hellerer streifen hinter den pfeilen */
 .ytSuggestionComponentQueryBuilderButton { background: transparent !important; }
+/* das animierte Like Symbol zeichnet mit fester weisser Farbe, es soll die Farbe des Knopfes nehmen */
+.ytLottieComponentHost, .ytLottieComponentHost svg, .ytLottieComponentHost svg path, animated-like-icon, animated-like-icon svg, animated-like-icon svg path { color: inherit !important; fill: currentColor !important; stroke: currentColor !important; }
+.ytLottieComponentHost svg path[fill="none"], animated-like-icon svg path[fill="none"] { fill: none !important; }
 /* beim suchen braucht das suchfeld den platz */
 ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.watchtime"] { display: none !important; }
 ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin: 0 2px 0 8px !important; padding: 0 6px !important; }

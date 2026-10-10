@@ -66,6 +66,9 @@ ytm-info-panel-container-renderer { display: none !important; }
 html[data-ytx-noshorts] ytm-reel-shelf-renderer, html[data-ytx-noshorts] grid-shelf-view-model:has(ytm-shorts-lockup-view-model), html[data-ytx-noshorts] ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model), html[data-ytx-noshorts] ytm-shorts-lockup-view-model, html[data-ytx-noshorts] ytm-video-with-context-renderer:has(a[href^="/shorts/"]), html[data-ytx-noshorts] ytm-compact-video-renderer:has(a[href^="/shorts/"]), html[data-ytx-noshorts] ytm-pivot-bar-item-renderer[data-ytx-mbpivot="shorts"], html[data-ytx-noshorts] yt-tab-shape[data-ytx-mbtab="shorts"] { display: none !important; }
 /* suchvorschlaege wie in der app: kein hellerer streifen hinter den pfeilen */
 .ytSuggestionComponentQueryBuilderButton { background: transparent !important; }
+/* das animierte Like Symbol zeichnet mit fester weisser Farbe, es soll die Farbe des Knopfes nehmen */
+.ytLottieComponentHost, .ytLottieComponentHost svg, .ytLottieComponentHost svg path, animated-like-icon, animated-like-icon svg, animated-like-icon svg path { color: inherit !important; fill: currentColor !important; stroke: currentColor !important; }
+.ytLottieComponentHost svg path[fill="none"], animated-like-icon svg path[fill="none"] { fill: none !important; }
 /* beim suchen braucht das suchfeld den platz */
 ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.watchtime"] { display: none !important; }
 ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin: 0 2px 0 8px !important; padding: 0 6px !important; }

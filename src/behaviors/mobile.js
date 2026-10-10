@@ -50,6 +50,63 @@ const swipeDownBack = {
   }
 }
 
+// kurz auf die zeitleiste tippen springt an die stelle, gedrueckt halten zeigt weiter die vorschau von youtube
+const tapSeek = {
+  id: 'tapSeek',
+  label: 'Zeitleiste antippen springt zur Stelle',
+  description: 'Ein kurzer Tipp auf die Zeitleiste springt im Video dorthin. Gedrückt halten und ziehen zeigt wie gewohnt die Vorschau',
+  type: 'toggle',
+  default: true,
+  start() {
+    let t0 = null
+    // die breiteste leiste unter dem finger, die gespielte teilstrecke ist schmaler
+    const barOf = (el) => {
+      let best = null
+      for (let e = el; e && e !== document.body; e = e.parentElement) {
+        if (e.id === 'movie_player') break
+        const name = `${e.tagName} ${typeof e.className === 'string' ? e.className : ''}`
+        if (/progress.?bar|scrubber|timebar|seek/i.test(name)) {
+          const w = e.getBoundingClientRect().width
+          if (!best || w > best.w) best = { el: e, w }
+        }
+      }
+      return best && best.w > 60 ? best.el : null
+    }
+    const offs = [
+      listen(document, 'touchstart', (e) => {
+        t0 = null
+        if (e.touches.length !== 1 || pageFromUrl(location.href) !== 'watch') return
+        const bar = barOf(e.target)
+        if (bar) t0 = { bar, x: e.touches[0].clientX, y: e.touches[0].clientY, at: Date.now() }
+      }, { passive: true, capture: true }),
+      listen(document, 'touchend', (e) => {
+        const s = t0
+        t0 = null
+        const t = e.changedTouches[0]
+        if (!s || !t || Date.now() - s.at > 600 || Math.abs(t.clientX - s.x) > 24 || Math.abs(t.clientY - s.y) > 24) return
+        const r = s.bar.getBoundingClientRect()
+        const frac = Math.min(1, Math.max(0, (s.x - r.left) / r.width))
+        const p = document.getElementById('movie_player')
+        const dur = p?.getDuration?.() || document.querySelector('#movie_player video')?.duration
+        if (!dur) return
+        // nach der eigenen behandlung von youtube, sonst setzt die vorschau die zeit zurueck
+        const target = frac * dur
+        const go = () => {
+          if (p?.seekTo) p.seekTo(target, true)
+          else document.querySelector('#movie_player video').currentTime = target
+        }
+        setTimeout(go, 80)
+        // zieht youtube nach dem loslassen auf die alte stelle zurueck, noch einmal setzen
+        setTimeout(() => {
+          const now = p?.getCurrentTime?.()
+          if (now != null && Math.abs(now - target) > 2) go()
+        }, 500)
+      }, { passive: true, capture: true })
+    ]
+    return () => offs.forEach((off) => off())
+  }
+}
+
 // beim kippen des handys schaltet youtube auf eine seiteneigene vollbildansicht, die app blendet dazu die systemleisten aus
 const appFullscreen = {
   id: 'appFullscreen',
@@ -172,6 +229,6 @@ const appFullscreen = {
   }
 }
 
-export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, appFullscreen, audioFocus]
+export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, appFullscreen, audioFocus]
 
 export const behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]))

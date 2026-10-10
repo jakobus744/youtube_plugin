@@ -71,7 +71,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.watchtime"] { 
 ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin: 0 2px 0 8px !important; padding: 0 6px !important; }
 /* die leiste dient nur als anker fuer ytx knoepfe, transkript steht im menue des videos */
 .ytx-watch-row { display: none !important; }
-.ytx-dl-icon { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; cursor: pointer; color: var(--yt-spec-text-primary, #f1f1f1); -webkit-tap-highlight-color: transparent; }
+.ytx-dl-icon { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .ytx-dl-icon svg { width: 24px; height: 24px; fill: currentColor; }`
 
 // kleines herunterladen symbol hinter den anderen symbolen der aktionsleiste

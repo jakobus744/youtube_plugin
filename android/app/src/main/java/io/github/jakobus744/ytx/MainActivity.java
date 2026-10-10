@@ -13,6 +13,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.InputType;
+import android.view.OrientationEventListener;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
@@ -77,6 +78,10 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     private static boolean paused;
     private boolean canGoBack;
     private boolean fullscreen;
+    // die seite sperrt beim vollbild knopf auf quer, wie in der youtube app loest einmal quer und dann hochkant halten die sperre
+    private OrientationEventListener orientWatch;
+    private boolean pageLocked;
+    private boolean seenLand;
     private String currentUrl;
 
     // ---------- was die activity zeigt ----------
@@ -262,15 +267,48 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         YtxRuntime.get(this).getOrientationController().setDelegate(new OrientationController.OrientationDelegate() {
             @Override
             public GeckoResult<AllowOrDeny> onOrientationLock(int orientation) {
-                runOnUiThread(() -> setRequestedOrientation(orientation));
+                runOnUiThread(() -> {
+                    setRequestedOrientation(orientation);
+                    watchOrientation(true);
+                });
                 return GeckoResult.allow();
             }
 
             @Override
             public void onOrientationUnlock() {
-                runOnUiThread(() -> setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED));
+                runOnUiThread(() -> {
+                    watchOrientation(false);
+                    setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+                });
             }
         });
+    }
+
+    private void watchOrientation(boolean on) {
+        pageLocked = on;
+        seenLand = false;
+        if (!on) {
+            if (orientWatch != null) orientWatch.disable();
+            return;
+        }
+        if (orientWatch == null) {
+            orientWatch = new OrientationEventListener(this) {
+                @Override
+                public void onOrientationChanged(int deg) {
+                    if (!pageLocked || deg == ORIENTATION_UNKNOWN) return;
+                    boolean land = (deg > 60 && deg < 120) || (deg > 240 && deg < 300);
+                    boolean upright = deg < 25 || deg > 335;
+                    if (land) seenLand = true;
+                    else if (upright && seenLand) {
+                        // hochkant gedreht: die seite merkt das und beendet das vollbild
+                        pageLocked = false;
+                        disable();
+                        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                    }
+                }
+            };
+        }
+        if (orientWatch.canDetectOrientation()) orientWatch.enable();
     }
 
     @Override
@@ -934,7 +972,10 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         } else {
             legacyFullscreen(w, full);
         }
-        if (!full) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        if (!full) {
+            watchOrientation(false);
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
+        }
     }
 
     @SuppressWarnings("deprecation")

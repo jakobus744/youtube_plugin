@@ -11859,6 +11859,58 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       return () => offs.forEach((off) => off());
     }
   };
+  var tapSeek = {
+    id: "tapSeek",
+    label: "Zeitleiste antippen springt zur Stelle",
+    description: "Ein kurzer Tipp auf die Zeitleiste springt im Video dorthin. Gedrückt halten und ziehen zeigt wie gewohnt die Vorschau",
+    type: "toggle",
+    default: true,
+    start() {
+      let t0 = null;
+      const barOf = (el) => {
+        let best = null;
+        for (let e = el; e && e !== document.body; e = e.parentElement) {
+          if (e.id === "movie_player") break;
+          const name = `${e.tagName} ${typeof e.className === "string" ? e.className : ""}`;
+          if (/progress.?bar|scrubber|timebar|seek/i.test(name)) {
+            const w = e.getBoundingClientRect().width;
+            if (!best || w > best.w) best = { el: e, w };
+          }
+        }
+        return best && best.w > 60 ? best.el : null;
+      };
+      const offs = [
+        listen(document, "touchstart", (e) => {
+          t0 = null;
+          if (e.touches.length !== 1 || pageFromUrl(location.href) !== "watch") return;
+          const bar = barOf(e.target);
+          if (bar) t0 = { bar, x: e.touches[0].clientX, y: e.touches[0].clientY, at: Date.now() };
+        }, { passive: true, capture: true }),
+        listen(document, "touchend", (e) => {
+          const s = t0;
+          t0 = null;
+          const t = e.changedTouches[0];
+          if (!s || !t || Date.now() - s.at > 600 || Math.abs(t.clientX - s.x) > 24 || Math.abs(t.clientY - s.y) > 24) return;
+          const r = s.bar.getBoundingClientRect();
+          const frac = Math.min(1, Math.max(0, (s.x - r.left) / r.width));
+          const p = document.getElementById("movie_player");
+          const dur = p?.getDuration?.() || document.querySelector("#movie_player video")?.duration;
+          if (!dur) return;
+          const target = frac * dur;
+          const go = () => {
+            if (p?.seekTo) p.seekTo(target, true);
+            else document.querySelector("#movie_player video").currentTime = target;
+          };
+          setTimeout(go, 80);
+          setTimeout(() => {
+            const now = p?.getCurrentTime?.();
+            if (now != null && Math.abs(now - target) > 2) go();
+          }, 500);
+        }, { passive: true, capture: true })
+      ];
+      return () => offs.forEach((off) => off());
+    }
+  };
   var appFullscreen = {
     id: "appFullscreen",
     label: "Echtes Vollbild beim Kippen (App)",
@@ -11968,7 +12020,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, appFullscreen, audioFocus];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, appFullscreen, audioFocus];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js
@@ -12105,7 +12157,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.watchtime"] { 
 ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin: 0 2px 0 8px !important; padding: 0 6px !important; }
 /* die leiste dient nur als anker fuer ytx knoepfe, transkript steht im menue des videos */
 .ytx-watch-row { display: none !important; }
-.ytx-dl-icon { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; cursor: pointer; color: var(--yt-spec-text-primary, #f1f1f1); -webkit-tap-highlight-color: transparent; }
+.ytx-dl-icon { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .ytx-dl-icon svg { width: 24px; height: 24px; fill: currentColor; }`;
   function ensureDownloadIcon(bar) {
     if (!window.__ytxNative || bar.querySelector(".ytx-dl-icon")) return;

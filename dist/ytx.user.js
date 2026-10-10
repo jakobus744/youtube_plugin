@@ -11872,21 +11872,25 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
   };
   var EMBED = "https://www.youtube.com";
   var HOLD_KEEP_MS = 1500;
-  var OVERLAY_MS = 3e3;
+  var OVERLAY_CLEAN_MS = 3e3;
   var thumbPreview = {
     id: "thumbPreview",
     label: "Video-Vorschau auf Thumbnails",
     description: "Stumme Vorschau mit Untertiteln direkt auf dem Bild, wie in der YouTube-App. Gedrückt halten startet sie, nach 1,5 Sekunden läuft sie auch ohne Finger weiter. Sie beginnt am Anfang des Videos. Nach links oder rechts ziehen spult. „Beim Verweilen“ startet sie von selbst, wenn ein Video in Ruhe mitten im Bild liegt",
     type: "select",
-    options: [["", "Aus"], ["press", "Gedrückt halten"], ["both", "Gedrückt halten und beim Verweilen"]],
+    options: [["", "Aus"], ["press", "Gedrückt halten"], ["both", "Gedrückt halten und beim Verweilen (schnell)"], ["clean", "Wie oben, ohne Player-Zeichen (3 Sekunden später)"]],
     default: "both",
     start(ctx, mode) {
-      const auto = mode === "both";
+      const clean = mode === "clean";
+      const auto = mode === "both" || clean;
+      const OVERLAY_MS = clean ? OVERLAY_CLEAN_MS : 0;
       let timer2 = 0;
       let press = null;
       let drag = null;
       let suppressUntil = 0;
       let scrollAt = Date.now();
+      let checkedAt = 0;
+      let raf = 0;
       let dwell = { link: null, since: 0 };
       let ready = false;
       let warmed = false;
@@ -11894,6 +11898,8 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       let box = null;
       let frame = null;
       let bar = null;
+      let slide = null;
+      let slideTimer = 0;
       let curId = "";
       let hs = 0;
       const idOf = (a) => (a?.getAttribute("href") || "").match(/[?&]v=([A-Za-z0-9_-]{11})/)?.[1] || "";
@@ -11917,24 +11923,49 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         frame = document.createElement("iframe");
         frame.setAttribute("allow", "autoplay; encrypted-media");
         frame.style.cssText = "width:100%;height:100%;border:0;pointer-events:none;transform:scale(1.25);transform-origin:50% 100%;opacity:0;transition:opacity .12s";
-        frame.src = `${EMBED}/embed/${id}?autoplay=0&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&fs=0&start=0&iv_load_policy=3&cc_load_policy=1&cc_lang_pref=de&hl=de&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+        frame.src = `${EMBED}/embed/${id}?autoplay=0&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&fs=0&start=0&vq=small&iv_load_policy=3&cc_load_policy=1&cc_lang_pref=de&hl=de&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
         curId = id;
         const track = document.createElement("div");
         track.style.cssText = "position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(255,255,255,.3)";
         bar = document.createElement("div");
         bar.style.cssText = "height:100%;width:0;background:#ff0033";
         track.append(bar);
-        box.append(frame, track);
+        slide = document.createElement("img");
+        slide.setAttribute("data-ytx-own", "");
+        slide.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;opacity:0;transition:opacity .15s";
+        box.append(slide, frame, track);
         document.documentElement.append(box);
-        hs = setInterval(() => {
+        const hello = () => {
           try {
             frame.contentWindow.postMessage(JSON.stringify({ event: "listening", id: "ytx", channel: "widget" }), EMBED);
           } catch {
           }
-        }, 250);
+          hs = setTimeout(hello, ready ? 3e3 : 250);
+        };
+        hello();
+      };
+      const stopSlides = () => {
+        clearInterval(slideTimer);
+        slideTimer = 0;
+        if (slide) {
+          slide.style.opacity = "0";
+          slide.removeAttribute("src");
+        }
+      };
+      const startSlides = (id) => {
+        stopSlides();
+        if (!slide) return;
+        let n = 1;
+        slide.src = `https://i.ytimg.com/vi/${id}/hq1.jpg`;
+        slide.style.opacity = "1";
+        slideTimer = setInterval(() => {
+          n = n % 3 + 1;
+          slide.src = `https://i.ytimg.com/vi/${id}/hq${n}.jpg`;
+        }, 700);
       };
       const stopLive = () => {
         clearTimeout(timer2);
+        stopSlides();
         if (live) {
           cmd("pauseVideo");
           live = null;
@@ -11957,7 +11988,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       const startVideo = (id) => {
         if (curId !== id) {
           cmd("mute");
-          cmd("loadVideoById", { videoId: id, startSeconds: 0 });
+          cmd("loadVideoById", { videoId: id, startSeconds: 0, suggestedQuality: "small" });
           curId = id;
         } else {
           cmd("seekTo", 0, true);
@@ -11980,6 +12011,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         live = { link, id, how, t0, rect: r, dur: 0, state: -1, cur: 0, vidOk: same2, shown: false, target: -1, lastSeek: 0, seeking: false, showAt: 0, loadedAt: Date.now() };
         place2(r);
         box.style.visibility = "visible";
+        startSlides(id);
         frame.style.opacity = "0";
         bar.style.width = "0";
         if (!ready) live.pending = true;
@@ -11987,8 +12019,12 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       };
       const reveal = () => {
         if (!live || !frame) return;
-        live.shown = !!(live.vidOk && live.state === 1 && live.dur > 0 && live.cur > 0.15 && !live.seeking && Date.now() >= live.showAt);
+        const ok = !!(live.vidOk && live.state === 1 && live.dur > 0 && live.cur > 0.15 && Date.now() >= live.showAt);
+        if (clean) live.shown = ok && !live.seeking;
+        else if (ok) live.shown = true;
         frame.style.opacity = live.shown ? "1" : "0";
+        if (live.shown && slideTimer) stopSlides();
+        else if (!live.shown && !slideTimer && live.id) startSlides(live.id);
       };
       const onMsg = (e) => {
         if (!frame || e.source !== frame.contentWindow) return;
@@ -12011,7 +12047,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         if (typeof state === "number") {
           live.state = state;
           if (state !== 1) live.notPlaying = true;
-          else if (live.notPlaying && live.showAt) {
+          else if (clean && live.notPlaying && live.showAt) {
             live.notPlaying = false;
             live.showAt = Date.now() + OVERLAY_MS;
             setTimeout(reveal, OVERLAY_MS + 30);
@@ -12043,8 +12079,10 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       const seekTo = (x) => {
         if (!live || !live.dur) return;
         live.seeking = true;
-        live.shown = false;
-        frame.style.opacity = "0";
+        if (clean) {
+          live.shown = false;
+          frame.style.opacity = "0";
+        }
         const f = Math.min(1, Math.max(0, (x - live.rect.left) / live.rect.width));
         bar.style.width = `${f * 100}%`;
         live.target = f * live.dur;
@@ -12061,9 +12099,11 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           live.target = -1;
         }
         live.seeking = false;
-        live.shown = false;
-        live.showAt = Date.now() + OVERLAY_MS;
-        setTimeout(reveal, OVERLAY_MS + 30);
+        if (clean) {
+          live.shown = false;
+          live.showAt = Date.now() + OVERLAY_MS;
+          setTimeout(reveal, OVERLAY_MS + 30);
+        }
         reveal();
       };
       const pickDwell = () => {
@@ -12091,19 +12131,25 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         const now = Date.now();
         if (!box) preload();
         if (live) follow();
-        if (!auto || now - scrollAt < 350) return;
-        const c = pickDwell();
-        if (c !== dwell.link) {
-          dwell = { link: c, since: now };
+        if (!auto || now - scrollAt < 300) return;
+        if (checkedAt < scrollAt) {
+          checkedAt = now;
+          dwell = { link: pickDwell(), since: now };
           return;
         }
-        if (c && (!live || live.how === "auto" && live.link !== c) && now - dwell.since > 200) begin(c, "auto");
-      }, 150);
+        const c = dwell.link;
+        if (c && (!live || live.how === "auto" && live.link !== c) && now - dwell.since > 120) begin(c, "auto");
+      }, 200);
       const onScroll = (e) => {
         const t = e.target;
         if (t !== document && t !== document.documentElement && t !== document.body) return;
         scrollAt = Date.now();
-        if (live && live.how === "auto") follow();
+        if (live && live.how === "auto" && !raf) {
+          raf = requestAnimationFrame(() => {
+            raf = 0;
+            follow();
+          });
+        }
       };
       const inLive = (t) => live && t.clientX >= live.rect.left && t.clientX <= live.rect.right && t.clientY >= live.rect.top && t.clientY <= live.rect.bottom;
       const offs = [
@@ -12129,7 +12175,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           }
           timer2 = setTimeout(() => {
             if (press) begin(press.link, "press");
-          }, 160);
+          }, 90);
         }, { passive: true, capture: true }),
         listen(document, "touchmove", (e) => {
           const t = e.touches[0];
@@ -12192,7 +12238,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       ];
       return () => {
         clearInterval(poll);
-        clearInterval(hs);
+        clearTimeout(hs);
         window.removeEventListener("message", onMsg);
         offs.forEach((off) => off());
         stopLive();

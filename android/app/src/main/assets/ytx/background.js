@@ -4,7 +4,7 @@
 const RAW = 'https://raw.githubusercontent.com/jakobus744/youtube_plugin/main/dist/ytx.user.js'
 const UPDATE_EVERY = 6 * 3600 * 1000
 // wie @connect im userscript
-const XHR_HOSTS = ['musicbrainz.org', 'ws.audioscrobbler.com', 'pi.tail5f332e.ts.net', '100.116.11.12', '192.168.178.56', 'jakobpi.duckdns.org']
+const XHR_HOSTS = ['musicbrainz.org', 'ws.audioscrobbler.com', 'returnyoutubedislikeapi.com', 'pi.tail5f332e.ts.net', '100.116.11.12', '192.168.178.56', 'jakobpi.duckdns.org']
 
 let code = ''
 let version = '0'

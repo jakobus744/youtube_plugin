@@ -126,3 +126,12 @@ Vorher: Tampermonkey auf 0.2.0 aktualisieren, Seiten neu laden. Nach jedem Punkt
 
 - Audio: „Audio statt Video & Equalizer“ an, Musikvideo starten → schaltet auf die Audiofassung? EQ „Bass+“ hörbar? Bei Problemen aus und neu laden.
 - Metadaten: Last.fm-Key eintragen, **Mix › Ähnlich** mit Last.fm an und aus vergleichen. Tampermonkey fragt einmal nach der Verbindung.
+
+## 7. Dranbleiben, wenn YouTube umbaut
+
+YouTube ändert Oberfläche und Elementnamen laufend. Vier Schichten halten ytx am Laufen und zeigen Neues früh:
+
+1. **Feature-Radar** (`src/core/radar.js`, Logik in `radarLogic.js`): Alle 45 s merkt sich ytx lokal (localStorage pro Seite), welche YouTube-Elemente (`ytm-…`, `yt-…`, `…-view-model`) und welche Experiment-Schalter des Kontos (`ytcfg EXPERIMENT_FLAGS`) es schon gesehen hat. Die ersten 3 Tage gelten als Eingewöhnung (still). Danach erscheint Neues im Panel unter **Diagnose** als Warnung „Neues Element / Neuer Schalter“ mit Datum und Seite. **Radar bestätigen** markiert alles als bekannt, **Radar kopieren** liefert den Text für einen Bericht.
+2. **Rückfall-Selektoren:** `npm run audit` (`tools/selector-audit.mjs`) listet Ziele und Anker mit nur einem Selektor. Dort lohnt ein zweiter Selektor oder eine Datenquelle statt eines Klassennamens.
+3. **Wöchentlicher Selbsttest** (`.github/workflows/canary.yml`, `tools/canary.mjs`): Öffnet m.youtube.com, www.youtube.com und Music ohne Anmeldung in Chromium und prüft alle Selektoren aus den Registries. Selektoren, die früher getroffen haben (`tools/canary-baseline.json`) und jetzt nirgends mehr, lösen ein GitHub-Issue aus. Lokal: `npm i --no-save playwright-core`, dann `CHROME_PATH=… npm run canary`, mit `-- --update` wird die Basis neu geschrieben. Eigene Markierungen (`data-ytx-…`) und alles, was eine Anmeldung braucht, prüft er nicht.
+4. **Monatlicher Bericht:** Eine geplante Aufgabe in Claude (am 1. des Monats, 9 Uhr, nur wenn die App läuft) recherchiert YouTube-Neuerungen, vergleicht sie mit ytx und schreibt `docs/radar/JJJJ-MM.md` mit Urteil je Neuerung (schon da, ausblenden, nachbauen, nicht machbar, ignorieren).

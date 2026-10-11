@@ -8,7 +8,7 @@ final class WebController: UIViewController, WKScriptMessageHandler, WKNavigatio
     private var statusDark = true
 
     // wie @connect im Userscript
-    private let xhrHosts = ["musicbrainz.org", "ws.audioscrobbler.com", "pi.tail5f332e.ts.net", "100.116.11.12", "192.168.178.56", "jakobpi.duckdns.org"]
+    private let xhrHosts = ["musicbrainz.org", "ws.audioscrobbler.com", "returnyoutubedislikeapi.com", "pi.tail5f332e.ts.net", "100.116.11.12", "192.168.178.56", "jakobpi.duckdns.org"]
     // Seiten die in der App bleiben, alles andere oeffnet im Browser
     private let inAppHosts = ["youtube.com", "google.com", "gstatic.com", "googleusercontent.com", "ytimg.com", "googlevideo.com", "youtube-nocookie.com"]
 

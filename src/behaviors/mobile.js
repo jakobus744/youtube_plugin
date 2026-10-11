@@ -7,7 +7,7 @@ import { discovered, normColor, DARK_REFS, LIGHT_REFS } from '../appliers/hashTo
 // verhalten fuer m.youtube.com
 // umleitungen arbeiten mit urls, der rest mit der player api, beides gibt es auch mobil
 
-const SHARED = ['shortsRedirect', 'homeRedirect', 'autoplayOff', 'forceQuality', 'speedMemory', 'pauseOnBlur', 'channelTrailerPause']
+const SHARED = ['shortsRedirect', 'homeRedirect', 'autoplayOff', 'forceQuality', 'speedMemory', 'pauseOnBlur', 'channelTrailerPause', 'shareClean', 'dislikeCount']
 
 // video nach unten wischen bringt zur vorherigen seite zurueck, wie das herunterziehen in der youtube app
 const swipeDownBack = {
@@ -772,6 +772,11 @@ const appFullscreen = {
       } else wasLand = land
       // selbst beendet: fuer dieses video nicht wieder automatisch hinein
       if (wasFull && !isFull() && land) exitedFor = autoFor = vid
+      // nach dem Verlassen des Vollbilds muss YouTube Player und Liste neu ausrichten, sonst bleibt die Hoehe vom Querformat stehen
+      if (wasFull && !isFull()) {
+        setFill(false)
+        for (const ms of [200, 700, 1500]) setTimeout(() => window.dispatchEvent(new Event('resize')), ms)
+      }
       wasFull = isFull()
       if (faux && (!watching || !land)) setFaux(false)
       applyAccent()

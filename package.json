@@ -10,7 +10,9 @@
     "serve": "node tools/serve.mjs",
     "test": "node --test \"tests/*.test.mjs\"",
     "apk": "node build.mjs && cd android && .\\gradlew.bat --no-daemon apk",
-    "ios:sync": "node build.mjs && node tools/ios-sync.mjs"
+    "ios:sync": "node build.mjs && node tools/ios-sync.mjs",
+    "canary": "node tools/canary.mjs",
+    "audit": "node tools/selector-audit.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

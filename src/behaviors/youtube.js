@@ -3,6 +3,8 @@ import { qs } from '../core/dom.js'
 import { player, pageWindow } from '../core/bridge.js'
 import { log } from '../core/log.js'
 import { sleep, waitFor } from '../core/scheduler.js'
+import { shareClean } from './shareClean.js'
+import { dislikeCount } from './dislikeCount.js'
 
 // verhalten sind aktionen statt css
 // start(ctx, value) liefert eine stop funktion
@@ -288,7 +290,9 @@ export const behaviors = [
       const ok = keys.filter((k) => String(cur[k]) === String(flags[k]))
       return { status: ok.length === keys.length ? 'ok' : 'warn', detail: `${ok.length}/${keys.length} Flags im ytcfg wirksam` }
     }
-  }
+  },
+  shareClean,
+  dislikeCount
 ]
 
 function parseFlags(text) {

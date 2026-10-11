@@ -6,6 +6,7 @@ import { countMatches } from '../appliers/display.js'
 import { filterStats } from '../appliers/filters.js'
 import { compileRules } from '../appliers/filterLogic.js'
 import { runChecks, summarize, reportText } from '../core/diagnose.js'
+import { initRadar, radarFresh, radarText, radarAck, radarInfo } from '../core/radar.js'
 import { listActions, keyFor, comboFromEvent } from '../core/hotkeys.js'
 import { capabilities } from '../core/bridge.js'
 import { mountStatus, getAnchorStatus } from '../core/mount.js'
@@ -487,7 +488,13 @@ export function diagnoseTab(app) {
   root.append(
     h('div', { class: 'btns' },
       btn('Neu prüfen', draw, 'primary'),
-      btn('Bericht kopieren', async () => app.flash((await app.copyText(reportText(runChecks(), meta()))) ? 'Bericht kopiert' : 'Kopieren fehlgeschlagen'))
+      btn('Bericht kopieren', async () => app.flash((await app.copyText(reportText(runChecks(), meta()))) ? 'Bericht kopiert' : 'Kopieren fehlgeschlagen')),
+      btn('Radar bestätigen', () => {
+        const n = radarAck()
+        app.flash(n ? `${n} Neuerungen als bekannt markiert` : 'Nichts Neues')
+        draw()
+      }),
+      btn('Radar kopieren', async () => app.flash((await app.copyText(radarText() || 'Nichts Neues')) ? 'Radar kopiert' : 'Kopieren fehlgeschlagen'))
     ),
     row('Nur Probleme zeigen', toggle(onlyProblems, (v) => {
       onlyProblems = app.ui.onlyProblems = v
@@ -501,6 +508,13 @@ export function diagnoseTab(app) {
 }
 
 export function registerCoreChecks(registerCheck, app) {
+  initRadar(() => app.nav.page)
+  registerCheck('radar', 'Neu bei YouTube', 'Feature-Radar', () => {
+    const fresh = radarFresh()
+    const info = radarInfo()
+    if (!fresh.length) return { status: 'skip', detail: `${info.tags} Elemente und ${info.flags} Schalter bekannt, nichts Neues` }
+    return fresh.slice(-40).map((f) => ({ id: `radar.${f.kind}.${f.name}`, label: `${f.kind === 'tags' ? 'Neues Element' : 'Neuer Schalter'}: ${f.name}`, status: 'warn', detail: `zuerst am ${new Date(f.at).toLocaleDateString('de-DE')} auf Seite „${f.page || '?'}“. Meist eine neue YouTube-Funktion, nach dem Ansehen „Radar bestätigen“` }))
+  })
   registerCheck('core', 'Grundlagen', 'Grundlagen', () => {
     const c = capabilities()
     return [

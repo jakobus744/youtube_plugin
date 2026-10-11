@@ -14,6 +14,7 @@
 // @grant        GM_xmlhttpRequest
 // @connect      musicbrainz.org
 // @connect      ws.audioscrobbler.com
+// @connect      returnyoutubedislikeapi.com
 // @connect      localhost
 // @connect      pi.tail5f332e.ts.net
 // @connect      100.116.11.12
@@ -49,7 +50,9 @@
       serve: "node tools/serve.mjs",
       test: 'node --test "tests/*.test.mjs"',
       apk: "node build.mjs && cd android && .\\gradlew.bat --no-daemon apk",
-      "ios:sync": "node build.mjs && node tools/ios-sync.mjs"
+      "ios:sync": "node build.mjs && node tools/ios-sync.mjs",
+      canary: "node tools/canary.mjs",
+      audit: "node tools/selector-audit.mjs"
     },
     devDependencies: {
       esbuild: "^0.25.0"
@@ -1939,6 +1942,203 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     }
   }
 
+  // src/core/shareLink.js
+  var DROP = ["si", "pp", "feature", "ab_channel", "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content"];
+  var HOST = /^(?:youtu\.be|(?:www\.|m\.|music\.)?youtube\.com|youtube-nocookie\.com)$/i;
+  var URL_RE = /https?:\/\/[^\s<>"']+/g;
+  function cleanShareUrl(url) {
+    let u;
+    try {
+      u = new URL(String(url));
+    } catch {
+      return String(url);
+    }
+    if (!HOST.test(u.hostname)) return String(url);
+    let changed = false;
+    for (const k of DROP) {
+      if (u.searchParams.has(k)) {
+        u.searchParams.delete(k);
+        changed = true;
+      }
+    }
+    return changed ? u.href : String(url);
+  }
+  function cleanShareText(text) {
+    if (text == null) return text;
+    return String(text).replace(URL_RE, (m) => {
+      const tail = (m.match(/[.,;:!?)]+$/) || [""])[0];
+      const body = tail ? m.slice(0, -tail.length) : m;
+      return cleanShareUrl(body) + tail;
+    });
+  }
+
+  // src/behaviors/shareClean.js
+  var shareClean = {
+    id: "shareClean",
+    label: "Teilen-Link ohne Tracking (si=)",
+    description: "Entfernt si=, pp= und feature= aus Links, die du über „Teilen“ oder „Link kopieren“ weitergibst. Der Zeitpunkt (t=) bleibt",
+    type: "toggle",
+    default: true,
+    start() {
+      const undo = [];
+      const wrap = (obj, key, make) => {
+        if (!obj || typeof obj[key] !== "function") return;
+        const orig = obj[key];
+        const own = Object.prototype.hasOwnProperty.call(obj, key);
+        const fn = make(orig);
+        try {
+          Object.defineProperty(obj, key, { value: fn, configurable: true, writable: true });
+          undo.push(() => {
+            if (obj[key] !== fn) return;
+            if (own) obj[key] = orig;
+            else delete obj[key];
+          });
+        } catch {
+        }
+      };
+      const nav2 = pageWindow.navigator;
+      wrap(
+        nav2,
+        "share",
+        (orig) => function(data2) {
+          if (data2 && typeof data2 === "object") data2 = { ...data2, url: data2.url == null ? data2.url : cleanShareUrl(data2.url), text: cleanShareText(data2.text) };
+          return orig.call(this, data2);
+        }
+      );
+      wrap(
+        nav2.clipboard,
+        "writeText",
+        (orig) => function(text) {
+          return orig.call(this, cleanShareText(text));
+        }
+      );
+      const doc = pageWindow.document;
+      const onCopy = (e) => {
+        try {
+          const a = doc.activeElement;
+          let sel = "";
+          if (a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && typeof a.value === "string") sel = a.value.slice(a.selectionStart || 0, a.selectionEnd || 0);
+          else sel = String(pageWindow.getSelection?.() || "");
+          if (!sel) return;
+          const cleaned = cleanShareText(sel);
+          if (cleaned === sel) return;
+          e.clipboardData?.setData("text/plain", cleaned);
+          e.preventDefault();
+        } catch {
+        }
+      };
+      doc.addEventListener("copy", onCopy, true);
+      undo.push(() => doc.removeEventListener("copy", onCopy, true));
+      return () => undo.reverse().forEach((f) => f());
+    }
+  };
+
+  // src/features/music/metadataProviders/http.js
+  function hasGmRequest() {
+    return typeof GM_xmlhttpRequest === "function";
+  }
+  function gmJson(url, { method = "GET", headers = {}, body = null, timeout = 15e3 } = {}) {
+    return new Promise((resolve, reject) => {
+      if (!hasGmRequest()) return reject(new Error("GM_xmlhttpRequest nicht verfügbar"));
+      GM_xmlhttpRequest({
+        url,
+        method,
+        headers,
+        data: body,
+        timeout,
+        responseType: "json",
+        onload: (r) => {
+          if (r.status < 200 || r.status >= 300) return reject(new Error(`HTTP ${r.status}`));
+          try {
+            resolve(typeof r.response === "object" && r.response ? r.response : JSON.parse(r.responseText));
+          } catch (e) {
+            reject(e);
+          }
+        },
+        onerror: () => reject(new Error("Netzwerkfehler")),
+        ontimeout: () => reject(new Error("Zeitüberschreitung"))
+      });
+    });
+  }
+
+  // src/core/dislikes.js
+  var API = "https://returnyoutubedislikeapi.com/votes?videoId=";
+  function parseVotes(j) {
+    if (!j || typeof j !== "object") return null;
+    const n = (v) => Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : null;
+    const dislikes = n(j.dislikes);
+    if (dislikes == null) return null;
+    return { likes: n(j.likes), dislikes };
+  }
+  function formatCount(n, locale) {
+    try {
+      return new Intl.NumberFormat(locale || void 0, { notation: "compact", maximumFractionDigits: 1 }).format(n);
+    } catch {
+      return String(n);
+    }
+  }
+
+  // src/behaviors/dislikeCount.js
+  var BUTTON = "dislike-button-view-model button, #segmented-dislike-button button, ytm-slim-video-action-bar-renderer like-button-view-model + * button";
+  var dislikeCount = {
+    id: "dislikeCount",
+    label: "Dislike-Anzahl (Return YouTube Dislike)",
+    description: "Zeigt die Zahl der Dislikes neben dem Daumen nach unten. Die Video-ID wird dafür an returnyoutubedislikeapi.com geschickt (Dienst von Dritten, Schätzwert aus Nutzerdaten)",
+    type: "toggle",
+    default: false,
+    start(ctx) {
+      const cache4 = /* @__PURE__ */ new Map();
+      let busy = false;
+      const render3 = (v) => {
+        const btn2 = document.querySelector(BUTTON);
+        if (!btn2) return;
+        let span = btn2.querySelector(".ytx-dislikes");
+        if (!v) {
+          if (span) {
+            span.remove();
+            btn2.style.removeProperty("width");
+            btn2.style.removeProperty("padding");
+          }
+          return;
+        }
+        const text = formatCount(v.dislikes, navigator.language);
+        if (!span) {
+          span = document.createElement("span");
+          span.className = "ytx-dislikes";
+          span.setAttribute("data-ytx-own", "");
+          span.style.cssText = "margin-left:4px;font:500 14px/20px Roboto,Arial,sans-serif;color:inherit;pointer-events:none;white-space:nowrap";
+          btn2.append(span);
+          btn2.style.setProperty("width", "auto", "important");
+          btn2.style.setProperty("padding", "0 8px", "important");
+        }
+        if (span.textContent !== text) span.textContent = text;
+      };
+      const tick2 = async () => {
+        if (ctx.nav.page !== "watch") return;
+        const id = ctx.nav.videoId;
+        if (!id) return;
+        if (!cache4.has(id) && !busy && hasGmRequest()) {
+          busy = true;
+          cache4.set(id, null);
+          try {
+            cache4.set(id, parseVotes(await gmJson(API + encodeURIComponent(id), { timeout: 8e3 })));
+          } catch {
+            cache4.set(id, null);
+          }
+          busy = false;
+        }
+        render3(cache4.get(id));
+      };
+      const t = setInterval(tick2, 1500);
+      tick2();
+      return () => {
+        clearInterval(t);
+        document.querySelectorAll(".ytx-dislikes").forEach((e) => e.remove());
+      };
+    },
+    health: () => ({ status: hasGmRequest() ? "ok" : "warn", detail: hasGmRequest() ? "Anfragen über den Userscript-Manager möglich" : "GM_xmlhttpRequest fehlt" })
+  };
+
   // src/behaviors/youtube.js
   var QUALITY_ORDER = ["highres", "hd2880", "hd2160", "hd1440", "hd1080", "hd720", "large", "medium", "small", "tiny"];
   function shortsId(url) {
@@ -2216,7 +2416,9 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
         const ok = keys.filter((k) => String(cur[k]) === String(flags[k]));
         return { status: ok.length === keys.length ? "ok" : "warn", detail: `${ok.length}/${keys.length} Flags im ytcfg wirksam` };
       }
-    }
+    },
+    shareClean,
+    dislikeCount
   ];
   function parseFlags(text) {
     const out = {};
@@ -2713,8 +2915,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     if (!json) json = await tryPanel();
     sourceStats.lastMs = Math.round(performance.now() - t0);
     if (!json || !Array.isArray(json.events)) {
-      const state = player()?.getPlayerState?.();
-      const hint = adShowing() ? "Werbung läuft noch" : state === -1 ? "Video einmal kurz starten und erneut versuchen" : "YouTube hat keine Untertitel geliefert";
+      const state2 = player()?.getPlayerState?.();
+      const hint = adShowing() ? "Werbung läuft noch" : state2 === -1 ? "Video einmal kurz starten und erneut versuchen" : "YouTube hat keine Untertitel geliefert";
       sourceStats.lastError = hint;
       throw new Error(`Transkript nicht verfügbar: ${hint}`);
     }
@@ -5278,12 +5480,12 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     s.percent = s.durationSec ? Math.min(1, s.maxPos / s.durationSec) : null;
     return s;
   }
-  function reminderDue({ todaySec, streakSec, limitMin, breakMin, remindEveryMin, state }) {
+  function reminderDue({ todaySec, streakSec, limitMin, breakMin, remindEveryMin, state: state2 }) {
     if (limitMin > 0 && todaySec >= limitMin * 60) {
-      const next = state.limitAt == null ? limitMin * 60 : state.limitAt + Math.max(1, remindEveryMin) * 60;
+      const next = state2.limitAt == null ? limitMin * 60 : state2.limitAt + Math.max(1, remindEveryMin) * 60;
       if (todaySec >= next) return { kind: "limit", mark: todaySec };
     }
-    if (breakMin > 0 && streakSec >= breakMin * 60 && (state.breakAt == null || streakSec >= state.breakAt + breakMin * 60)) return { kind: "break", mark: streakSec };
+    if (breakMin > 0 && streakSec >= breakMin * 60 && (state2.breakAt == null || streakSec >= state2.breakAt + breakMin * 60)) return { kind: "break", mark: streakSec };
     return null;
   }
   function add(map, key, init, sec) {
@@ -5361,7 +5563,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         }
       };
       loadToday();
-      const save2 = (sess) => {
+      const save3 = (sess) => {
         if (!sess || sess.wallSec < 3) return;
         db3.put("views", { ...sess, wallSec: Math.round(sess.wallSec) }).then(() => st.saved++).catch((e) => st.error = e.message);
       };
@@ -5421,7 +5623,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         st.lastTick = now;
         const day = dayKey(now);
         if (day !== st.day) {
-          if (st.session) save2(st.session);
+          if (st.session) save3(st.session);
           st.session = null;
           st.day = day;
           st.todayBase = 0;
@@ -5431,7 +5633,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         let p = activePlayback3();
         if (p && p.kind === "short" && !s.countShorts) p = null;
         if (st.session && (!p || p.videoId !== st.session.videoId)) {
-          save2(st.session);
+          save3(st.session);
           st.todayBase += st.session.wallSec;
           st.session = null;
         }
@@ -5440,7 +5642,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           tickSession(st.session, p, dt, now);
           if (now - st.lastSave > 15e3) {
             st.lastSave = now;
-            save2(st.session);
+            save3(st.session);
           }
         }
         if (p?.playing && !p.ad) {
@@ -5459,7 +5661,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       };
       const timer2 = setInterval(tick2, 1e3);
       const badgeTimer = setInterval(() => badge2.refresh(), 1e4);
-      const offHide = listen(window, "pagehide", () => save2(st.session));
+      const offHide = listen(window, "pagehide", () => save3(st.session));
       const prune = () => db3.deleteWhere("views", "startedAt", IDBKeyRange.upperBound(Date.now() - s.retentionDays * DAY)).catch(() => {
       });
       const pruneTimer = setTimeout(prune, 2e4);
@@ -5479,7 +5681,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           clearInterval(badgeTimer);
           clearTimeout(pruneTimer);
           offHide();
-          save2(st.session);
+          save3(st.session);
           closeCard();
           badge2.destroy();
           if (current === inst) current = null;
@@ -5825,7 +6027,7 @@ ${chaptersText(true)}
   function bootHashTokens(isDark, label, onMode) {
     let tries = 0;
     let dark = null;
-    const scan = () => {
+    const scan2 = () => {
       if (dark === null) {
         dark = !!isDark();
         onMode?.(dark);
@@ -5835,12 +6037,12 @@ ${chaptersText(true)}
       return added;
     };
     const t = setInterval(() => {
-      const added = scan();
+      const added = scan2();
       if (added < 0) dark = null;
       if (added >= 0 || ++tries > 40) {
         clearInterval(t);
         log.info(`${label} farben erkannt: ${Object.entries(tokenCount()).map(([k, v]) => `${k} ${v}`).join(", ") || "keine"}`);
-        for (const ms of [4e3, 15e3, 45e3]) setTimeout(scan, ms);
+        for (const ms of [4e3, 15e3, 45e3]) setTimeout(scan2, ms);
       }
     }, 500);
   }
@@ -7018,17 +7220,17 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     let pos = 0;
     let dur = 0;
     let rate = 1;
-    let state = -1;
+    let state2 = -1;
     try {
       pos = p?.getCurrentTime?.() || 0;
       dur = p?.getDuration?.() || 0;
       rate = p?.getPlaybackRate?.() || 1;
-      state = p?.getPlayerState?.() ?? -1;
+      state2 = p?.getPlayerState?.() ?? -1;
     } catch {
     }
     if (!dur && vd?.lengthSeconds) dur = Number(vd.lengthSeconds) || 0;
     const ad = !!(st?.player?.adPlaying || p?.classList?.contains("ad-showing"));
-    const playing = typeof st?.player?.isPlaying === "boolean" ? st.player.isPlaying : state === 1;
+    const playing = typeof st?.player?.isPlaying === "boolean" ? st.player.isPlaying : state2 === 1;
     return {
       videoId: vid,
       title: sameItem && item.title || (vd?.videoId === vid ? vd.title : "") || "",
@@ -7234,8 +7436,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         document.documentElement.append(nav2);
         const sync = () => {
           const layout = document.querySelector("ytmusic-app-layout");
-          const state = layout?.getAttribute("player-ui-state") || "";
-          const full = !!state && state !== "PLAYER_BAR_ONLY" && state !== "INACTIVE";
+          const state2 = layout?.getAttribute("player-ui-state") || "";
+          const full = !!state2 && state2 !== "PLAYER_BAR_ONLY" && state2 !== "INACTIVE";
           nav2.hidden = !!full;
           document.documentElement.toggleAttribute("data-ytx-mnav", !full);
           const page = document.documentElement.getAttribute("data-ytx-page");
@@ -7369,7 +7571,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         };
       }
     },
-    audioFocus
+    audioFocus,
+    shareClean
   ];
   var behaviorById2 = Object.fromEntries(behaviors2.map((b) => [b.id, b]));
 
@@ -8162,7 +8365,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       const tracker = createTracker();
       const stats2 = { samples: 0, saved: 0, dropped: 0, lastSampleAt: 0, lastSaved: null, lastError: null, lastVideo: null };
       let pausedSince = 0;
-      const save2 = async (records) => {
+      const save3 = async (records) => {
         for (const rec of records) {
           const auto = autoSkipped.get(rec.videoId);
           if (auto && Date.now() - auto < 10 * 60 * 1e3) {
@@ -8192,17 +8395,17 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         stats2.lastVideo = t.videoId;
         if (!t.playing) {
           pausedSince ||= now;
-          if (now - pausedSince > 30 * 60 * 1e3 && tracker.current) save2(tracker.finish("pause", now));
+          if (now - pausedSince > 30 * 60 * 1e3 && tracker.current) save3(tracker.finish("pause", now));
         } else {
           pausedSince = 0;
         }
         const session = music.session();
         const meta = { title: t.title, artists: t.artists, album: t.album, year: t.year, durationSec: t.durationSec };
         const out = tracker.sample({ ts: now, videoId: t.videoId, pos: t.pos, dur: t.dur, playing: t.playing, ad: t.ad, liked: t.liked, rate: t.rate, meta, context: { page: ctx.nav.page, playlistId: ctx.nav.playlistId || null, session: session?.presetId || null, videoType: t.videoType } });
-        if (out.length) save2(out);
+        if (out.length) save3(out);
       };
       const timer2 = setInterval(tick2, 1e3);
-      const offHide = listen(window, "pagehide", () => save2(tracker.finish("close", Date.now())));
+      const offHide = listen(window, "pagehide", () => save3(tracker.finish("close", Date.now())));
       scheduleRetention();
       const daily = setInterval(scheduleRetention, 6 * 3600 * 1e3);
       tick2();
@@ -8213,7 +8416,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
           clearInterval(timer2);
           clearInterval(daily);
           offHide();
-          save2(tracker.finish("close", Date.now()));
+          save3(tracker.finish("close", Date.now()));
         },
         health() {
           const p = music.prefs();
@@ -8251,7 +8454,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       if (!parsed) throw new Error("keine seitendaten im html");
       return parsed;
     }
-    async function load3(path, { maxAge = maxAgeMs, force = false, cacheOnly = false, transform = (x) => x } = {}) {
+    async function load4(path, { maxAge = maxAgeMs, force = false, cacheOnly = false, transform = (x) => x } = {}) {
       const key = `page:${path}`;
       if (!force && cache4) {
         try {
@@ -8290,7 +8493,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     }
     return {
       stats: stats2,
-      load: load3,
+      load: load4,
       stop() {
         stopped = true;
       }
@@ -8877,7 +9080,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     },
     setup(ctx) {
       let s = ctx.settings;
-      const state = { bar: null, page: null };
+      const state2 = { bar: null, page: null };
       const refreshBar = async (node) => {
         const t = currentTrack();
         if (!t) return;
@@ -8912,11 +9115,11 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       const toggle2 = async (item) => {
         const on = await music.favorites.toggle(item);
         toast(`${TYPE_LABEL[item.type]} ${on ? "favorisiert" : "entfernt"}: ${item.name}`);
-        if (state.bar?.node) state.bar.node.__at = 0;
-        state.bar?.refresh();
-        state.page?.refresh();
+        if (state2.bar?.node) state2.bar.node.__at = 0;
+        state2.bar?.refresh();
+        state2.page?.refresh();
       };
-      state.bar = ctx.mount({
+      state2.bar = ctx.mount({
         id: "m.fav.bar",
         anchor: "m.bar.middleButtons",
         position: "prepend",
@@ -8924,7 +9127,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         create: () => iconButton({ icon: "★", title: "Favorisieren", pressed: false, onClick: (e, b) => barMenu(b) }),
         update: (node) => refreshBar(node)
       });
-      state.page = ctx.mount({
+      state2.page = ctx.mount({
         id: "m.fav.page",
         anchor: "m.header.buttons",
         position: "append",
@@ -8955,7 +9158,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           node.querySelector(".ytx-m-lbl").textContent = on ? `${TYPE_LABEL[subj.type]}-Favorit` : "Favorit";
         }
       });
-      state.lib = ctx.mount({
+      state2.lib = ctx.mount({
         id: "m.fav.library",
         anchor: "m.browse.top",
         position: "prepend",
@@ -8964,12 +9167,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         update: (node) => drawLibrary(node, ctx)
       });
       const off = music.on("favorites", () => {
-        if (state.lib.node) state.lib.node.__at = 0;
-        state.lib.refresh();
-        if (state.bar.node) state.bar.node.__at = 0;
-        if (state.page.node) state.page.node.__at = 0;
-        state.bar.refresh();
-        state.page.refresh();
+        if (state2.lib.node) state2.lib.node.__at = 0;
+        state2.lib.refresh();
+        if (state2.bar.node) state2.bar.node.__at = 0;
+        if (state2.page.node) state2.page.node.__at = 0;
+        state2.bar.refresh();
+        state2.page.refresh();
       });
       ctx.action("music.favorite", async () => {
         const t = currentTrack();
@@ -8978,26 +9181,26 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       return {
         update(next) {
           s = next;
-          state.bar.refresh();
-          state.page.refresh();
-          state.lib.refresh();
+          state2.bar.refresh();
+          state2.page.refresh();
+          state2.lib.refresh();
         },
         onVideo() {
-          state.bar.refresh();
+          state2.bar.refresh();
         },
         onPage() {
-          state.page.refresh();
-          state.lib.refresh();
+          state2.page.refresh();
+          state2.lib.refresh();
         },
         dispose() {
           off();
-          state.bar.destroy();
-          state.page.destroy();
-          state.lib.destroy();
+          state2.bar.destroy();
+          state2.page.destroy();
+          state2.lib.destroy();
         },
         health() {
-          if (s.barButton && !state.bar.ok) return { status: currentTrack() ? "warn" : "skip", detail: currentTrack() ? "Playerleiste nicht gefunden" : "Kein Titel aktiv" };
-          return { status: "ok", detail: `Stern ${state.bar.ok ? "in der Playerleiste" : ""}${state.page.ok ? " und auf der Seite" : ""}` };
+          if (s.barButton && !state2.bar.ok) return { status: currentTrack() ? "warn" : "skip", detail: currentTrack() ? "Playerleiste nicht gefunden" : "Kein Titel aktiv" };
+          return { status: "ok", detail: `Stern ${state2.bar.ok ? "in der Playerleiste" : ""}${state2.page.ok ? " und auf der Seite" : ""}` };
         }
       };
     }
@@ -9159,34 +9362,6 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       return [];
     }
   };
-
-  // src/features/music/metadataProviders/http.js
-  function hasGmRequest() {
-    return typeof GM_xmlhttpRequest === "function";
-  }
-  function gmJson(url, { method = "GET", headers = {}, body = null, timeout = 15e3 } = {}) {
-    return new Promise((resolve, reject) => {
-      if (!hasGmRequest()) return reject(new Error("GM_xmlhttpRequest nicht verfügbar"));
-      GM_xmlhttpRequest({
-        url,
-        method,
-        headers,
-        data: body,
-        timeout,
-        responseType: "json",
-        onload: (r) => {
-          if (r.status < 200 || r.status >= 300) return reject(new Error(`HTTP ${r.status}`));
-          try {
-            resolve(typeof r.response === "object" && r.response ? r.response : JSON.parse(r.responseText));
-          } catch (e) {
-            reject(e);
-          }
-        },
-        onerror: () => reject(new Error("Netzwerkfehler")),
-        ontimeout: () => reject(new Error("Zeitüberschreitung"))
-      });
-    });
-  }
 
   // src/features/music/metadataProviders/musicbrainz.js
   var musicbrainzProvider = {
@@ -9760,14 +9935,14 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         slider.addEventListener("input", () => val.textContent = slider.value);
         slider.addEventListener("change", () => {
           ui.discovery = Number(slider.value) / 100;
-          load3(true);
+          load4(true);
         });
         t.append(h("label", { title: "Nur für diese Ansicht, Standard im ytx-Panel" }, "Bekannt", slider, "Entdecken"));
         const sel = h("select", { title: "Session-Preset, gilt nur in diesem Tab" }, h("option", { value: "", text: "Keine Session", selected: !session }), ...SESSION_PRESETS.map((p) => h("option", { value: p.id, text: p.label, selected: session?.presetId === p.id })));
         sel.addEventListener("change", () => {
           music.setSession(sel.value || null);
           ui.discovery = null;
-          load3(true);
+          load4(true);
         });
         t.append(sel);
         if (ui.tab === "genre") {
@@ -9779,7 +9954,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
             if (!input.value.trim()) return;
             ui.genre = input.value.trim();
             ctx.state.set("m.hub.genre", ui.genre);
-            load3(true);
+            load4(true);
           });
           t.append(input, dl);
           const favs = prefs.genres.favorites;
@@ -9802,7 +9977,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
             c.addEventListener("click", () => {
               ui.genre = g;
               ctx.state.set("m.hub.genre", g);
-              load3(true);
+              load4(true);
             });
             t.append(c);
           }
@@ -9814,7 +9989,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
             run2.textContent = "prüft …";
             const r = await checkReleases({ force: true, onProgress: (n, total) => run2.textContent = `prüft ${n}/${total}` }).catch((e) => ({ error: e.message }));
             toast(r.error ? `Prüfung fehlgeschlagen: ${r.error}` : `${r.checked} Künstler geprüft, ${r.fresh} neu`);
-            load3(true);
+            load4(true);
           });
           t.append(run2);
         }
@@ -9831,12 +10006,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           const seedSel = h("select", null, ...opts.map(([v, l]) => h("option", { value: v, text: l, selected: v === cur })));
           seedSel.addEventListener("change", () => {
             ui.seed = { key: seedSel.value };
-            load3(true);
+            load4(true);
           });
           t.append(seedSel);
         }
         const reload = h("button", { class: "btn sec", type: "button", text: "↻", title: "Neu berechnen" });
-        reload.addEventListener("click", () => load3(true, true));
+        reload.addEventListener("click", () => load4(true, true));
         t.append(reload);
         t.append(infoLine(prefs, session, disc));
       }
@@ -9860,7 +10035,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           const cb = h("input", { type: "checkbox", checked: prefs.genres.inForYou, style: { verticalAlign: "middle", margin: "0 4px 0 10px" } });
           cb.addEventListener("change", () => {
             music.updatePrefs((p) => p.genres.inForYou = cb.checked);
-            load3(true, true);
+            load4(true, true);
           });
           box.append(h("label", { style: { whiteSpace: "nowrap", cursor: "pointer" } }, cb, "Lieblingsgenres einbeziehen"));
         }
@@ -9884,7 +10059,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       function cacheKey(args) {
         return JSON.stringify([ui.tab, args.genre, args.artist?.id, args.seed?.videoId || args.seed?.id || args.seed?.name || args.seed?.presetId, args.discovery, music.session()?.presetId]);
       }
-      async function load3(redraw = false, force = false) {
+      async function load4(redraw = false, force = false) {
         if (redraw) drawTools();
         const token = ++renderToken;
         const tab = ui.tab;
@@ -10027,7 +10202,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           return;
         }
         if (ui.result) drawBody();
-        else load3();
+        else load4();
       }
       const offQueue = ytxQueue.on(() => drawer.isOpen && ui.tab === "queue" && drawQueue());
       const T2 = { primary: "var(--ytmusic-text-primary, #fff)", secondary: "var(--ytmusic-text-secondary, #aaa)" };
@@ -11838,7 +12013,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
   }
 
   // src/behaviors/mobile.js
-  var SHARED = ["shortsRedirect", "homeRedirect", "autoplayOff", "forceQuality", "speedMemory", "pauseOnBlur", "channelTrailerPause"];
+  var SHARED = ["shortsRedirect", "homeRedirect", "autoplayOff", "forceQuality", "speedMemory", "pauseOnBlur", "channelTrailerPause", "shareClean", "dislikeCount"];
   var swipeDownBack = {
     id: "swipeDownBack",
     label: "Video nach unten wischen, um zu verkleinern",
@@ -12049,20 +12224,20 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         }
         if (!live) return;
         if (d.event === "onError") return stopLive();
-        const state = d.event === "onStateChange" ? d.info : d.info?.playerState;
-        if (typeof state === "number") {
-          live.state = state;
-          if (state !== 1) live.notPlaying = true;
+        const state2 = d.event === "onStateChange" ? d.info : d.info?.playerState;
+        if (typeof state2 === "number") {
+          live.state = state2;
+          if (state2 !== 1) live.notPlaying = true;
           else if (clean && live.notPlaying && live.showAt) {
             live.notPlaying = false;
             live.showAt = Date.now() + OVERLAY_MS;
             setTimeout(reveal, OVERLAY_MS + 30);
           }
-          if (state === 0 && !live.seeking) {
+          if (state2 === 0 && !live.seeking) {
             cmd("seekTo", 0, true);
             cmd("playVideo");
           }
-          if (state === 1 && !live.showAt) {
+          if (state2 === 1 && !live.showAt) {
             live.showAt = Date.now() + OVERLAY_MS;
             setTimeout(reveal, OVERLAY_MS + 30);
           }
@@ -12546,6 +12721,10 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           enterFs(p);
         } else wasLand = land;
         if (wasFull && !isFull() && land) exitedFor = autoFor = vid;
+        if (wasFull && !isFull()) {
+          setFill(false);
+          for (const ms of [200, 700, 1500]) setTimeout(() => window.dispatchEvent(new Event("resize")), ms);
+        }
         wasFull = isFull();
         if (faux && (!watching || !land)) setFaux(false);
         applyAccent();
@@ -13654,6 +13833,91 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
 .log { font-family: ui-monospace, Consolas, monospace; font-size: 11px; white-space: pre-wrap; word-break: break-word; color: var(--fg2); max-height: 200px; overflow: auto; }
 `;
 
+  // src/core/radarLogic.js
+  var BASELINE_MS = 3 * 24 * 3600 * 1e3;
+  var MAX2 = 4e3;
+  var emptyState = () => ({ since: 0, tags: {}, flags: {}, fresh: [] });
+  function isInteresting(tag) {
+    return /^(ytm?d?-|ytmusic-|yt-)/.test(tag) || /-(view-model|renderer)$/.test(tag);
+  }
+  function applyScan(state2, { tags, flags, page, now }) {
+    if (!state2.since) state2.since = now;
+    const settling = now - state2.since < BASELINE_MS;
+    let changed = false;
+    const seen2 = (kind, names) => {
+      const known2 = state2[kind];
+      for (const n of names) {
+        if (n in known2) continue;
+        if (Object.keys(known2).length >= MAX2) break;
+        known2[n] = now;
+        changed = true;
+        if (!settling) state2.fresh.push({ kind, name: n, at: now, page });
+      }
+    };
+    seen2("tags", tags);
+    seen2("flags", flags);
+    if (state2.fresh.length > 300) state2.fresh.splice(0, state2.fresh.length - 300);
+    return changed;
+  }
+  function acknowledge(state2) {
+    const n = state2.fresh.length;
+    state2.fresh = [];
+    return n;
+  }
+  function describeFresh(state2, locale = "de-DE") {
+    return state2.fresh.map((f) => `${new Date(f.at).toLocaleDateString(locale)}  ${f.kind === "tags" ? "Element" : "Schalter"}  ${f.name}  (${f.page || "?"})`);
+  }
+
+  // src/core/radar.js
+  var KEY3 = `ytx.radar.${location.host}`;
+  var EVERY = 45e3;
+  var state = emptyState();
+  var lastScan = 0;
+  var load3 = () => {
+    try {
+      return { ...emptyState(), ...JSON.parse(localStorage.getItem(KEY3) || "{}") };
+    } catch {
+      return emptyState();
+    }
+  };
+  var save2 = () => {
+    try {
+      localStorage.setItem(KEY3, JSON.stringify(state));
+    } catch {
+    }
+  };
+  function scan(page) {
+    const tags = /* @__PURE__ */ new Set();
+    for (const el of document.getElementsByTagName("*")) {
+      const n = el.localName;
+      if (n.includes("-") && isInteresting(n)) tags.add(n);
+    }
+    const flags = [];
+    try {
+      const f = pageWindow.ytcfg?.get?.("EXPERIMENT_FLAGS") || {};
+      for (const k of Object.keys(f)) if (f[k] === true || f[k] === "true") flags.push(k);
+    } catch {
+    }
+    if (applyScan(state, { tags: [...tags], flags, page, now: Date.now() })) save2();
+  }
+  function initRadar(getPage) {
+    state = load3();
+    return onSweep("radar", () => {
+      const now = Date.now();
+      if (now - lastScan < EVERY) return;
+      lastScan = now;
+      scan(getPage?.());
+    });
+  }
+  var radarFresh = () => state.fresh;
+  var radarText = () => describeFresh(state).join("\n");
+  function radarAck() {
+    const n = acknowledge(state);
+    save2();
+    return n;
+  }
+  var radarInfo = () => ({ tags: Object.keys(state.tags).length, flags: Object.keys(state.flags).length, since: state.since });
+
   // src/core/cloudSync.js
   var CLOUD_DEFAULT_URL = "http://pi.tail5f332e.ts.net:8181";
   function cloudConfig() {
@@ -13964,20 +14228,20 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       const labels = Object.fromEntries(g.items);
       for (const [id] of g.items) if (!list.includes(id)) list.push(id);
       const box = h("div", { class: "orderlist" });
-      const save2 = () => update((c) => c.layout.order[gid] = list.slice());
+      const save3 = () => update((c) => c.layout.order[gid] = list.slice());
       const draw = () => {
         box.replaceChildren();
         list.forEach((id, i) => {
           const up2 = btn("↑", () => {
             if (i === 0) return;
             [list[i - 1], list[i]] = [list[i], list[i - 1]];
-            save2();
+            save3();
             draw();
           }, "tiny");
           const down = btn("↓", () => {
             if (i === list.length - 1) return;
             [list[i + 1], list[i]] = [list[i], list[i + 1]];
-            save2();
+            save3();
             draw();
           }, "tiny");
           box.append(h("div", { class: "item" }, h("span", { text: labels[id] || id }), up2, down));
@@ -14264,7 +14528,13 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
         "div",
         { class: "btns" },
         btn("Neu prüfen", draw, "primary"),
-        btn("Bericht kopieren", async () => app.flash(await app.copyText(reportText(runChecks(), meta())) ? "Bericht kopiert" : "Kopieren fehlgeschlagen"))
+        btn("Bericht kopieren", async () => app.flash(await app.copyText(reportText(runChecks(), meta())) ? "Bericht kopiert" : "Kopieren fehlgeschlagen")),
+        btn("Radar bestätigen", () => {
+          const n = radarAck();
+          app.flash(n ? `${n} Neuerungen als bekannt markiert` : "Nichts Neues");
+          draw();
+        }),
+        btn("Radar kopieren", async () => app.flash(await app.copyText(radarText() || "Nichts Neues") ? "Radar kopiert" : "Kopieren fehlgeschlagen"))
       ),
       row("Nur Probleme zeigen", toggle(onlyProblems, (v) => {
         onlyProblems = app.ui.onlyProblems = v;
@@ -14277,6 +14547,13 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     return root;
   }
   function registerCoreChecks(registerCheck2, app) {
+    initRadar(() => app.nav.page);
+    registerCheck2("radar", "Neu bei YouTube", "Feature-Radar", () => {
+      const fresh = radarFresh();
+      const info2 = radarInfo();
+      if (!fresh.length) return { status: "skip", detail: `${info2.tags} Elemente und ${info2.flags} Schalter bekannt, nichts Neues` };
+      return fresh.slice(-40).map((f) => ({ id: `radar.${f.kind}.${f.name}`, label: `${f.kind === "tags" ? "Neues Element" : "Neuer Schalter"}: ${f.name}`, status: "warn", detail: `zuerst am ${new Date(f.at).toLocaleDateString("de-DE")} auf Seite „${f.page || "?"}“. Meist eine neue YouTube-Funktion, nach dem Ansehen „Radar bestätigen“` }));
+    });
     registerCheck2("core", "Grundlagen", "Grundlagen", () => {
       const c = capabilities();
       return [
@@ -14977,15 +15254,15 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const top2 = Math.min(64, Math.max(GAP, vh - MIN_H - GAP));
     return { left: vw - width - 12, top: top2, width, height: vh - top2 - 12 };
   }
-  function makeMovable(panel, handle, { load: load3, save: save2 }) {
+  function makeMovable(panel, handle, { load: load4, save: save3 }) {
     const vp = () => [document.documentElement.clientWidth || innerWidth, innerHeight];
     let rect = null;
     const apply = (r) => {
       rect = clampRect(r, ...vp());
       Object.assign(panel.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px`, right: "auto", bottom: "auto" });
     };
-    const place2 = () => apply(load3() || defaultRect(...vp()));
-    const persist2 = debounce(() => rect && save2(rect), 300);
+    const place2 = () => apply(load4() || defaultRect(...vp()));
+    const persist2 = debounce(() => rect && save3(rect), 300);
     let drag = null;
     listen(handle, "pointerdown", (e) => {
       if (e.button !== 0 || e.target.closest("select, button, input, a")) return;
@@ -15006,7 +15283,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     listen(handle, "pointercancel", end);
     listen(handle, "dblclick", (e) => {
       if (e.target.closest("select, button, input, a")) return;
-      save2(null);
+      save3(null);
       apply(defaultRect(...vp()));
     });
     const ro = new ResizeObserver(() => {

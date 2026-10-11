@@ -27,6 +27,7 @@ const meta = (name, extra = []) =>
     '// @grant        GM_xmlhttpRequest',
     '// @connect      musicbrainz.org',
     '// @connect      ws.audioscrobbler.com',
+    '// @connect      returnyoutubedislikeapi.com',
     '// @connect      localhost',
     '// @connect      pi.tail5f332e.ts.net',
     '// @connect      100.116.11.12',

@@ -1,0 +1,46 @@
+name: ytx
+options:
+  bundleIdPrefix: io.github.jakobus744
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.4.1"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1"
+targetTemplates:
+  App:
+    type: application
+    platform: iOS
+    sources:
+      - path: Ytx
+    info:
+      properties:
+        UILaunchScreen: {}
+        UIBackgroundModes: [audio]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        ITSAppUsesNonExemptEncryption: false
+targets:
+  ytx:
+    templates: [App]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.jakobus744.ytx
+        PRODUCT_NAME: ytx
+    info:
+      path: build/Info-ytx.plist
+      properties:
+        CFBundleDisplayName: ytx
+        YtxStartURL: https://m.youtube.com/
+  ytxmusic:
+    templates: [App]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: io.github.jakobus744.ytx.music
+        PRODUCT_NAME: ytx Music
+    info:
+      path: build/Info-ytxmusic.plist
+      properties:
+        CFBundleDisplayName: ytx Music
+        YtxStartURL: https://music.youtube.com/

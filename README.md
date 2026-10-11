@@ -72,6 +72,10 @@ Eine richtige App mit zwei Icons, **ytx** (YouTube) und **ytx Music**, ohne Fire
 
 **Technik**: Aufbau, Entscheidungen und Testweg stehen in [docs/ANDROID-APP.md](docs/ANDROID-APP.md). `android/app/src/main/assets/ytx/` ist eine eingebaute Erweiterung. Sie stellt die GM-Funktionen bereit (Speicher, Live-Abgleich, Anfragen, Zwischenablage) und entfernt auf YouTube die Content-Security-Policy, weil ytx sonst nicht in die Seite darf. Bauen braucht Android SDK und JDK 17, Build-Dateien landen in `%LOCALAPPDATA%/ytx-android-build`, nicht in Nextcloud.
 
+### iOS: eigene ytx-App (ungetestet)
+
+Quellcode in `ios/`, ein GitHub Workflow baut unsignierte `.ipa` Dateien ohne Mac. Aufbau, Bauen und Signieren stehen in [docs/IOS-APP.md](docs/IOS-APP.md).
+
 ### Android: Firefox + Violentmonkey
 
 1. **Firefox** aus dem Play Store installieren.

@@ -1,0 +1,30 @@
+name: iOS
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+jobs:
+  ipa:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npm run ios:sync
+      - run: brew install xcodegen
+      - run: cd ios && xcodegen generate
+      - name: Build ohne Signatur
+        run: |
+          cd ios
+          for t in ytx ytxmusic; do
+            xcodebuild -project ytx.xcodeproj -scheme "$t" -configuration Release -sdk iphoneos \
+              -derivedDataPath "build/dd-$t" CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+            app=$(ls -d build/dd-$t/Build/Products/Release-iphoneos/*.app)
+            rm -rf Payload && mkdir Payload && cp -R "$app" Payload/
+            zip -qr "$t.ipa" Payload
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ytx-ios
+          path: ios/*.ipa

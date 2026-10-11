@@ -12253,6 +12253,11 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     type: "toggle",
     default: true,
     start() {
+      if (new URLSearchParams(location.search).has("ytxr")) {
+        const u = new URL(location.href);
+        u.searchParams.delete("ytxr");
+        history.replaceState(history.state, "", u.pathname + (u.search || "") + u.hash);
+      }
       const TRIGGER = 130;
       let t0 = null;
       let dot = null;
@@ -12306,7 +12311,9 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           if (!done2) return hide();
           d.style.transition = "transform 1s linear";
           d.style.transform = "translateY(20px) rotate(1080deg)";
-          location.reload();
+          const u = new URL(location.href);
+          u.searchParams.set("ytxr", String(Date.now()));
+          location.replace(u.href);
         }, { passive: true, capture: true })
       ];
       return () => {

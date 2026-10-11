@@ -1,0 +1,5 @@
+ios/ytx.xcodeproj/
+ios/build/
+ios/*.ipa
+ios/Payload/
+Ytx/Resources/ytx.user.js

@@ -457,6 +457,12 @@ const pullRefresh = {
   type: 'toggle',
   default: true,
   start() {
+    // der Hilfsparameter der Neu-Laden-Geste soll nicht in der Adresse stehen bleiben
+    if (new URLSearchParams(location.search).has('ytxr')) {
+      const u = new URL(location.href)
+      u.searchParams.delete('ytxr')
+      history.replaceState(history.state, '', u.pathname + (u.search || '') + u.hash)
+    }
     const TRIGGER = 130
     let t0 = null
     let dot = null
@@ -511,7 +517,10 @@ const pullRefresh = {
         if (!done) return hide()
         d.style.transition = 'transform 1s linear'
         d.style.transform = 'translateY(20px) rotate(1080deg)'
-        location.reload()
+        // eine frische Adresse umgeht den Zwischenspeicher, ein einfaches reload kann dieselben Videos zeigen
+        const u = new URL(location.href)
+        u.searchParams.set('ytxr', String(Date.now()))
+        location.replace(u.href)
       }, { passive: true, capture: true })
     ]
     return () => {

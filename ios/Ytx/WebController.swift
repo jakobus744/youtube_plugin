@@ -62,7 +62,8 @@ final class WebController: UIViewController, WKScriptMessageHandler, WKNavigatio
             let q = { (s: String) -> String in
                 String(data: try! JSONSerialization.data(withJSONObject: [s]), encoding: .utf8)!.dropFirst().dropLast().description
             }
-            let src = "(\(shim))(\(q(channel)), \(q(recv)), \(Store.objectLiteral()), \(q(cur.version)));\n\(cur.code)\n//# sourceURL=ytx.user.js"
+            // auf Google Seiten (Anmeldung) laeuft ytx nicht, dort gibt es keine GM Funktionen
+            let src = "if (/(^|\\.)youtube\\.com$/.test(location.hostname)) {\n(\(shim))(\(q(channel)), \(q(recv)), \(Store.objectLiteral()), \(q(cur.version)));\n\(cur.code)\n}\n//# sourceURL=ytx.user.js"
             // WKUserScript wird von der Seiten CSP nicht blockiert, deshalb braucht es hier keinen Eingriff in die Header
             ucc.addUserScript(WKUserScript(source: src, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         }
@@ -74,7 +75,9 @@ final class WebController: UIViewController, WKScriptMessageHandler, WKNavigatio
     // MARK: Nachrichten der Seite
 
     func userContentController(_ c: WKUserContentController, didReceive m: WKScriptMessage) {
-        guard let s = m.body as? String, let d = s.data(using: .utf8),
+        // nur die Hauptseite von YouTube darf die App ansprechen
+        guard m.frameInfo.isMainFrame, isYouTube(m.frameInfo.securityOrigin.host),
+              let s = m.body as? String, let d = s.data(using: .utf8),
               let o = try? JSONSerialization.jsonObject(with: d) as? [String: Any],
               let t = o["t"] as? String else { return }
         switch t {
@@ -140,21 +143,32 @@ final class WebController: UIViewController, WKScriptMessageHandler, WKNavigatio
 
     // MARK: Navigation
 
+    private func hostMatches(_ host: String, _ list: [String]) -> Bool {
+        list.contains(where: { host == $0 || host.hasSuffix("." + $0) })
+    }
+
+    private func isYouTube(_ host: String) -> Bool { hostMatches(host, ["youtube.com"]) }
+
+    // gilt fuer jede Navigation der Hauptseite, nicht nur fuer Links
+    private func allowedInApp(_ url: URL) -> Bool {
+        if url.scheme == "about" { return true }
+        return url.scheme == "https" && hostMatches(url.host ?? "", inAppHosts)
+    }
+
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        guard let url = action.request.url, action.navigationType == .linkActivated, action.targetFrame?.isMainFrame ?? true else {
+        guard action.targetFrame?.isMainFrame ?? true, let url = action.request.url else {
             return decisionHandler(.allow)
         }
-        let host = url.host ?? ""
-        if url.scheme == "https", inAppHosts.contains(where: { host == $0 || host.hasSuffix("." + $0) }) {
-            return decisionHandler(.allow)
-        }
-        UIApplication.shared.open(url)
+        if allowedInApp(url) { return decisionHandler(.allow) }
+        if action.navigationType == .linkActivated, url.scheme == "https" { UIApplication.shared.open(url) }
         decisionHandler(.cancel)
     }
 
     // window.open und target=_blank bleiben im selben Fenster
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for action: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if let u = action.request.url { webView.load(URLRequest(url: u)) }
+        if let u = action.request.url {
+            if allowedInApp(u) { webView.load(URLRequest(url: u)) } else if u.scheme == "https" { UIApplication.shared.open(u) }
+        }
         return nil
     }
 

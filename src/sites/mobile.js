@@ -55,11 +55,14 @@ const FILTER_PAGES = [
 
 // zeile direkt unter der aktionsleiste, features docken am end marker an
 const OPEN_YT_CSS = `
-#ytx-fs-exit { all: initial; position: fixed; top: 14px; right: 14px; z-index: 2147483647; width: 48px; height: 48px; border-radius: 24px; background: rgba(0,0,0,.55); color: #fff; font: 700 26px/48px sans-serif; text-align: center; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .2s; }
-#ytx-fs-exit.show { opacity: 1; pointer-events: auto; }
-html:not([data-ytx-fs]) #ytx-fs-exit { display: none; }
 /* echtes vollbild in der app: nur das video, ohne leisten und einblendungen */
 html[data-ytx-fs] ytm-mobile-topbar-renderer, html[data-ytx-fs] .mobile-topbar-header-background, html[data-ytx-fs] ytm-pivot-bar-renderer, html[data-ytx-fs] [class*="paid-content-overlay"], html[data-ytx-fs] ytm-paid-content-overlay-renderer, html[data-ytx-fs] ytm-custom-control .ytp-paid-content-overlay, html[data-ytx-fs] #movie_player .ytp-paid-content-overlay, html[data-ytx-fs] .ytp-title-channel-logo, html[data-ytx-fs] .ytm-autonav-bar { display: none !important; }
+/* kein echtes Vollbild erlaubt: der player fuellt die ganze Seite selbst */
+html[data-ytx-faux] { overflow: hidden !important; }
+html[data-ytx-faux] #player-container-id, html[data-ytx-faux] #player, html[data-ytx-faux] .player-container { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; max-height: none !important; z-index: 2147483000 !important; background: #000 !important; }
+html[data-ytx-faux] #movie_player, html[data-ytx-faux] .html5-video-container, html[data-ytx-faux] .html5-video-player { position: absolute !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; }
+html[data-ytx-faux] #movie_player video { position: absolute !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; object-fit: contain !important; transform: none !important; }
+html[data-ytx-faux] ytm-mobile-topbar-renderer, html[data-ytx-faux] .mobile-topbar-header-background, html[data-ytx-faux] ytm-pivot-bar-renderer { display: none !important; }
 /* hinweisbalken wie „Weitere Informationen zu diesen Ergebnissen“ immer weg */
 ytm-info-panel-container-renderer { display: none !important; }
 /* filter shorts an: ganze shorts regale samt ueberschrift weg */

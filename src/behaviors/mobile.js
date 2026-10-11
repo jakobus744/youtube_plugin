@@ -601,15 +601,20 @@ const appFullscreen = {
     let autoFor = ''
     let exitedFor = ''
     let wasFull = false
-    // eigener knopf zum verlassen, weil die leiste von youtube im vollbild nicht immer reagiert
-    let exitBtn = null
-    let hideTimer = 0
+    // ohne frische beruehrung verweigert Gecko das echte Vollbild, dann fuellt der player selbst die ganze Seite
+    let faux = false
+    const setFaux = (on) => {
+      if (faux === on) return
+      faux = on
+      document.documentElement.toggleAttribute('data-ytx-faux', on)
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 50)
+    }
     const leave = () => {
       const p = document.getElementById('movie_player')
       exitedFor = autoFor = new URLSearchParams(location.search).get('v') || ''
       // derselbe weg wie beim hochkant kippen
-      p?.toggleFullscreen?.()
-      exitBtn?.classList.remove('show')
+      if (faux) setFaux(false)
+      else p?.toggleFullscreen?.()
       verifyExit()
     }
     // hat es nicht geklappt, den browser selbst aus dem vollbild holen und die seite nach oben setzen
@@ -619,28 +624,6 @@ const appFullscreen = {
         scrollTo(0, 0)
       }, 800)
     }
-    const showBtn = () => {
-      if (!isFull()) return
-      if (!exitBtn) {
-        exitBtn = document.createElement('button')
-        exitBtn.type = 'button'
-        exitBtn.id = 'ytx-fs-exit'
-        exitBtn.setAttribute('data-ytx-own', '')
-        exitBtn.setAttribute('aria-label', 'Vollbild verlassen')
-        exitBtn.textContent = '⤡'
-        exitBtn.addEventListener('click', (e) => {
-          e.stopPropagation()
-          leave()
-        })
-      }
-      // im echten vollbild liegt nur das vollbildelement vorne, der knopf muss darin stehen
-      const host = document.fullscreenElement || document.body || document.documentElement
-      if (exitBtn.parentElement !== host) host.append(exitBtn)
-      exitBtn.classList.add('show')
-      clearTimeout(hideTimer)
-      hideTimer = setTimeout(() => exitBtn?.classList.remove('show'), 3500)
-    }
-    const offTouch = listen(document, 'touchstart', showBtn, { passive: true, capture: true })
     // das vollbild symbol von youtube selbst soll ebenfalls zuverlaessig beenden
     const offClick = listen(document, 'click', (e) => {
       // das vollbild symbol von youtube macht genau das gleiche wie das hochkant kippen
@@ -664,13 +647,26 @@ const appFullscreen = {
     }
     // das vollbildelement der youtube leiste ist der container um player und bedienung, nicht der player allein
     const enterFs = (p) => {
-      const box = document.getElementById('player-container-id')
-      allowEnter = true
-      setTimeout(() => (allowEnter = false), 600)
-      if (box?.requestFullscreen) box.requestFullscreen().catch(() => p.toggleFullscreen?.())
-      else p.toggleFullscreen?.()
+      const go = () => {
+        const box = document.getElementById('player-container-id')
+        allowEnter = true
+        setTimeout(() => (allowEnter = false), 600)
+        if (box?.requestFullscreen) box.requestFullscreen().catch(() => p.toggleFullscreen?.())
+        else p.toggleFullscreen?.()
+      }
+      // war die seite nach unten gescrollt, sitzt der player nicht an seinem platz, dann klappt das vollbild nicht
+      // erst nach oben, kurz warten bis das layout im querformat steht, dann hinein
+      if (scrollY > 0 || (document.scrollingElement && document.scrollingElement.scrollTop > 0)) {
+        scrollTo(0, 0)
+        if (document.scrollingElement) document.scrollingElement.scrollTop = 0
+        setTimeout(go, 300)
+      } else go()
+      // hat es nicht geklappt (keine frische Beruehrung), fuellt der Player die Seite selbst
+      setTimeout(() => {
+        if (innerWidth > innerHeight && !isFull() && !document.hidden) setFaux(true)
+      }, 900)
     }
-    const isFull = () => !!document.fullscreenElement || document.body?.getAttribute('faux-fullscreen') === 'true'
+    const isFull = () => faux || !!document.fullscreenElement || document.body?.getAttribute('faux-fullscreen') === 'true'
     const t = setInterval(() => {
       const land = innerWidth > innerHeight
       const p = document.getElementById('movie_player')
@@ -682,7 +678,7 @@ const appFullscreen = {
       if (land !== wasLand && watching) {
         wasLand = land
         if (land && !isFull()) enterFs(p)
-        if (!land && isFull()) p.toggleFullscreen?.()
+        if (!land && isFull()) faux ? setFaux(false) : p.toggleFullscreen?.()
         autoFor = land ? vid : ''
         exitedFor = ''
       } else if (land && watching && vid && vid !== autoFor && vid !== exitedFor && p.getPlayerState?.() === 1 && !isFull()) {
@@ -692,6 +688,7 @@ const appFullscreen = {
       // selbst beendet: fuer dieses video nicht wieder automatisch hinein
       if (wasFull && !isFull() && land) exitedFor = autoFor = vid
       wasFull = isFull()
+      if (faux && (!watching || !land)) setFaux(false)
       const on = isFull() && land
       document.documentElement.toggleAttribute('data-ytx-fs', on)
       if (on === last) return
@@ -700,10 +697,8 @@ const appFullscreen = {
     }, 250)
     return () => {
       clearInterval(t)
-      offTouch()
       offClick()
       if (origRequest) Element.prototype.requestFullscreen = origRequest
-      exitBtn?.remove()
       if (last) window.__ytxNative({ a: 'fsOff' })
     }
   }

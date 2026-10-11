@@ -48,7 +48,8 @@
       dev: "node build.mjs --watch",
       serve: "node tools/serve.mjs",
       test: 'node --test "tests/*.test.mjs"',
-      apk: "node build.mjs && cd android && .\\gradlew.bat --no-daemon apk"
+      apk: "node build.mjs && cd android && .\\gradlew.bat --no-daemon apk",
+      "ios:sync": "node build.mjs && node tools/ios-sync.mjs"
     },
     devDependencies: {
       esbuild: "^0.25.0"
@@ -2938,6 +2939,8 @@ ${s.text}
 .ytx-toast { position: fixed; z-index: 2400; left: 50%; bottom: 32px; transform: translateX(-50%); max-width: 80vw; padding: 10px 16px; border-radius: 8px;
   font: 400 14px/1.3 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary-inverse, #0f0f0f); background: var(--yt-sys-color-baseline--inverted-background, #f1f1f1); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
 .ytx-toast[data-kind="error"] { background: #c62828; color: #fff; }
+/* eigener stapel, sonst liegt das abzeichen ueber dem festgehaltenen player */
+:has(> .ytx-badge) { isolation: isolate; }
 .ytx-badge { position: absolute; z-index: 3; right: 4px; top: 4px; padding: 1px 5px; border-radius: 4px; pointer-events: none; font: 500 11px/16px Roboto, Arial, sans-serif; color: #fff; background: rgba(0,0,0,.75); }
 `;
   function initUiCss() {
@@ -12388,13 +12391,18 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       let autoFor = "";
       let exitedFor = "";
       let wasFull = false;
-      let exitBtn = null;
-      let hideTimer = 0;
+      let faux = false;
+      const setFaux = (on) => {
+        if (faux === on) return;
+        faux = on;
+        document.documentElement.toggleAttribute("data-ytx-faux", on);
+        setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
+      };
       const leave = () => {
         const p = document.getElementById("movie_player");
         exitedFor = autoFor = new URLSearchParams(location.search).get("v") || "";
-        p?.toggleFullscreen?.();
-        exitBtn?.classList.remove("show");
+        if (faux) setFaux(false);
+        else p?.toggleFullscreen?.();
         verifyExit();
       };
       const verifyExit = () => {
@@ -12404,27 +12412,6 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           scrollTo(0, 0);
         }, 800);
       };
-      const showBtn = () => {
-        if (!isFull()) return;
-        if (!exitBtn) {
-          exitBtn = document.createElement("button");
-          exitBtn.type = "button";
-          exitBtn.id = "ytx-fs-exit";
-          exitBtn.setAttribute("data-ytx-own", "");
-          exitBtn.setAttribute("aria-label", "Vollbild verlassen");
-          exitBtn.textContent = "⤡";
-          exitBtn.addEventListener("click", (e) => {
-            e.stopPropagation();
-            leave();
-          });
-        }
-        const host2 = document.fullscreenElement || document.body || document.documentElement;
-        if (exitBtn.parentElement !== host2) host2.append(exitBtn);
-        exitBtn.classList.add("show");
-        clearTimeout(hideTimer);
-        hideTimer = setTimeout(() => exitBtn?.classList.remove("show"), 3500);
-      };
-      const offTouch = listen(document, "touchstart", showBtn, { passive: true, capture: true });
       const offClick = listen(document, "click", (e) => {
         if (isFull() && e.target?.closest?.(".fullscreen-icon")) {
           e.stopPropagation();
@@ -12443,13 +12430,23 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         };
       }
       const enterFs = (p) => {
-        const box = document.getElementById("player-container-id");
-        allowEnter = true;
-        setTimeout(() => allowEnter = false, 600);
-        if (box?.requestFullscreen) box.requestFullscreen().catch(() => p.toggleFullscreen?.());
-        else p.toggleFullscreen?.();
+        const go = () => {
+          const box = document.getElementById("player-container-id");
+          allowEnter = true;
+          setTimeout(() => allowEnter = false, 600);
+          if (box?.requestFullscreen) box.requestFullscreen().catch(() => p.toggleFullscreen?.());
+          else p.toggleFullscreen?.();
+        };
+        if (scrollY > 0 || document.scrollingElement && document.scrollingElement.scrollTop > 0) {
+          scrollTo(0, 0);
+          if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+          setTimeout(go, 300);
+        } else go();
+        setTimeout(() => {
+          if (innerWidth > innerHeight && !isFull() && !document.hidden) setFaux(true);
+        }, 900);
       };
-      const isFull = () => !!document.fullscreenElement || document.body?.getAttribute("faux-fullscreen") === "true";
+      const isFull = () => faux || !!document.fullscreenElement || document.body?.getAttribute("faux-fullscreen") === "true";
       const t = setInterval(() => {
         const land = innerWidth > innerHeight;
         const p = document.getElementById("movie_player");
@@ -12458,7 +12455,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         if (land !== wasLand && watching) {
           wasLand = land;
           if (land && !isFull()) enterFs(p);
-          if (!land && isFull()) p.toggleFullscreen?.();
+          if (!land && isFull()) faux ? setFaux(false) : p.toggleFullscreen?.();
           autoFor = land ? vid : "";
           exitedFor = "";
         } else if (land && watching && vid && vid !== autoFor && vid !== exitedFor && p.getPlayerState?.() === 1 && !isFull()) {
@@ -12467,6 +12464,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         } else wasLand = land;
         if (wasFull && !isFull() && land) exitedFor = autoFor = vid;
         wasFull = isFull();
+        if (faux && (!watching || !land)) setFaux(false);
         const on = isFull() && land;
         document.documentElement.toggleAttribute("data-ytx-fs", on);
         if (on === last2) return;
@@ -12475,10 +12473,8 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       }, 250);
       return () => {
         clearInterval(t);
-        offTouch();
         offClick();
         if (origRequest) Element.prototype.requestFullscreen = origRequest;
-        exitBtn?.remove();
         if (last2) window.__ytxNative({ a: "fsOff" });
       };
     }
@@ -12604,11 +12600,14 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
     ["channel", "Kanal"]
   ];
   var OPEN_YT_CSS = `
-#ytx-fs-exit { all: initial; position: fixed; top: 14px; right: 14px; z-index: 2147483647; width: 48px; height: 48px; border-radius: 24px; background: rgba(0,0,0,.55); color: #fff; font: 700 26px/48px sans-serif; text-align: center; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .2s; }
-#ytx-fs-exit.show { opacity: 1; pointer-events: auto; }
-html:not([data-ytx-fs]) #ytx-fs-exit { display: none; }
 /* echtes vollbild in der app: nur das video, ohne leisten und einblendungen */
 html[data-ytx-fs] ytm-mobile-topbar-renderer, html[data-ytx-fs] .mobile-topbar-header-background, html[data-ytx-fs] ytm-pivot-bar-renderer, html[data-ytx-fs] [class*="paid-content-overlay"], html[data-ytx-fs] ytm-paid-content-overlay-renderer, html[data-ytx-fs] ytm-custom-control .ytp-paid-content-overlay, html[data-ytx-fs] #movie_player .ytp-paid-content-overlay, html[data-ytx-fs] .ytp-title-channel-logo, html[data-ytx-fs] .ytm-autonav-bar { display: none !important; }
+/* kein echtes Vollbild erlaubt: der player fuellt die ganze Seite selbst */
+html[data-ytx-faux] { overflow: hidden !important; }
+html[data-ytx-faux] #player-container-id, html[data-ytx-faux] #player, html[data-ytx-faux] .player-container { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; max-height: none !important; z-index: 2147483000 !important; background: #000 !important; }
+html[data-ytx-faux] #movie_player, html[data-ytx-faux] .html5-video-container, html[data-ytx-faux] .html5-video-player { position: absolute !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; }
+html[data-ytx-faux] #movie_player video { position: absolute !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; object-fit: contain !important; transform: none !important; }
+html[data-ytx-faux] ytm-mobile-topbar-renderer, html[data-ytx-faux] .mobile-topbar-header-background, html[data-ytx-faux] ytm-pivot-bar-renderer { display: none !important; }
 /* hinweisbalken wie „Weitere Informationen zu diesen Ergebnissen“ immer weg */
 ytm-info-panel-container-renderer { display: none !important; }
 /* filter shorts an: ganze shorts regale samt ueberschrift weg */

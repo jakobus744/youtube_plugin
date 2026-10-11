@@ -960,6 +960,9 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
   var LIGHT_REFS = { bg: "#ffffff", text: "#0f0f0f", textSecondary: "#606060", accent: "#065fd4" };
   var found = {};
   var known = /* @__PURE__ */ new Set();
+  function discovered() {
+    return found;
+  }
   function scanPage(dark) {
     const cs = getComputedStyle(document.documentElement);
     const vars = [];
@@ -12412,6 +12415,86 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           scrollTo(0, 0);
         }, 800);
       };
+      let fillBtn = null;
+      let fillOn = false;
+      const fillScale = () => {
+        const v = document.querySelector("#movie_player video");
+        if (!v || !v.videoWidth || !v.videoHeight) return;
+        const a = v.videoWidth / v.videoHeight;
+        const b = innerWidth / innerHeight;
+        v.style.setProperty("scale", String(Math.max(a / b, b / a)), "important");
+      };
+      const setFill = (on) => {
+        fillOn = on;
+        document.documentElement.toggleAttribute("data-ytx-fill", on);
+        fillBtn?.classList.toggle("on", on);
+        if (on) fillScale();
+        else document.querySelector("#movie_player video")?.style.removeProperty("scale");
+      };
+      const ensureBtn = () => {
+        const host2 = document.querySelector(".player-controls-bottom-right");
+        if (!host2) return;
+        if (!fillBtn) {
+          fillBtn = document.createElement("button");
+          fillBtn.type = "button";
+          fillBtn.id = "ytx-fill-btn";
+          fillBtn.setAttribute("data-ytx-own", "");
+          fillBtn.setAttribute("aria-label", "Bild füllen");
+          const ns = "http://www.w3.org/2000/svg";
+          const svg = document.createElementNS(ns, "svg");
+          svg.setAttribute("viewBox", "0 0 24 24");
+          const path = document.createElementNS(ns, "path");
+          path.setAttribute("d", "M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm14 0h2v6h-6v-2h4v-4z");
+          svg.append(path);
+          fillBtn.append(svg);
+          fillBtn.classList.toggle("on", fillOn);
+          fillBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            setFill(!fillOn);
+          });
+        }
+        if (fillBtn.parentElement !== host2) host2.append(fillBtn);
+      };
+      const mirror = setInterval(() => {
+        if (!fillBtn || !fillBtn.parentElement) return;
+        const host2 = fillBtn.parentElement;
+        const ref = host2.querySelector(".fullscreen-icon");
+        if (!ref) return;
+        let op = 1;
+        let vis = true;
+        for (let e = ref; e && e !== host2; e = e.parentElement) {
+          const cs = getComputedStyle(e);
+          op *= Number(cs.opacity);
+          if (cs.visibility === "hidden" || cs.display === "none") vis = false;
+        }
+        fillBtn.style.opacity = String(op);
+        fillBtn.style.visibility = vis ? "visible" : "hidden";
+        fillBtn.style.pointerEvents = vis && op > 0.2 ? "auto" : "none";
+      }, 100);
+      const offUpgrade = listen(document, "click", () => {
+        if (!faux || document.fullscreenElement) return;
+        const box = document.getElementById("player-container-id");
+        allowEnter = true;
+        setTimeout(() => allowEnter = false, 600);
+        box?.requestFullscreen?.().then(() => setFaux(false)).catch(() => {
+        });
+      }, { capture: true });
+      let accSet = false;
+      const applyAccent = () => {
+        if (accSet) return;
+        const cs = getComputedStyle(document.documentElement);
+        const custom = (role) => {
+          const name2 = discovered()[role]?.[0]?.name;
+          if (!name2) return null;
+          const c = normColor(cs.getPropertyValue(name2));
+          return c && c !== normColor(DARK_REFS[role]) && c !== normColor(LIGHT_REFS[role]) ? name2 : null;
+        };
+        const name = custom("accent") || discovered().text?.[0]?.name;
+        if (!name) return;
+        accSet = true;
+        document.documentElement.style.setProperty("--ytx-accent", `var(${name})`);
+        document.documentElement.setAttribute("data-ytx-acc", "");
+      };
       const offClick = listen(document, "click", (e) => {
         if (isFull() && e.target?.closest?.(".fullscreen-icon")) {
           e.stopPropagation();
@@ -12465,6 +12548,10 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         if (wasFull && !isFull() && land) exitedFor = autoFor = vid;
         wasFull = isFull();
         if (faux && (!watching || !land)) setFaux(false);
+        applyAccent();
+        if (isFull()) ensureBtn();
+        if (fillOn && (!isFull() || !land)) setFill(false);
+        else if (fillOn) fillScale();
         const on = isFull() && land;
         document.documentElement.toggleAttribute("data-ytx-fs", on);
         if (on === last2) return;
@@ -12473,7 +12560,11 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       }, 250);
       return () => {
         clearInterval(t);
+        clearInterval(mirror);
+        offUpgrade();
         offClick();
+        fillBtn?.remove();
+        setFill(false);
         if (origRequest) Element.prototype.requestFullscreen = origRequest;
         if (last2) window.__ytxNative({ a: "fsOff" });
       };
@@ -12602,6 +12693,16 @@ ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
   var OPEN_YT_CSS = `
 /* echtes vollbild in der app: nur das video, ohne leisten und einblendungen */
 html[data-ytx-fs] ytm-mobile-topbar-renderer, html[data-ytx-fs] .mobile-topbar-header-background, html[data-ytx-fs] ytm-pivot-bar-renderer, html[data-ytx-fs] [class*="paid-content-overlay"], html[data-ytx-fs] ytm-paid-content-overlay-renderer, html[data-ytx-fs] ytm-custom-control .ytp-paid-content-overlay, html[data-ytx-fs] #movie_player .ytp-paid-content-overlay, html[data-ytx-fs] .ytp-title-channel-logo, html[data-ytx-fs] .ytm-autonav-bar { display: none !important; }
+/* Player Leiste im Vollbild in der Akzentfarbe des Looks, Fortschritt, Punkt, Symbole und Zeit */
+html[data-ytx-acc] .ytChapteredProgressBarChapteredPlayerBarFill { background: var(--ytx-accent) !important; }
+html[data-ytx-acc] .ytProgressBarPlayheadProgressBarPlayheadDot { background: var(--ytx-accent) !important; }
+html[data-ytx-acc] ytm-custom-control svg path:not([fill="none"]), html[data-ytx-acc] .player-controls-content svg path:not([fill="none"]), html[data-ytx-acc] #movie_player svg path:not([fill="none"]) { fill: var(--ytx-accent) !important; }
+html[data-ytx-acc] ytm-custom-control, html[data-ytx-acc] .player-controls-content, html[data-ytx-acc] .player-controls-content * { color: var(--ytx-accent) !important; }
+/* Knopf Bild fuellen im Vollbild */
+#ytx-fill-btn { all: initial; box-sizing: border-box; position: absolute; right: 48px; top: 0; width: 44px; height: 44px; border-radius: 22px; background: rgba(0,0,0,.45); color: var(--ytx-accent, #fff); display: none; align-items: center; justify-content: center; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
+.player-controls-bottom-right #ytx-fill-btn { display: flex; }
+#ytx-fill-btn.on { background: rgba(255,255,255,.25); }
+#ytx-fill-btn svg { width: 24px; height: 24px; fill: currentColor; }
 /* kein echtes Vollbild erlaubt: der player fuellt die ganze Seite selbst */
 html[data-ytx-faux] { overflow: hidden !important; }
 html[data-ytx-faux] #player-container-id, html[data-ytx-faux] #player, html[data-ytx-faux] .player-container { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; max-height: none !important; z-index: 2147483000 !important; background: #000 !important; }

@@ -2,6 +2,7 @@ import { behaviors as yt } from './youtube.js'
 import { listen } from '../core/lifecycle.js'
 import { pageFromUrl } from '../registry/youtube/pages.js'
 import { audioFocus } from './appAudio.js'
+import { discovered, normColor, DARK_REFS, LIGHT_REFS } from '../appliers/hashTokens.js'
 
 // verhalten fuer m.youtube.com
 // umleitungen arbeiten mit urls, der rest mit der player api, beides gibt es auch mobil
@@ -624,6 +625,90 @@ const appFullscreen = {
         scrollTo(0, 0)
       }, 800)
     }
+    // Bild fuellen: das Video wird so vergroessert, dass es den ganzen Bildschirm nutzt, die Raender werden beschnitten
+    let fillBtn = null
+    let fillOn = false
+    const fillScale = () => {
+      const v = document.querySelector('#movie_player video')
+      if (!v || !v.videoWidth || !v.videoHeight) return
+      const a = v.videoWidth / v.videoHeight
+      const b = innerWidth / innerHeight
+      v.style.setProperty('scale', String(Math.max(a / b, b / a)), 'important')
+    }
+    const setFill = (on) => {
+      fillOn = on
+      document.documentElement.toggleAttribute('data-ytx-fill', on)
+      fillBtn?.classList.toggle('on', on)
+      if (on) fillScale()
+      else document.querySelector('#movie_player video')?.style.removeProperty('scale')
+    }
+    const ensureBtn = () => {
+      // die Leiste von YouTube hat unten rechts den Vollbild Knopf, der Knopf steht daneben und blendet mit ein und aus
+      const host = document.querySelector('.player-controls-bottom-right')
+      if (!host) return
+      if (!fillBtn) {
+        fillBtn = document.createElement('button')
+        fillBtn.type = 'button'
+        fillBtn.id = 'ytx-fill-btn'
+        fillBtn.setAttribute('data-ytx-own', '')
+        fillBtn.setAttribute('aria-label', 'Bild füllen')
+        const ns = 'http://www.w3.org/2000/svg'
+        const svg = document.createElementNS(ns, 'svg')
+        svg.setAttribute('viewBox', '0 0 24 24')
+        const path = document.createElementNS(ns, 'path')
+        path.setAttribute('d', 'M4 4h6v2H6v4H4V4zm10 0h6v6h-2V6h-4V4zM4 14h2v4h4v2H4v-6zm14 0h2v6h-6v-2h4v-4z')
+        svg.append(path)
+        fillBtn.append(svg)
+        fillBtn.classList.toggle('on', fillOn)
+        fillBtn.addEventListener('click', (e) => {
+          e.stopPropagation()
+          setFill(!fillOn)
+        })
+      }
+      if (fillBtn.parentElement !== host) host.append(fillBtn)
+    }
+    // YouTube blendet seine Symbole einzeln aus, der Knopf uebernimmt die Sichtbarkeit des Vollbild Knopfs daneben
+    const mirror = setInterval(() => {
+      if (!fillBtn || !fillBtn.parentElement) return
+      const host = fillBtn.parentElement
+      const ref = host.querySelector('.fullscreen-icon')
+      if (!ref) return
+      let op = 1
+      let vis = true
+      for (let e = ref; e && e !== host; e = e.parentElement) {
+        const cs = getComputedStyle(e)
+        op *= Number(cs.opacity)
+        if (cs.visibility === 'hidden' || cs.display === 'none') vis = false
+      }
+      fillBtn.style.opacity = String(op)
+      fillBtn.style.visibility = vis ? 'visible' : 'hidden'
+      fillBtn.style.pointerEvents = vis && op > 0.2 ? 'auto' : 'none'
+    }, 100)
+    const offUpgrade = listen(document, 'click', () => {
+      if (!faux || document.fullscreenElement) return
+      const box = document.getElementById('player-container-id')
+      allowEnter = true
+      setTimeout(() => (allowEnter = false), 600)
+      box?.requestFullscreen?.().then(() => setFaux(false)).catch(() => {})
+    }, { capture: true })
+    // Farben der Player Leiste im Vollbild folgen dem Akzent des Looks
+    let accSet = false
+    const applyAccent = () => {
+      if (accSet) return
+      // der Akzent des Looks, ist er nicht angepasst (Standardblau), die Textfarbe des Looks
+      const cs = getComputedStyle(document.documentElement)
+      const custom = (role) => {
+        const name = discovered()[role]?.[0]?.name
+        if (!name) return null
+        const c = normColor(cs.getPropertyValue(name))
+        return c && c !== normColor(DARK_REFS[role]) && c !== normColor(LIGHT_REFS[role]) ? name : null
+      }
+      const name = custom('accent') || discovered().text?.[0]?.name
+      if (!name) return
+      accSet = true
+      document.documentElement.style.setProperty('--ytx-accent', `var(${name})`)
+      document.documentElement.setAttribute('data-ytx-acc', '')
+    }
     // das vollbild symbol von youtube selbst soll ebenfalls zuverlaessig beenden
     const offClick = listen(document, 'click', (e) => {
       // das vollbild symbol von youtube macht genau das gleiche wie das hochkant kippen
@@ -689,6 +774,10 @@ const appFullscreen = {
       if (wasFull && !isFull() && land) exitedFor = autoFor = vid
       wasFull = isFull()
       if (faux && (!watching || !land)) setFaux(false)
+      applyAccent()
+      if (isFull()) ensureBtn()
+      if (fillOn && (!isFull() || !land)) setFill(false)
+      else if (fillOn) fillScale()
       const on = isFull() && land
       document.documentElement.toggleAttribute('data-ytx-fs', on)
       if (on === last) return
@@ -697,7 +786,11 @@ const appFullscreen = {
     }, 250)
     return () => {
       clearInterval(t)
+      clearInterval(mirror)
+      offUpgrade()
       offClick()
+      fillBtn?.remove()
+      setFill(false)
       if (origRequest) Element.prototype.requestFullscreen = origRequest
       if (last) window.__ytxNative({ a: 'fsOff' })
     }

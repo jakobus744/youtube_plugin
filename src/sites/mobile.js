@@ -57,6 +57,16 @@ const FILTER_PAGES = [
 const OPEN_YT_CSS = `
 /* echtes vollbild in der app: nur das video, ohne leisten und einblendungen */
 html[data-ytx-fs] ytm-mobile-topbar-renderer, html[data-ytx-fs] .mobile-topbar-header-background, html[data-ytx-fs] ytm-pivot-bar-renderer, html[data-ytx-fs] [class*="paid-content-overlay"], html[data-ytx-fs] ytm-paid-content-overlay-renderer, html[data-ytx-fs] ytm-custom-control .ytp-paid-content-overlay, html[data-ytx-fs] #movie_player .ytp-paid-content-overlay, html[data-ytx-fs] .ytp-title-channel-logo, html[data-ytx-fs] .ytm-autonav-bar { display: none !important; }
+/* Player Leiste im Vollbild in der Akzentfarbe des Looks, Fortschritt, Punkt, Symbole und Zeit */
+html[data-ytx-acc] .ytChapteredProgressBarChapteredPlayerBarFill { background: var(--ytx-accent) !important; }
+html[data-ytx-acc] .ytProgressBarPlayheadProgressBarPlayheadDot { background: var(--ytx-accent) !important; }
+html[data-ytx-acc] ytm-custom-control svg path:not([fill="none"]), html[data-ytx-acc] .player-controls-content svg path:not([fill="none"]), html[data-ytx-acc] #movie_player svg path:not([fill="none"]) { fill: var(--ytx-accent) !important; }
+html[data-ytx-acc] ytm-custom-control, html[data-ytx-acc] .player-controls-content, html[data-ytx-acc] .player-controls-content * { color: var(--ytx-accent) !important; }
+/* Knopf Bild fuellen im Vollbild */
+#ytx-fill-btn { all: initial; box-sizing: border-box; position: absolute; right: 48px; top: 0; width: 44px; height: 44px; border-radius: 22px; background: rgba(0,0,0,.45); color: var(--ytx-accent, #fff); display: none; align-items: center; justify-content: center; pointer-events: auto; -webkit-tap-highlight-color: transparent; }
+.player-controls-bottom-right #ytx-fill-btn { display: flex; }
+#ytx-fill-btn.on { background: rgba(255,255,255,.25); }
+#ytx-fill-btn svg { width: 24px; height: 24px; fill: currentColor; }
 /* kein echtes Vollbild erlaubt: der player fuellt die ganze Seite selbst */
 html[data-ytx-faux] { overflow: hidden !important; }
 html[data-ytx-faux] #player-container-id, html[data-ytx-faux] #player, html[data-ytx-faux] .player-container { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; max-height: none !important; z-index: 2147483000 !important; background: #000 !important; }

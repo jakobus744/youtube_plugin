@@ -65,7 +65,7 @@ const thumbPreview = {
   label: 'Video-Vorschau auf Thumbnails',
   description: 'Stumme Vorschau mit Untertiteln direkt auf dem Bild, wie in der YouTube-App. Gedrückt halten startet sie, nach 1,5 Sekunden läuft sie auch ohne Finger weiter. Sie beginnt am Anfang des Videos. Nach links oder rechts ziehen spult. „Beim Verweilen“ startet sie von selbst, wenn ein Video in Ruhe mitten im Bild liegt',
   type: 'select',
-  options: [['', 'Aus'], ['press', 'Gedrückt halten'], ['both', 'Gedrückt halten und beim Verweilen (schnell)'], ['clean', 'Wie oben, ohne Player-Zeichen (3 Sekunden später)']],
+  options: [['', 'Aus'], ['press', 'Gedrückt halten'], ['both', 'Gedrückt halten und beim Verweilen']],
   default: 'both',
   start(ctx, mode) {
     const clean = mode === 'clean'

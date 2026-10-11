@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "ytx",
-  "version": "1.0",
+  "version": "1.1",
   "description": "ytx userscript als eingebaute erweiterung der ytx app",
   "browser_specific_settings": {
     "gecko": { "id": "ytx@jakobus744.github.io" }
@@ -30,6 +30,12 @@
       "matches": ["https://www.youtube.com/*", "https://m.youtube.com/*", "https://music.youtube.com/*"],
       "js": ["content.js"],
       "run_at": "document_start"
+    },
+    {
+      "matches": ["https://www.youtube.com/embed/*"],
+      "js": ["embed.js"],
+      "run_at": "document_start",
+      "all_frames": true
     }
   ]
 }

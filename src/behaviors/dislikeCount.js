@@ -1,5 +1,5 @@
 import { gmJson, hasGmRequest } from '../features/music/metadataProviders/http.js'
-import { API, parseVotes, formatCount } from '../core/dislikes.js'
+import { API, parseVotes, formatCount, isPressed } from '../core/dislikes.js'
 
 // Dislike Button: am Rechner und auf dem Handy der zweite Knopf der Like Gruppe
 const BUTTON = 'dislike-button-view-model button, #segmented-dislike-button button, ytm-slim-video-action-bar-renderer like-button-view-model + * button'
@@ -13,6 +13,8 @@ export const dislikeCount = {
   start(ctx) {
     const cache = new Map()
     let busy = false
+    // Zustand des Knopfs beim ersten Lesen je Video, ein Druck auf Dislike zaehlt sofort mit
+    let first = { id: '', pressed: false }
     const render = (v) => {
       const btn = document.querySelector(BUTTON)
       if (!btn) return
@@ -25,7 +27,9 @@ export const dislikeCount = {
         }
         return
       }
-      const text = formatCount(v.dislikes, navigator.language)
+      const pressed = isPressed(btn)
+      if (first.id !== ctx.nav.videoId) first = { id: ctx.nav.videoId, pressed }
+      const text = formatCount(Math.max(0, v.dislikes + (pressed ? 1 : 0) - (first.pressed ? 1 : 0)), navigator.language)
       if (!span) {
         span = document.createElement('span')
         span.className = 'ytx-dislikes'

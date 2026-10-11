@@ -67,6 +67,8 @@ html[data-ytx-acc] ytm-custom-control, html[data-ytx-acc] .player-controls-conte
 .player-controls-bottom-right #ytx-fill-btn { display: flex; }
 #ytx-fill-btn.on { background: rgba(255,255,255,.25); }
 #ytx-fill-btn svg { width: 24px; height: 24px; fill: currentColor; }
+/* Player wieder oben festgesetzt, wenn YouTube ihn nach dem Vollbild mitscrollen laesst */
+html[data-ytx-pinned] [data-ytx-pin] { position: fixed !important; top: var(--ytx-pin-top, 48px) !important; left: 0 !important; width: 100% !important; z-index: 4 !important; }
 /* kein echtes Vollbild erlaubt: der player fuellt die ganze Seite selbst */
 html[data-ytx-faux] { overflow: hidden !important; }
 html[data-ytx-faux] #player-container-id, html[data-ytx-faux] #player, html[data-ytx-faux] .player-container { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; max-height: none !important; z-index: 2147483000 !important; background: #000 !important; }

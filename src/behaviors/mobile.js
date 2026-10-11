@@ -3,11 +3,12 @@ import { listen } from '../core/lifecycle.js'
 import { pageFromUrl } from '../registry/youtube/pages.js'
 import { audioFocus } from './appAudio.js'
 import { discovered, normColor, DARK_REFS, LIGHT_REFS } from '../appliers/hashTokens.js'
+import { log } from '../core/log.js'
 
 // verhalten fuer m.youtube.com
 // umleitungen arbeiten mit urls, der rest mit der player api, beides gibt es auch mobil
 
-const SHARED = ['shortsRedirect', 'homeRedirect', 'autoplayOff', 'forceQuality', 'speedMemory', 'pauseOnBlur', 'channelTrailerPause', 'shareClean', 'dislikeCount']
+const SHARED = ['shortsRedirect', 'homeRedirect', 'autoplayOff', 'forceQuality', 'speedMemory', 'pauseOnBlur', 'channelTrailerPause', 'shareClean', 'dislikeCount', 'likeCount']
 
 // video nach unten wischen bringt zur vorherigen seite zurueck, wie das herunterziehen in der youtube app
 const swipeDownBack = {
@@ -602,6 +603,50 @@ const appFullscreen = {
     let autoFor = ''
     let exitedFor = ''
     let wasFull = false
+    // Wachhund fuer die Videoseite: im Hochformat bleibt der Player oben stehen, nach dem Vollbild kann YouTube das vergessen
+    let badTicks = 0
+    let heals = 0
+    let lastWatchVid = ''
+    const playerBox = () => document.getElementById('player-container-id') || document.getElementById('movie_player')
+    const playerGone = () => {
+      const box = playerBox()
+      if (!box) return false
+      const scrolled = scrollY > 0 || (document.scrollingElement?.scrollTop || 0) > 0
+      return scrolled && box.getBoundingClientRect().bottom < innerHeight * 0.1
+    }
+    // festgesetzt per Attribut und Stylesheet, YouTube ueberschreibt Inline Werte am Player nach kurzer Zeit wieder
+    let pinned = null
+    const pinPlayer = () => {
+      const box = playerBox()
+      if (!box) return
+      if (pinned !== box) {
+        const top = Math.round(box.getBoundingClientRect().top + scrollY)
+        document.documentElement.style.setProperty('--ytx-pin-top', top + 'px')
+      }
+      box.setAttribute('data-ytx-pin', '')
+      document.documentElement.toggleAttribute('data-ytx-pinned', true)
+      pinned = box
+    }
+    const unpinPlayer = () => {
+      pinned?.removeAttribute('data-ytx-pin')
+      document.documentElement.removeAttribute('data-ytx-pinned')
+      pinned = null
+    }
+    const healLayout = () => {
+      heals++
+      if (heals > 6) return pinPlayer()
+      const box = playerBox()
+      const info = []
+      for (let e = box, i = 0; e && i < 4; e = e.parentElement, i++) {
+        const cs = getComputedStyle(e)
+        const r = e.getBoundingClientRect()
+        info.push(`${e.localName}#${e.id || ''} pos=${cs.position} top=${Math.round(r.top)} h=${Math.round(r.height)}`)
+      }
+      log.warn(`Videoseite: Player nicht mehr oben (${innerWidth}x${innerHeight}, scrollY ${Math.round(scrollY)}) ${info.join(' < ')}`)
+      // der Log zeigt: der Player steht dann auf position absolute und scrollt mit der Seite, normal bleibt er oben stehen
+      // also wieder oben festsetzen, an der Stelle, an der er ohne Scrollen steht (die Seite hat dafuer schon Platz gelassen)
+      pinPlayer()
+    }
     // ohne frische beruehrung verweigert Gecko das echte Vollbild, dann fuellt der player selbst die ganze Seite
     let faux = false
     const setFaux = (on) => {
@@ -780,6 +825,18 @@ const appFullscreen = {
       wasFull = isFull()
       if (faux && (!watching || !land)) setFaux(false)
       applyAccent()
+      if (watching && !land && !isFull()) {
+        if (vid !== lastWatchVid) {
+          lastWatchVid = vid
+          heals = 0
+        }
+        badTicks = playerGone() ? badTicks + 1 : 0
+        if (badTicks >= 3 && (pinned !== playerBox() || !pinned.hasAttribute('data-ytx-pin'))) healLayout()
+        else if (pinned && playerBox() === pinned) pinned.setAttribute('data-ytx-pin', '')
+      } else {
+        badTicks = 0
+        if (pinned && (!watching || land || isFull())) unpinPlayer()
+      }
       if (isFull()) ensureBtn()
       if (fillOn && (!isFull() || !land)) setFill(false)
       else if (fillOn) fillScale()
@@ -792,6 +849,7 @@ const appFullscreen = {
     return () => {
       clearInterval(t)
       clearInterval(mirror)
+      unpinPlayer()
       offUpgrade()
       offClick()
       fillBtn?.remove()

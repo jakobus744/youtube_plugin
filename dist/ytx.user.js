@@ -2077,6 +2077,22 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       return String(n);
     }
   }
+  function likesFromLabel(label) {
+    const m = String(label || "").match(/\d[\d.,\s  ]*\d|\d/g);
+    if (!m) return null;
+    const best = m.map((x) => x.replace(/\D/g, "")).sort((a, b) => b.length - a.length)[0];
+    const n = Number(best);
+    return Number.isFinite(n) ? n : null;
+  }
+  function adjustCount(base2, now, pressed0, pressedNow) {
+    if (base2 == null || now == null) return now;
+    if (now !== base2) return now;
+    return Math.max(0, now + (pressedNow ? 1 : 0) - (pressed0 ? 1 : 0));
+  }
+  function isPressed(btn2) {
+    const el = btn2?.closest?.("[aria-pressed]") || btn2;
+    return el?.getAttribute?.("aria-pressed") === "true";
+  }
 
   // src/behaviors/dislikeCount.js
   var BUTTON = "dislike-button-view-model button, #segmented-dislike-button button, ytm-slim-video-action-bar-renderer like-button-view-model + * button";
@@ -2089,6 +2105,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     start(ctx) {
       const cache4 = /* @__PURE__ */ new Map();
       let busy = false;
+      let first = { id: "", pressed: false };
       const render3 = (v) => {
         const btn2 = document.querySelector(BUTTON);
         if (!btn2) return;
@@ -2101,7 +2118,9 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
           }
           return;
         }
-        const text = formatCount(v.dislikes, navigator.language);
+        const pressed = isPressed(btn2);
+        if (first.id !== ctx.nav.videoId) first = { id: ctx.nav.videoId, pressed };
+        const text = formatCount(Math.max(0, v.dislikes + (pressed ? 1 : 0) - (first.pressed ? 1 : 0)), navigator.language);
         if (!span) {
           span = document.createElement("span");
           span.className = "ytx-dislikes";
@@ -2137,6 +2156,59 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       };
     },
     health: () => ({ status: hasGmRequest() ? "ok" : "warn", detail: hasGmRequest() ? "Anfragen über den Userscript-Manager möglich" : "GM_xmlhttpRequest fehlt" })
+  };
+
+  // src/behaviors/likeCount.js
+  var BUTTON2 = "like-button-view-model button, #segmented-like-button button";
+  var likeCount = {
+    id: "likeCount",
+    label: "Like-Anzahl am Daumen",
+    description: "Zeigt die Zahl der Likes neben dem Daumen nach oben. Sie kommt aus der Beschriftung des Knopfs, es wird nichts nach außen geschickt",
+    type: "toggle",
+    default: true,
+    start(ctx) {
+      const clear2 = () => {
+        document.querySelectorAll(".ytx-likes").forEach((span) => {
+          const btn2 = span.closest("button");
+          span.remove();
+          if (btn2) {
+            btn2.style.removeProperty("width");
+            btn2.style.removeProperty("padding");
+          }
+        });
+      };
+      let first = { id: "", n: null, pressed: false };
+      const tick2 = () => {
+        if (ctx.nav.page !== "watch") return;
+        const btn2 = document.querySelector(BUTTON2);
+        if (!btn2) return;
+        const own = btn2.querySelector(".yt-spec-button-shape-next__button-text-content, .ytSpecButtonShapeNextButtonTextContent");
+        if (own && own.textContent.trim()) return clear2();
+        const raw = likesFromLabel(btn2.getAttribute("aria-label"));
+        const pressed = isPressed(btn2);
+        if (first.id !== ctx.nav.videoId) first = { id: ctx.nav.videoId, n: raw, pressed };
+        const n = adjustCount(first.n, raw, first.pressed, pressed);
+        let span = btn2.querySelector(".ytx-likes");
+        if (n == null) return span && clear2();
+        const text = formatCount(n, navigator.language);
+        if (!span) {
+          span = document.createElement("span");
+          span.className = "ytx-likes";
+          span.setAttribute("data-ytx-own", "");
+          span.style.cssText = "margin-left:4px;font:500 14px/20px Roboto,Arial,sans-serif;color:inherit;pointer-events:none;white-space:nowrap";
+          btn2.append(span);
+          btn2.style.setProperty("width", "auto", "important");
+          btn2.style.setProperty("padding", "0 8px", "important");
+        }
+        if (span.textContent !== text) span.textContent = text;
+      };
+      const t = setInterval(tick2, 1500);
+      tick2();
+      return () => {
+        clearInterval(t);
+        clear2();
+      };
+    }
   };
 
   // src/behaviors/youtube.js
@@ -2418,7 +2490,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       }
     },
     shareClean,
-    dislikeCount
+    dislikeCount,
+    likeCount
   ];
   function parseFlags(text) {
     const out = {};
@@ -12013,7 +12086,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
   }
 
   // src/behaviors/mobile.js
-  var SHARED = ["shortsRedirect", "homeRedirect", "autoplayOff", "forceQuality", "speedMemory", "pauseOnBlur", "channelTrailerPause", "shareClean", "dislikeCount"];
+  var SHARED = ["shortsRedirect", "homeRedirect", "autoplayOff", "forceQuality", "speedMemory", "pauseOnBlur", "channelTrailerPause", "shareClean", "dislikeCount", "likeCount"];
   var swipeDownBack = {
     id: "swipeDownBack",
     label: "Video nach unten wischen, um zu verkleinern",
@@ -12569,6 +12642,46 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       let autoFor = "";
       let exitedFor = "";
       let wasFull = false;
+      let badTicks = 0;
+      let heals = 0;
+      let lastWatchVid = "";
+      const playerBox = () => document.getElementById("player-container-id") || document.getElementById("movie_player");
+      const playerGone = () => {
+        const box = playerBox();
+        if (!box) return false;
+        const scrolled = scrollY > 0 || (document.scrollingElement?.scrollTop || 0) > 0;
+        return scrolled && box.getBoundingClientRect().bottom < innerHeight * 0.1;
+      };
+      let pinned = null;
+      const pinPlayer = () => {
+        const box = playerBox();
+        if (!box) return;
+        if (pinned !== box) {
+          const top2 = Math.round(box.getBoundingClientRect().top + scrollY);
+          document.documentElement.style.setProperty("--ytx-pin-top", top2 + "px");
+        }
+        box.setAttribute("data-ytx-pin", "");
+        document.documentElement.toggleAttribute("data-ytx-pinned", true);
+        pinned = box;
+      };
+      const unpinPlayer = () => {
+        pinned?.removeAttribute("data-ytx-pin");
+        document.documentElement.removeAttribute("data-ytx-pinned");
+        pinned = null;
+      };
+      const healLayout = () => {
+        heals++;
+        if (heals > 6) return pinPlayer();
+        const box = playerBox();
+        const info2 = [];
+        for (let e = box, i = 0; e && i < 4; e = e.parentElement, i++) {
+          const cs = getComputedStyle(e);
+          const r = e.getBoundingClientRect();
+          info2.push(`${e.localName}#${e.id || ""} pos=${cs.position} top=${Math.round(r.top)} h=${Math.round(r.height)}`);
+        }
+        log.warn(`Videoseite: Player nicht mehr oben (${innerWidth}x${innerHeight}, scrollY ${Math.round(scrollY)}) ${info2.join(" < ")}`);
+        pinPlayer();
+      };
       let faux = false;
       const setFaux = (on) => {
         if (faux === on) return;
@@ -12728,6 +12841,18 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         wasFull = isFull();
         if (faux && (!watching || !land)) setFaux(false);
         applyAccent();
+        if (watching && !land && !isFull()) {
+          if (vid !== lastWatchVid) {
+            lastWatchVid = vid;
+            heals = 0;
+          }
+          badTicks = playerGone() ? badTicks + 1 : 0;
+          if (badTicks >= 3 && (pinned !== playerBox() || !pinned.hasAttribute("data-ytx-pin"))) healLayout();
+          else if (pinned && playerBox() === pinned) pinned.setAttribute("data-ytx-pin", "");
+        } else {
+          badTicks = 0;
+          if (pinned && (!watching || land || isFull())) unpinPlayer();
+        }
         if (isFull()) ensureBtn();
         if (fillOn && (!isFull() || !land)) setFill(false);
         else if (fillOn) fillScale();
@@ -12740,6 +12865,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       return () => {
         clearInterval(t);
         clearInterval(mirror);
+        unpinPlayer();
         offUpgrade();
         offClick();
         fillBtn?.remove();
@@ -12882,6 +13008,8 @@ html[data-ytx-acc] ytm-custom-control, html[data-ytx-acc] .player-controls-conte
 .player-controls-bottom-right #ytx-fill-btn { display: flex; }
 #ytx-fill-btn.on { background: rgba(255,255,255,.25); }
 #ytx-fill-btn svg { width: 24px; height: 24px; fill: currentColor; }
+/* Player wieder oben festgesetzt, wenn YouTube ihn nach dem Vollbild mitscrollen laesst */
+html[data-ytx-pinned] [data-ytx-pin] { position: fixed !important; top: var(--ytx-pin-top, 48px) !important; left: 0 !important; width: 100% !important; z-index: 4 !important; }
 /* kein echtes Vollbild erlaubt: der player fuellt die ganze Seite selbst */
 html[data-ytx-faux] { overflow: hidden !important; }
 html[data-ytx-faux] #player-container-id, html[data-ytx-faux] #player, html[data-ytx-faux] .player-container { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; max-height: none !important; z-index: 2147483000 !important; background: #000 !important; }

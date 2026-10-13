@@ -1,6 +1,7 @@
 import { qsa, h } from '../core/dom.js'
 import { shareClean } from './shareClean.js'
 import { musicBack } from './musicBack.js'
+import { musicRows } from './musicRows.js'
 import { setCss } from '../core/css.js'
 import { listen } from '../core/lifecycle.js'
 import { audioFocus } from './appAudio.js'
@@ -228,7 +229,8 @@ export const behaviors = [
   },
   audioFocus,
   shareClean,
-  musicBack
+  musicBack,
+  musicRows
 ]
 
 export const behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]))

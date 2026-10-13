@@ -7432,7 +7432,15 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     const b = document.querySelector("ytmusic-player-page #collapse-button, ytmusic-player-page .collapse-button");
     if (!b) return false;
     tap(b);
-    setTimeout(() => isOpen() && (b.querySelector("button") || b).click(), 150);
+    let waited = 0;
+    const check = setInterval(() => {
+      waited += 50;
+      if (!isOpen()) clearInterval(check);
+      else if (waited >= 450) {
+        clearInterval(check);
+        (b.querySelector("button") || b).click();
+      }
+    }, 50);
     return true;
   };
   var musicBack = {
@@ -7444,33 +7452,74 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     start() {
       if (!window.__ytxNative) return () => {
       };
-      let was = false;
       let pushed = false;
-      const t = setInterval(() => {
+      const sync = () => {
         const open = isOpen();
-        if (open && !was && !history.state?.ytxPlayer) {
-          history.pushState({ ...history.state || {}, ytxPlayer: 1 }, "", location.href);
+        if (open && !pushed && history.length <= 1) {
+          history.pushState({ ytxPlayer: 1 }, "", location.href);
           pushed = true;
-        } else if (!open && was && pushed && history.state?.ytxPlayer) {
+        } else if (!open && pushed) {
           pushed = false;
-          history.back();
+          if (history.state?.ytxPlayer) history.back();
         }
-        was = open;
-      }, 300);
+      };
+      let mo = null;
+      const watch4 = () => {
+        const layout = document.querySelector("ytmusic-app-layout");
+        if (!layout || mo) return !!mo;
+        mo = new MutationObserver(sync);
+        mo.observe(layout, { attributes: true, attributeFilter: ["player-ui-state"] });
+        sync();
+        return true;
+      };
+      const wait = setInterval(() => watch4() && clearInterval(wait), 400);
       const onPop = () => {
         if (pushed && isOpen()) {
           pushed = false;
-          was = false;
           collapse();
         } else pushed = false;
       };
       window.addEventListener("popstate", onPop, true);
       document.addEventListener("click", openFromBar, true);
       return () => {
-        clearInterval(t);
+        clearInterval(wait);
+        mo?.disconnect();
         window.removeEventListener("popstate", onPop, true);
         document.removeEventListener("click", openFromBar, true);
       };
+    }
+  };
+
+  // src/behaviors/musicRows.js
+  var ROWS = "ytmusic-responsive-list-item-renderer, ytmusic-two-row-item-renderer";
+  var OWN = 'a, button, input, yt-button-shape, tp-yt-paper-icon-button, yt-icon-button, ytmusic-menu-renderer, ytmusic-play-button-renderer, ytmusic-like-button-renderer, ytmusic-thumbnail-renderer, ytmusic-item-thumbnail-overlay-renderer, [role="button"], tp-yt-paper-checkbox, ytmusic-toggle-button-renderer';
+  var musicRows = {
+    id: "m.rowTap",
+    label: "Ganze Zeile antippbar (App)",
+    description: "Ein Tipp auf den Text einer Zeile oder Karte (Schnellauswahl, Listen, Regale) startet den Titel oder öffnet das Album, nicht nur der Tipp aufs Bild",
+    type: "toggle",
+    default: true,
+    start() {
+      if (!window.__ytxNative) return () => {
+      };
+      let last2 = 0;
+      const onClick = (e) => {
+        if (!e.isTrusted) return;
+        const t = e.target;
+        if (!t?.closest || t.closest(OWN)) return;
+        const row2 = t.closest(ROWS);
+        if (!row2) return;
+        const ep = (row2.data || row2.__data?.data)?.navigationEndpoint;
+        if (!ep) return;
+        const now = Date.now();
+        if (now - last2 < 800) return;
+        last2 = now;
+        e.stopPropagation();
+        e.preventDefault();
+        navigateEndpoint(ep);
+      };
+      document.addEventListener("click", onClick, true);
+      return () => document.removeEventListener("click", onClick, true);
     }
   };
 
@@ -7708,7 +7757,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     },
     audioFocus,
     shareClean,
-    musicBack
+    musicBack,
+    musicRows
   ];
   var behaviorById2 = Object.fromEntries(behaviors2.map((b) => [b.id, b]));
 
@@ -12923,20 +12973,30 @@ html[data-ytx-mini] ytm-mobile-topbar-renderer, html[data-ytx-mini] .mobile-topb
 html[data-ytx-mini] .watch-below-the-player, html[data-ytx-mini] ytm-consent-bump-v2-renderer, html[data-ytx-mini] [data-ytx-mount], html[data-ytx-mini] .ytx-watch-row { display: none !important; }
 html[data-ytx-mini] #player-container-id { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 2147483000 !important; }
 html[data-ytx-mini] #player, html[data-ytx-mini] #movie_player { width: 100% !important; height: 100% !important; padding: 0 !important; margin: 0 !important; }
+html[data-ytx-mini] .player-controls-top, html[data-ytx-mini] .player-controls-bottom, html[data-ytx-mini] .player-middle-controls-prev-next-button, html[data-ytx-mini] yt-progress-bar, html[data-ytx-mini] .ytmA11yStylesHiddenButton { display: none !important; }
 html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #movie_player video { width: 100% !important; height: 100% !important; left: 0 !important; top: 0 !important; }
-#ytx-mini-ui { all: initial; position: fixed; right: 6px; top: 6px; z-index: 2147483600; width: 36px; height: 36px; border-radius: 18px; background: rgba(0,0,0,.6); color: #fff; font: 700 16px/36px sans-serif; text-align: center; cursor: pointer; }`;
+.ytx-mini-btn { all: initial; position: fixed; top: 6px; z-index: 2147483600; width: 36px; height: 36px; border-radius: 18px; background: rgba(0,0,0,.6); color: #fff; font: 700 16px/36px sans-serif; text-align: center; cursor: pointer; }
+#ytx-mini-ui { right: 6px; }
+#ytx-mini-expand { left: 6px; }`;
   var native = (a) => window.__ytxNative?.({ a });
   function initMiniMode() {
     let ui = null;
     let timer2 = null;
     const isMini = () => innerWidth <= 480 && innerHeight <= 300;
     function build() {
-      const close = h("button", { id: "ytx-mini-ui", "data-ytx-own": "", type: "button", text: "✕", "aria-label": "Schließen" });
+      const box = h("div", { "data-ytx-own": "" });
+      const close = h("button", { id: "ytx-mini-ui", class: "ytx-mini-btn", type: "button", text: "✕", "aria-label": "Schließen" });
+      const expand = h("button", { id: "ytx-mini-expand", class: "ytx-mini-btn", type: "button", text: "⤢", "aria-label": "Vergrößern" });
       close.addEventListener("click", (e) => {
         e.stopPropagation();
         native("close");
       });
-      return close;
+      expand.addEventListener("click", (e) => {
+        e.stopPropagation();
+        native("expand");
+      });
+      box.append(expand, close);
+      return box;
     }
     function tick2() {
       const on = isMini() && pageFromUrl(location.href) === "watch";

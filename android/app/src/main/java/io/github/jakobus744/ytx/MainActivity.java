@@ -62,6 +62,9 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     private String lastBrowse;
     private boolean pip;
     private boolean pipWanted;
+    // nach einem Screenshot kein kleines Fenster, sonst liegt es vor dem Bild, wenn man es ansieht oder speichert
+    private long pipSuppressUntil;
+    private Activity.ScreenCaptureCallback shotCallback;
     private float miniTx;
     private float miniTy;
     private float dragBaseX;
@@ -254,6 +257,22 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         super.onStart();
         if (session != null) session.setActive(true);
         if (mini != null) mini.setActive(true);
+        if (Build.VERSION.SDK_INT >= 34) {
+            if (shotCallback == null) {
+                shotCallback = () -> {
+                    android.util.Log.i("ytx", "screenshot erkannt, kein kleines Fenster fuer 25 s");
+                    pipSuppressUntil = android.os.SystemClock.uptimeMillis() + 25000;
+                    updatePip();
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(this::updatePip, 25500);
+                };
+            }
+            try {
+                registerScreenCaptureCallback(getMainExecutor(), shotCallback);
+                android.util.Log.i("ytx", "screenshot callback angemeldet");
+            } catch (RuntimeException e) {
+                android.util.Log.w("ytx", "screenshot callback", e);
+            }
+        }
     }
 
     @Override
@@ -383,6 +402,12 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
 
     @Override
     protected void onStop() {
+        if (Build.VERSION.SDK_INT >= 34 && shotCallback != null) {
+            try {
+                unregisterScreenCaptureCallback(shotCallback);
+            } catch (RuntimeException ignored) {
+            }
+        }
         // wo medien laufen bleibt die sitzung aktiv, damit der ton weiterlaeuft
         if (session != null && !playing.contains(session)) session.setActive(false);
         if (mini != null && !playing.contains(mini)) mini.setActive(false);
@@ -744,7 +769,8 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     // ab android 12 geht das bild in bild von selbst beim verlassen der app, nicht schon bei einem screenshot
     private void updatePip() {
         runOnUiThread(() -> {
-            boolean on = !homeUrl().contains("music.") && !playing.isEmpty() && (mini != null || (currentUrl != null && currentUrl.contains("/watch")));
+            boolean on = !homeUrl().contains("music.") && !playing.isEmpty() && (mini != null || (currentUrl != null && currentUrl.contains("/watch")))
+                    && android.os.SystemClock.uptimeMillis() >= pipSuppressUntil;
             pipWanted = on;
             if (Build.VERSION.SDK_INT >= 31) {
                 try {

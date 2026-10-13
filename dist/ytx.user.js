@@ -7500,10 +7500,12 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     type: "toggle",
     default: true,
     start() {
+      window.__ytxAppLog?.("ROWTAP start native=" + !!window.__ytxNative);
       if (!window.__ytxNative) return () => {
       };
       let last2 = 0;
       const onClick = (e) => {
+        window.__ytxAppLog?.("ROWTAP click", e.isTrusted, e.target?.localName, e.target?.closest?.(OWN)?.localName || "-", e.target?.closest?.(ROWS)?.localName || "-", !!e.target?.closest?.(ROWS)?.data);
         if (!e.isTrusted) return;
         const t = e.target;
         if (!t?.closest || t.closest(OWN)) return;
@@ -12973,7 +12975,7 @@ html[data-ytx-mini] ytm-mobile-topbar-renderer, html[data-ytx-mini] .mobile-topb
 html[data-ytx-mini] .watch-below-the-player, html[data-ytx-mini] ytm-consent-bump-v2-renderer, html[data-ytx-mini] [data-ytx-mount], html[data-ytx-mini] .ytx-watch-row { display: none !important; }
 html[data-ytx-mini] #player-container-id { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 2147483000 !important; }
 html[data-ytx-mini] #player, html[data-ytx-mini] #movie_player { width: 100% !important; height: 100% !important; padding: 0 !important; margin: 0 !important; }
-html[data-ytx-mini] .player-controls-top, html[data-ytx-mini] .player-controls-bottom, html[data-ytx-mini] .player-middle-controls-prev-next-button, html[data-ytx-mini] yt-progress-bar, html[data-ytx-mini] .ytmA11yStylesHiddenButton { display: none !important; }
+html[data-ytx-mini] .player-controls-top, html[data-ytx-mini] .player-controls-bottom, html[data-ytx-mini] yt-progress-bar, html[data-ytx-mini] .ytmA11yStylesHiddenButton { display: none !important; }
 html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #movie_player video { width: 100% !important; height: 100% !important; left: 0 !important; top: 0 !important; }
 .ytx-mini-btn { all: initial; position: fixed; top: 6px; z-index: 2147483600; width: 36px; height: 36px; border-radius: 18px; background: rgba(0,0,0,.6); color: #fff; font: 700 16px/36px sans-serif; text-align: center; cursor: pointer; }
 #ytx-mini-ui { right: 6px; }

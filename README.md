@@ -67,6 +67,9 @@ Eine richtige App mit zwei Icons, **ytx** (YouTube) und **ytx Music**, ohne Fire
 - **Teilen-Link ohne Tracking**: Beim Teilen und Kopieren fällt `si=` (und `pp=`, `feature=`) aus YouTube-Links, der Zeitpunkt `t=` bleibt. An in Verhalten (Standard an).
 - **Datum unter dem Video**: Bei den weiteren Videos unter dem Video steht wie auf der Startseite „vor 3 Tagen“, gelesen aus den Seitendaten von YouTube.
 - **Music: Zurück klappt den Player zu**: Die Zurück-Geste schließt den großen Player, die Musik läuft weiter.
+- **Music: ganze Zeile antippbar**: Ein Tipp auf den Text einer Zeile oder Karte startet den Titel oder öffnet das Album, nicht nur der Tipp aufs Bild. Ein Tipp irgendwo auf die Leiste unten öffnet den Player.
+- **Mini-Player**: Im kleinen Fenster bleiben Vorheriges, Pause und Nächstes von YouTube, dazu ✕ zum Schließen und ⤢ zum Vergrößern.
+- **Screenshot**: Nach einem Screenshot geht das Video 25 Sekunden lang nicht ins kleine Fenster über dem Startbildschirm, damit es nicht vor dem Screenshot liegt.
 - **Like-Anzahl**: Zeigt die Zahl neben dem Daumen nach oben, gelesen aus der Beschriftung des Knopfs, nichts geht nach außen (Standard an).
 - **Dislike-Anzahl**: Zeigt die Zahl neben dem Daumen nach unten, aus Return YouTube Dislike (`returnyoutubedislikeapi.com`, Video-ID geht an den Dienst, Standard aus).
 - **Feature-Radar**: Meldet in Diagnose, wenn YouTube neue Elemente oder Schalter ausliefert, plus Selbsttest und Monatsbericht, siehe [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md) §7.

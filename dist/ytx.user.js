@@ -7500,12 +7500,10 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     type: "toggle",
     default: true,
     start() {
-      window.__ytxAppLog?.("ROWTAP start native=" + !!window.__ytxNative);
       if (!window.__ytxNative) return () => {
       };
       let last2 = 0;
       const onClick = (e) => {
-        window.__ytxAppLog?.("ROWTAP click", e.isTrusted, e.target?.localName, e.target?.closest?.(OWN)?.localName || "-", e.target?.closest?.(ROWS)?.localName || "-", !!e.target?.closest?.(ROWS)?.data);
         if (!e.isTrusted) return;
         const t = e.target;
         if (!t?.closest || t.closest(OWN)) return;

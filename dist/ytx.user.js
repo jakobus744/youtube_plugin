@@ -7412,6 +7412,68 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     return { browseId: data2.browseId, params: data2.params || null, response: main.response };
   }
 
+  // src/behaviors/musicBack.js
+  var CLOSED = ["", "PLAYER_BAR_ONLY", "INACTIVE", "MINIPLAYER"];
+  var isOpen = () => {
+    const s = document.querySelector("ytmusic-app-layout")?.getAttribute("player-ui-state") || "";
+    return !CLOSED.includes(s);
+  };
+  var tap = (el) => el.dispatchEvent(new CustomEvent("tap", { bubbles: true, composed: true, detail: { x: 0, y: 0 } }));
+  var INTERACTIVE = "button, a, tp-yt-paper-slider, tp-yt-paper-icon-button, yt-icon-button, ytmusic-like-button-renderer, #progress-bar, .right-controls, .left-controls, input";
+  var openFromBar = (e) => {
+    const bar = e.target?.closest?.("ytmusic-player-bar");
+    if (!bar || isOpen() || e.target.closest(INTERACTIVE)) return;
+    const part = bar.querySelector(".thumbnail-image-wrapper, .image, .content-info-wrapper, .middle-controls");
+    if (!part || part.contains(e.target)) return;
+    tap(part);
+    setTimeout(() => !isOpen() && part.click(), 150);
+  };
+  var collapse = () => {
+    const b = document.querySelector("ytmusic-player-page #collapse-button, ytmusic-player-page .collapse-button");
+    if (!b) return false;
+    tap(b);
+    setTimeout(() => isOpen() && (b.querySelector("button") || b).click(), 150);
+    return true;
+  };
+  var musicBack = {
+    id: "m.backClosesPlayer",
+    label: "Player: Zurück klappt zu, Tipp auf die Leiste öffnet (App)",
+    description: "Wie in der YouTube-Music-App: Die Zurück-Geste schließt den großen Player, ein Tipp irgendwo auf die Leiste unten öffnet ihn",
+    type: "toggle",
+    default: true,
+    start() {
+      if (!window.__ytxNative) return () => {
+      };
+      let was = false;
+      let pushed = false;
+      const t = setInterval(() => {
+        const open = isOpen();
+        if (open && !was && !history.state?.ytxPlayer) {
+          history.pushState({ ...history.state || {}, ytxPlayer: 1 }, "", location.href);
+          pushed = true;
+        } else if (!open && was && pushed && history.state?.ytxPlayer) {
+          pushed = false;
+          history.back();
+        }
+        was = open;
+      }, 300);
+      const onPop = () => {
+        if (pushed && isOpen()) {
+          pushed = false;
+          was = false;
+          collapse();
+        } else pushed = false;
+      };
+      window.addEventListener("popstate", onPop, true);
+      document.addEventListener("click", openFromBar, true);
+      return () => {
+        clearInterval(t);
+        window.removeEventListener("popstate", onPop, true);
+        document.removeEventListener("click", openFromBar, true);
+      };
+    }
+  };
+
   // src/behaviors/appAudio.js
   var audioFocus = {
     id: "appAudioFocus",
@@ -7645,7 +7707,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       }
     },
     audioFocus,
-    shareClean
+    shareClean,
+    musicBack
   ];
   var behaviorById2 = Object.fromEntries(behaviors2.map((b) => [b.id, b]));
 
@@ -12085,6 +12148,80 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     return decl.length ? `html:root:root { ${decl.join(" ")} }` : "";
   }
 
+  // src/behaviors/relatedDates.js
+  var dates = /* @__PURE__ */ new Map();
+  var textOf = (t) => t?.runs ? t.runs.map((r) => r.text).join("") : t?.simpleText || t?.content || "";
+  function collectDates(o, d = 0) {
+    if (!o || typeof o !== "object" || d > 60) return;
+    if (typeof o.videoId === "string" && o.publishedTimeText) {
+      const t = textOf(o.publishedTimeText);
+      if (t) dates.set(o.videoId, t);
+    }
+    if (Array.isArray(o)) for (const x of o) collectDates(x, d + 1);
+    else for (const k in o) collectDates(o[k], d + 1);
+  }
+  var hooked = false;
+  function hookFetch() {
+    if (hooked) return;
+    hooked = true;
+    const w = pageWindow;
+    const orig = w.fetch;
+    if (typeof orig !== "function") return;
+    w.fetch = function(...a) {
+      const p = orig.apply(this, a);
+      try {
+        const url = String(a[0]?.url || a[0]);
+        if (/\/youtubei\/v1\/(next|get_watch|browse|search)/.test(url)) p.then((r) => r.clone().json()).then((j) => collectDates(j)).catch(() => {
+        });
+      } catch {
+      }
+      return p;
+    };
+  }
+  var CARDS = "ytm-watch ytm-video-with-context-renderer, ytm-watch ytm-compact-video-renderer";
+  var relatedDates = {
+    id: "relatedDates",
+    label: "Datum bei den Videos unter dem Video",
+    description: "Ergänzt „vor 3 Tagen“ in der Zeile mit Kanal und Aufrufen, wie auf der Startseite. Das Datum kommt aus den Seitendaten von YouTube",
+    type: "toggle",
+    default: true,
+    start() {
+      hookFetch();
+      collectDates(pageWindow.ytInitialData);
+      let lastInit = pageWindow.ytInitialData;
+      const run2 = () => {
+        if (pageWindow.ytInitialData !== lastInit) {
+          lastInit = pageWindow.ytInitialData;
+          collectDates(lastInit);
+        }
+        if (pageFromUrl(location.href) !== "watch") return;
+        for (const card2 of document.querySelectorAll(CARDS)) {
+          if (card2.querySelector(".ytx-rdate")) continue;
+          const id = card2.querySelector('a[href*="watch?v="]')?.getAttribute("href")?.match(/v=([\w-]{11})/)?.[1];
+          const t = id && dates.get(id);
+          if (!t) continue;
+          const by = card2.querySelector("ytm-badge-and-byline-renderer");
+          if (!by || by.textContent.includes(t)) continue;
+          const sep = document.createElement("span");
+          sep.className = "ytmBadgeAndBylineRendererSeparator ytx-rdate";
+          sep.setAttribute("data-ytx-own", "");
+          sep.textContent = "•";
+          const item = document.createElement("span");
+          item.className = "ytmBadgeAndBylineRendererItemByline ytx-rdate";
+          item.setAttribute("data-ytx-own", "");
+          item.textContent = t;
+          by.append(sep, item);
+        }
+      };
+      const off = onSweep("relatedDates", run2);
+      run2();
+      return () => {
+        off();
+        document.querySelectorAll(".ytx-rdate").forEach((e) => e.remove());
+      };
+    }
+  };
+
   // src/behaviors/mobile.js
   var SHARED = ["shortsRedirect", "homeRedirect", "autoplayOff", "forceQuality", "speedMemory", "pauseOnBlur", "channelTrailerPause", "shareClean", "dislikeCount", "likeCount"];
   var swipeDownBack = {
@@ -12126,219 +12263,146 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
   };
   var EMBED = "https://www.youtube.com";
   var HOLD_KEEP_MS = 1500;
-  var OVERLAY_CLEAN_MS = 3e3;
+  var TAP_MS = 350;
   var thumbPreview = {
     id: "thumbPreview",
     label: "Video-Vorschau auf Thumbnails",
-    description: "Stumme Vorschau mit Untertiteln direkt auf dem Bild, wie in der YouTube-App. Gedrückt halten startet sie, nach 1,5 Sekunden läuft sie auch ohne Finger weiter. Sie beginnt am Anfang des Videos. Nach links oder rechts ziehen spult. „Beim Verweilen“ startet sie von selbst, wenn ein Video in Ruhe mitten im Bild liegt",
+    description: "Stumme Vorschau mit Untertiteln direkt im Bild, wie in der YouTube-App. Gedrückt halten startet sie, nach 1,5 Sekunden läuft sie auch ohne Finger weiter. Nach links oder rechts ziehen spult. „Beim Verweilen“ startet sie von selbst, wenn ein Video in Ruhe mitten im Bild liegt. Ein kurzer Tipp öffnet das Video wie immer",
     type: "select",
     options: [["", "Aus"], ["press", "Gedrückt halten"], ["both", "Gedrückt halten und beim Verweilen"]],
     default: "both",
     start(ctx, mode) {
-      const clean = mode === "clean";
-      const auto = mode === "both" || clean;
-      const OVERLAY_MS = clean ? OVERLAY_CLEAN_MS : 0;
+      const auto = mode === "both";
       let timer2 = 0;
       let press = null;
       let drag = null;
       let suppressUntil = 0;
       let scrollAt = Date.now();
       let checkedAt = 0;
-      let raf = 0;
       let dwell = { link: null, since: 0 };
-      let ready = false;
-      let warmed = false;
       let live = null;
-      let box = null;
-      let frame = null;
-      let bar = null;
-      let slide = null;
-      let slideTimer = 0;
-      let curId = "";
-      let hs = 0;
       const idOf = (a) => (a?.getAttribute("href") || "").match(/[?&]v=([A-Za-z0-9_-]{11})/)?.[1] || "";
       const thumbLink = (el) => {
         const a = el?.closest?.('a[href*="/watch?v="]');
-        if (!a || !a.querySelector('img, [class*="thumbnail"], [class*="image"]')) return null;
+        if (!a || !a.querySelector("img")) return null;
         const r = a.getBoundingClientRect();
         return r.width > 80 && r.height > 40 ? a : null;
       };
+      const holderOf = (a) => {
+        const img = a.querySelector("img");
+        let el = img?.parentElement;
+        while (el && el !== a && el.getBoundingClientRect().height < 40) el = el.parentElement;
+        return el || a;
+      };
       const cmd = (func, ...args) => {
         try {
-          frame?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), EMBED);
+          live?.frame?.contentWindow?.postMessage(JSON.stringify({ event: "command", func, args }), EMBED);
         } catch {
         }
       };
-      const ensurePlayer = (id) => {
-        if (box) return;
-        box = document.createElement("div");
-        box.setAttribute("data-ytx-own", "");
-        box.style.cssText = "position:fixed;z-index:2147483000;left:0;top:0;width:10px;height:10px;background:transparent;pointer-events:none;overflow:hidden;border-radius:8px;visibility:hidden";
-        frame = document.createElement("iframe");
-        frame.setAttribute("allow", "autoplay; encrypted-media");
-        frame.style.cssText = "width:100%;height:100%;border:0;pointer-events:none;transform:scale(1.25);transform-origin:50% 100%;opacity:0;transition:opacity .12s";
-        frame.src = `${EMBED}/embed/${id}?autoplay=0&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&fs=0&start=0&vq=small&iv_load_policy=3&cc_load_policy=1&cc_lang_pref=de&hl=de&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
-        curId = id;
-        const track = document.createElement("div");
-        track.style.cssText = "position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(255,255,255,.3)";
-        bar = document.createElement("div");
-        bar.style.cssText = "height:100%;width:0;background:#ff0033";
-        track.append(bar);
-        slide = document.createElement("img");
-        slide.setAttribute("data-ytx-own", "");
-        slide.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;opacity:0;transition:opacity .15s";
-        box.append(slide, frame, track);
-        document.documentElement.append(box);
-        const hello = () => {
-          try {
-            frame.contentWindow.postMessage(JSON.stringify({ event: "listening", id: "ytx", channel: "widget" }), EMBED);
-          } catch {
-          }
-          hs = setTimeout(hello, ready ? 3e3 : 250);
-        };
-        hello();
-      };
-      const stopSlides = () => {
-        clearInterval(slideTimer);
-        slideTimer = 0;
-        if (slide) {
-          slide.style.opacity = "0";
-          slide.removeAttribute("src");
-        }
-      };
-      const startSlides = (id) => {
-        stopSlides();
-        if (!slide) return;
-        let n = 1;
-        slide.src = `https://i.ytimg.com/vi/${id}/hq1.jpg`;
-        slide.style.opacity = "1";
-        slideTimer = setInterval(() => {
-          n = n % 3 + 1;
-          slide.src = `https://i.ytimg.com/vi/${id}/hq${n}.jpg`;
-        }, 700);
-      };
       const stopLive = () => {
         clearTimeout(timer2);
-        stopSlides();
         if (live) {
-          cmd("pauseVideo");
+          clearTimeout(live.hello);
+          clearInterval(live.slideTimer);
+          live.box.remove();
           live = null;
-        }
-        if (box) {
-          box.style.visibility = "hidden";
-          frame.style.opacity = "0";
-          bar.style.width = "0";
         }
         press = null;
         drag = null;
       };
-      const place2 = (r) => {
-        const top2 = document.querySelector("ytm-mobile-topbar-renderer, ytm-mobile-topbar")?.getBoundingClientRect().bottom || 0;
-        const bottom = document.querySelector("ytm-pivot-bar-renderer")?.getBoundingClientRect().top || innerHeight;
-        const cutTop = Math.max(0, top2 - r.top);
-        const cutBottom = Math.max(0, r.bottom - bottom);
-        Object.assign(box.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, clipPath: `inset(${cutTop}px 0 ${cutBottom}px 0)` });
-      };
-      const startVideo = (id) => {
-        if (curId !== id) {
-          cmd("mute");
-          cmd("loadVideoById", { videoId: id, startSeconds: 0, suggestedQuality: "small" });
-          curId = id;
-        } else {
-          cmd("seekTo", 0, true);
-          cmd("playVideo");
+      const reveal = () => {
+        if (!live) return;
+        if (live.vidOk && live.state === 1 && live.dur > 0 && live.cur > 0.15) live.shown = true;
+        live.frame.style.opacity = live.shown ? "1" : "0";
+        if (live.shown && live.slideTimer) {
+          clearInterval(live.slideTimer);
+          live.slideTimer = 0;
+          live.slide.style.opacity = "0";
         }
-      };
-      const preload = () => {
-        const id = idOf(document.querySelector('a[href*="/watch?v="]'));
-        if (id) ensurePlayer(id);
       };
       const begin = (link, how) => {
         const id = idOf(link);
         if (!id) return;
-        warmed = false;
         const t0 = press ? press.t0 : Date.now();
         stopLive();
-        const r = link.getBoundingClientRect();
-        ensurePlayer(id);
-        const same2 = curId === id;
-        live = { link, id, how, t0, rect: r, dur: 0, state: -1, cur: 0, vidOk: same2, shown: false, target: -1, lastSeek: 0, seeking: false, showAt: 0, loadedAt: Date.now() };
-        place2(r);
-        box.style.visibility = "visible";
-        startSlides(id);
-        frame.style.opacity = "0";
-        bar.style.width = "0";
-        if (!ready) live.pending = true;
-        else startVideo(id);
-      };
-      const reveal = () => {
-        if (!live || !frame) return;
-        const ok = !!(live.vidOk && live.state === 1 && live.dur > 0 && live.cur > 0.15 && Date.now() >= live.showAt);
-        if (clean) live.shown = ok && !live.seeking;
-        else if (ok) live.shown = true;
-        frame.style.opacity = live.shown ? "1" : "0";
-        if (live.shown && slideTimer) stopSlides();
-        else if (!live.shown && !slideTimer && live.id) startSlides(live.id);
+        const holder = holderOf(link);
+        if (getComputedStyle(holder).position === "static") holder.style.position = "relative";
+        holder.style.isolation = "isolate";
+        const box = document.createElement("div");
+        box.setAttribute("data-ytx-own", "");
+        box.className = "ytx-preview";
+        box.style.cssText = "position:absolute;inset:0;z-index:1;overflow:hidden;border-radius:inherit;pointer-events:none;background:transparent";
+        const slide = document.createElement("img");
+        slide.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:1";
+        slide.src = `https://i.ytimg.com/vi/${id}/hq1.jpg`;
+        const frame = document.createElement("iframe");
+        frame.setAttribute("allow", "autoplay; encrypted-media");
+        frame.style.cssText = "position:absolute;inset:0;width:100%;height:100%;border:0;transform:scale(1.25);transform-origin:50% 100%;opacity:0;transition:opacity .12s";
+        frame.src = `${EMBED}/embed/${id}?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&fs=0&start=0&vq=small&iv_load_policy=3&cc_load_policy=1&cc_lang_pref=de&hl=de&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
+        const track = document.createElement("div");
+        track.style.cssText = "position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.3)";
+        const bar = document.createElement("div");
+        bar.style.cssText = "height:100%;width:0;background:#ff0033";
+        track.append(bar);
+        box.append(slide, frame, track);
+        holder.append(box);
+        let n = 1;
+        live = { link, id, how, t0, box, frame, bar, slide, dur: 0, state: -1, cur: 0, vidOk: false, shown: false, target: -1, lastSeek: 0, seeking: false, loadedAt: Date.now() };
+        live.slideTimer = setInterval(() => {
+          n = n % 3 + 1;
+          slide.src = `https://i.ytimg.com/vi/${id}/hq${n}.jpg`;
+        }, 700);
+        const me = live;
+        const hello = () => {
+          if (live !== me) return;
+          try {
+            frame.contentWindow.postMessage(JSON.stringify({ event: "listening", id: "ytx", channel: "widget" }), EMBED);
+          } catch {
+          }
+          me.hello = setTimeout(hello, me.ready ? 3e3 : 250);
+        };
+        frame.addEventListener("load", hello, { once: true });
       };
       const onMsg = (e) => {
-        if (!frame || e.source !== frame.contentWindow) return;
+        if (!live || e.source !== live.frame.contentWindow) return;
         let d;
         try {
           d = JSON.parse(e.data);
         } catch {
           return;
         }
-        if (!ready) {
-          ready = true;
-          if (live?.pending) {
-            live.pending = false;
-            startVideo(live.id);
-          }
+        if (!live.ready) {
+          live.ready = true;
+          cmd("mute");
+          cmd("playVideo");
         }
-        if (!live) return;
         if (d.event === "onError") return stopLive();
         const state2 = d.event === "onStateChange" ? d.info : d.info?.playerState;
         if (typeof state2 === "number") {
           live.state = state2;
-          if (state2 !== 1) live.notPlaying = true;
-          else if (clean && live.notPlaying && live.showAt) {
-            live.notPlaying = false;
-            live.showAt = Date.now() + OVERLAY_MS;
-            setTimeout(reveal, OVERLAY_MS + 30);
-          }
           if (state2 === 0 && !live.seeking) {
             cmd("seekTo", 0, true);
             cmd("playVideo");
-          }
-          if (state2 === 1 && !live.showAt) {
-            live.showAt = Date.now() + OVERLAY_MS;
-            setTimeout(reveal, OVERLAY_MS + 30);
           }
         }
         const info2 = d.info;
         const vid = info2?.videoData?.video_id;
         if (vid) live.vidOk = vid === live.id;
         else if (!live.vidOk && live.state === 1 && Date.now() - live.loadedAt > 2500) live.vidOk = true;
-        const dur = info2?.duration;
-        if (!live.dur && dur > 0 && live.vidOk) {
-          live.dur = dur;
-          cmd("playVideo");
-        }
+        if (!live.dur && info2?.duration > 0) live.dur = info2.duration;
         const cur = info2?.currentTime;
         if (typeof cur === "number") live.cur = cur;
-        if (!live.seeking && live.dur && cur >= 0) bar.style.width = `${Math.min(100, cur / live.dur * 100)}%`;
+        if (!live.seeking && live.dur && cur >= 0) live.bar.style.width = `${Math.min(100, cur / live.dur * 100)}%`;
         reveal();
       };
       window.addEventListener("message", onMsg);
       const seekTo = (x) => {
         if (!live || !live.dur) return;
         live.seeking = true;
-        if (clean) {
-          live.shown = false;
-          frame.style.opacity = "0";
-        }
-        const f = Math.min(1, Math.max(0, (x - live.rect.left) / live.rect.width));
-        bar.style.width = `${f * 100}%`;
+        const r = live.box.getBoundingClientRect();
+        const f = Math.min(1, Math.max(0, (x - r.left) / r.width));
+        live.bar.style.width = `${f * 100}%`;
         live.target = f * live.dur;
         const now = Date.now();
         if (now - live.lastSeek < 300) return;
@@ -12353,11 +12417,6 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           live.target = -1;
         }
         live.seeking = false;
-        if (clean) {
-          live.shown = false;
-          live.showAt = Date.now() + OVERLAY_MS;
-          setTimeout(reveal, OVERLAY_MS + 30);
-        }
         reveal();
       };
       const pickDwell = () => {
@@ -12371,21 +12430,17 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         }
         return best?.a || null;
       };
-      const follow = () => {
-        if (!live) return;
-        const r = live.link.getBoundingClientRect();
-        const mid = r.top + r.height / 2;
-        if (!live.link.isConnected || mid < innerHeight * 0.1 || mid > innerHeight * 0.92) return stopLive();
-        live.rect = r;
-        place2(r);
-      };
+      const overlayOpen = () => !!document.querySelector("ytm-search[open], .ytm-search-suggestions, bottom-sheet-container:not([hidden]) .ytSpecBottomSheetLayoutHost, ytm-menu-popup-renderer, .ytx-panel-open, html[data-ytx-panel]");
       const poll = setInterval(() => {
         if (document.hidden || document.fullscreenElement || press || drag) return;
         if (pageFromUrl(location.href) === "watch" || navigator.connection?.saveData) return live && stopLive();
+        if (live) {
+          const r = live.link.getBoundingClientRect();
+          const mid = r.top + r.height / 2;
+          if (!live.link.isConnected || mid < innerHeight * 0.1 || mid > innerHeight * 0.92 || overlayOpen()) return stopLive();
+        }
         const now = Date.now();
-        if (!box) preload();
-        if (live) follow();
-        if (!auto || now - scrollAt < 300) return;
+        if (!auto || now - scrollAt < 300 || overlayOpen()) return;
         if (checkedAt < scrollAt) {
           checkedAt = now;
           dwell = { link: pickDwell(), since: now };
@@ -12398,21 +12453,19 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         const t = e.target;
         if (t !== document && t !== document.documentElement && t !== document.body) return;
         scrollAt = Date.now();
-        if (live && live.how === "auto" && !raf) {
-          raf = requestAnimationFrame(() => {
-            raf = 0;
-            follow();
-          });
-        }
       };
-      const inLive = (t) => live && t.clientX >= live.rect.left && t.clientX <= live.rect.right && t.clientY >= live.rect.top && t.clientY <= live.rect.bottom;
+      const inLive = (t) => {
+        if (!live) return false;
+        const r = live.box.getBoundingClientRect();
+        return t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom;
+      };
       const offs = [
         listen(window, "scroll", onScroll, { passive: true, capture: true }),
         listen(document, "touchstart", (e) => {
           if (e.touches.length !== 1) return stopLive();
           const t = e.touches[0];
           if (live && live.how === "auto" && inLive(t)) {
-            drag = { x: t.clientX, y: t.clientY, moved: false };
+            drag = { x: t.clientX, y: t.clientY, moved: false, t0: Date.now() };
             return;
           }
           press = null;
@@ -12422,19 +12475,15 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           const link = thumbLink(e.target);
           if (!link) return;
           press = { x: t.clientX, y: t.clientY, link, t0: Date.now() };
-          const wid = idOf(link);
-          if (ready && wid && curId !== wid && !live) {
-            startVideo(wid);
-            warmed = true;
-          }
           timer2 = setTimeout(() => {
             if (press) begin(press.link, "press");
-          }, 90);
+          }, TAP_MS);
         }, { passive: true, capture: true }),
         listen(document, "touchmove", (e) => {
           const t = e.touches[0];
           if (live && live.how === "press") {
             e.preventDefault();
+            if (Math.abs(t.clientX - (press?.x ?? t.clientX)) > 8) live.moved = true;
             seekTo(t.clientX);
           } else if (live && drag) {
             const dx = t.clientX - drag.x;
@@ -12449,18 +12498,10 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           } else if (press && (Math.abs(t.clientX - press.x) > 12 || Math.abs(t.clientY - press.y) > 12)) {
             clearTimeout(timer2);
             press = null;
-            if (warmed && !live) {
-              cmd("pauseVideo");
-              warmed = false;
-            }
           }
         }, { passive: false, capture: true }),
         listen(document, "touchend", () => {
           clearTimeout(timer2);
-          if (warmed && !live) {
-            cmd("pauseVideo");
-            warmed = false;
-          }
           if (live && live.how === "press") {
             const held = Date.now() - live.t0;
             settleSeek();
@@ -12482,7 +12523,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
         listen(document, "contextmenu", (e) => {
           if (live || press) e.preventDefault();
         }, { capture: true }),
-        // der Klick nach dem Spulen oder Halten soll das Video nicht oeffnen, ein normaler Tipp oeffnet es wie immer
+        // der klick nach dem spulen oder halten soll das video nicht oeffnen, ein normaler tipp oeffnet es wie immer
         listen(document, "click", (e) => {
           if (Date.now() < suppressUntil) {
             e.stopPropagation();
@@ -12492,11 +12533,9 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       ];
       return () => {
         clearInterval(poll);
-        clearTimeout(hs);
         window.removeEventListener("message", onMsg);
         offs.forEach((off) => off());
         stopLive();
-        box?.remove();
       };
     }
   };
@@ -12638,7 +12677,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       if (!window.__ytxNative) return () => {
       };
       let last2 = false;
-      let wasLand = innerWidth > innerHeight;
+      let wasLand = innerWidth > innerHeight && innerHeight >= 250;
       let autoFor = "";
       let exitedFor = "";
       let wasFull = false;
@@ -12814,12 +12853,12 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
           setTimeout(go, 300);
         } else go();
         setTimeout(() => {
-          if (innerWidth > innerHeight && !isFull() && !document.hidden) setFaux(true);
+          if (innerWidth > innerHeight && innerHeight >= 250 && !isFull() && !document.hidden) setFaux(true);
         }, 900);
       };
       const isFull = () => faux || !!document.fullscreenElement || document.body?.getAttribute("faux-fullscreen") === "true";
       const t = setInterval(() => {
-        const land = innerWidth > innerHeight;
+        const land = innerWidth > innerHeight && innerHeight >= 250;
         const p = document.getElementById("movie_player");
         const watching = pageFromUrl(location.href) === "watch" && p;
         const vid = watching ? new URLSearchParams(location.search).get("v") || "" : "";
@@ -12875,56 +12914,34 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, relatedDates];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js
   var CSS3 = `html[data-ytx-mini], html[data-ytx-mini] body { overflow: hidden !important; background: #000 !important; }
 html[data-ytx-mini] ytm-mobile-topbar-renderer, html[data-ytx-mini] .mobile-topbar-header-background, html[data-ytx-mini] ytm-pivot-bar-renderer,
-html[data-ytx-mini] .watch-below-the-player, html[data-ytx-mini] ytm-consent-bump-v2-renderer, html[data-ytx-mini] ytm-custom-control, html[data-ytx-mini] [data-ytx-mount], html[data-ytx-mini] .ytx-watch-row { display: none !important; }
+html[data-ytx-mini] .watch-below-the-player, html[data-ytx-mini] ytm-consent-bump-v2-renderer, html[data-ytx-mini] [data-ytx-mount], html[data-ytx-mini] .ytx-watch-row { display: none !important; }
 html[data-ytx-mini] #player-container-id { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 2147483000 !important; }
 html[data-ytx-mini] #player, html[data-ytx-mini] #movie_player { width: 100% !important; height: 100% !important; padding: 0 !important; margin: 0 !important; }
 html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #movie_player video { width: 100% !important; height: 100% !important; left: 0 !important; top: 0 !important; }
-#ytx-mini-ui { position: fixed; inset: 0; z-index: 2147483600; background: transparent; }
-#ytx-mini-ui button { all: initial; position: absolute; width: 36px; height: 36px; border-radius: 18px; background: rgba(0,0,0,.6); color: #fff; font: 700 16px/36px sans-serif; text-align: center; cursor: pointer; }
-#ytx-mini-ui .ytx-mini-play { left: 6px; bottom: 6px; }
-#ytx-mini-ui .ytx-mini-close { right: 6px; top: 6px; }
-#ytx-mini-ui .ytx-mini-next { right: 6px; bottom: 6px; }`;
+#ytx-mini-ui { all: initial; position: fixed; right: 6px; top: 6px; z-index: 2147483600; width: 36px; height: 36px; border-radius: 18px; background: rgba(0,0,0,.6); color: #fff; font: 700 16px/36px sans-serif; text-align: center; cursor: pointer; }`;
   var native = (a) => window.__ytxNative?.({ a });
   function initMiniMode() {
     let ui = null;
     let timer2 = null;
     const isMini = () => innerWidth <= 480 && innerHeight <= 300;
-    const player2 = () => document.getElementById("movie_player");
     function build() {
-      const play = h("button", { class: "ytx-mini-play", type: "button", text: "❚❚", "aria-label": "Abspielen oder pausieren" });
-      const close = h("button", { class: "ytx-mini-close", type: "button", text: "✕", "aria-label": "Schließen" });
-      play.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const p = player2();
-        if (!p) return;
-        if (p.getPlayerState?.() === 1) p.pauseVideo();
-        else p.playVideo();
-      });
+      const close = h("button", { id: "ytx-mini-ui", "data-ytx-own": "", type: "button", text: "✕", "aria-label": "Schließen" });
       close.addEventListener("click", (e) => {
         e.stopPropagation();
         native("close");
       });
-      const next = h("button", { class: "ytx-mini-next", type: "button", text: "⏭", "aria-label": "Nächstes Video" });
-      next.addEventListener("click", (e) => {
-        e.stopPropagation();
-        player2()?.nextVideo?.();
-      });
-      const box = h("div", { id: "ytx-mini-ui", "data-ytx-own": "" }, play, next, close);
-      box.addEventListener("click", () => native("expand"));
-      box.__play = play;
-      return box;
+      return close;
     }
     function tick2() {
       const on = isMini() && pageFromUrl(location.href) === "watch";
       const html = document.documentElement;
       if (on === html.hasAttribute("data-ytx-mini")) {
-        if (on && ui) ui.__play.textContent = player2()?.getPlayerState?.() === 1 ? "❚❚" : "▶";
         return;
       }
       html.toggleAttribute("data-ytx-mini", on);

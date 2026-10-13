@@ -65,6 +65,8 @@ Eine richtige App mit zwei Icons, **ytx** (YouTube) und **ytx Music**, ohne Fire
 - **Vollbild**: Kippen und der Vollbild-Knopf zeigen dieselbe Ansicht. Wer mit dem Knopf ins Vollbild geht, verlässt es durch einmal quer und dann wieder hochkant Halten.
 - **Vollbild Bild füllen**: Im Vollbild erscheint beim Antippen ein Knopf neben dem Verlassen-Symbol, der das Video so vergrößert, dass es den ganzen Bildschirm nutzt (Ränder werden beschnitten). Die Leiste des Players (Fortschritt, Symbole, Zeit) nimmt die Farbe des Looks an. Verweigert Android das echte Vollbild beim Kippen, füllt der Player die Seite selbst.
 - **Teilen-Link ohne Tracking**: Beim Teilen und Kopieren fällt `si=` (und `pp=`, `feature=`) aus YouTube-Links, der Zeitpunkt `t=` bleibt. An in Verhalten (Standard an).
+- **Datum unter dem Video**: Bei den weiteren Videos unter dem Video steht wie auf der Startseite „vor 3 Tagen“, gelesen aus den Seitendaten von YouTube.
+- **Music: Zurück klappt den Player zu**: Die Zurück-Geste schließt den großen Player, die Musik läuft weiter.
 - **Like-Anzahl**: Zeigt die Zahl neben dem Daumen nach oben, gelesen aus der Beschriftung des Knopfs, nichts geht nach außen (Standard an).
 - **Dislike-Anzahl**: Zeigt die Zahl neben dem Daumen nach unten, aus Return YouTube Dislike (`returnyoutubedislikeapi.com`, Video-ID geht an den Dienst, Standard aus).
 - **Feature-Radar**: Meldet in Diagnose, wenn YouTube neue Elemente oder Schalter ausliefert, plus Selbsttest und Monatsbericht, siehe [docs/ARCHITEKTUR.md](docs/ARCHITEKTUR.md) §7.

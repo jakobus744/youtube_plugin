@@ -4,6 +4,7 @@ import { pageFromUrl } from '../registry/youtube/pages.js'
 import { audioFocus } from './appAudio.js'
 import { discovered, normColor, DARK_REFS, LIGHT_REFS } from '../appliers/hashTokens.js'
 import { log } from '../core/log.js'
+import { relatedDates } from './relatedDates.js'
 
 // verhalten fuer m.youtube.com
 // umleitungen arbeiten mit urls, der rest mit der player api, beides gibt es auch mobil
@@ -52,241 +53,152 @@ const swipeDownBack = {
   }
 }
 
-// vorschau auf thumbnails wie in der youtube app: stumm, direkt auf dem bild, mit untertiteln, ziehen spult
+// vorschau auf thumbnails wie in der youtube app: stumm, direkt im bild, mit untertiteln, ziehen spult
 // gedrueckt halten startet sie, nach 1,5 Sekunden laeuft sie auch weiter wenn der finger weg ist
 // oder ein video liegt in ruhe mitten im bild, dann startet sie von selbst
-// ein einziger offizieller einbett player wird wiederverwendet, ein neuer fuer jede vorschau waere zu langsam
+// der offizielle einbett player sitzt im thumbnail selbst, er scrollt mit der karte und liegt unter kopfzeile, suche und ytx fenster
 const EMBED = 'https://www.youtube.com'
 const HOLD_KEEP_MS = 1500
-// der Player zeigt nach dem Start etwa 3 Sekunden lang seine Leiste (Teilen, Uhr, Logo), das laesst sich nicht abschalten
-// im Modus „ohne Zeichen“ erscheint die Vorschau deshalb erst danach, bis dahin steht das Thumbnail mit dem Ladebalken
-// im Standardmodus erscheint sie sofort, sobald das Video spielt, und bleibt beim Spulen und Neustart stehen
-const OVERLAY_CLEAN_MS = 3000
+// kuerzer gedrueckt ist ein normaler tipp, der das video oeffnet
+const TAP_MS = 350
 const thumbPreview = {
   id: 'thumbPreview',
   label: 'Video-Vorschau auf Thumbnails',
-  description: 'Stumme Vorschau mit Untertiteln direkt auf dem Bild, wie in der YouTube-App. Gedrückt halten startet sie, nach 1,5 Sekunden läuft sie auch ohne Finger weiter. Sie beginnt am Anfang des Videos. Nach links oder rechts ziehen spult. „Beim Verweilen“ startet sie von selbst, wenn ein Video in Ruhe mitten im Bild liegt',
+  description: 'Stumme Vorschau mit Untertiteln direkt im Bild, wie in der YouTube-App. Gedrückt halten startet sie, nach 1,5 Sekunden läuft sie auch ohne Finger weiter. Nach links oder rechts ziehen spult. „Beim Verweilen“ startet sie von selbst, wenn ein Video in Ruhe mitten im Bild liegt. Ein kurzer Tipp öffnet das Video wie immer',
   type: 'select',
   options: [['', 'Aus'], ['press', 'Gedrückt halten'], ['both', 'Gedrückt halten und beim Verweilen']],
   default: 'both',
   start(ctx, mode) {
-    const clean = mode === 'clean'
-    const auto = mode === 'both' || clean
-    const OVERLAY_MS = clean ? OVERLAY_CLEAN_MS : 0
+    const auto = mode === 'both'
     let timer = 0
     let press = null
     let drag = null
     let suppressUntil = 0
     let scrollAt = Date.now()
     let checkedAt = 0
-    let raf = 0
     let dwell = { link: null, since: 0 }
-    let ready = false
-    let warmed = false
     let live = null
-    let box = null
-    let frame = null
-    let bar = null
-    let slide = null
-    let slideTimer = 0
-    let curId = ''
-    let hs = 0
     const idOf = (a) => (a?.getAttribute('href') || '').match(/[?&]v=([A-Za-z0-9_-]{11})/)?.[1] || ''
     const thumbLink = (el) => {
       const a = el?.closest?.('a[href*="/watch?v="]')
-      if (!a || !a.querySelector('img, [class*="thumbnail"], [class*="image"]')) return null
+      if (!a || !a.querySelector('img')) return null
       const r = a.getBoundingClientRect()
       return r.width > 80 && r.height > 40 ? a : null
     }
+    // der bereich des bildes in der karte, dort hinein kommt der player
+    const holderOf = (a) => {
+      const img = a.querySelector('img')
+      let el = img?.parentElement
+      while (el && el !== a && el.getBoundingClientRect().height < 40) el = el.parentElement
+      return el || a
+    }
     const cmd = (func, ...args) => {
-      try { frame?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), EMBED) } catch {}
-    }
-    const ensurePlayer = (id) => {
-      if (box) return
-      box = document.createElement('div')
-      box.setAttribute('data-ytx-own', '')
-      box.style.cssText = 'position:fixed;z-index:2147483000;left:0;top:0;width:10px;height:10px;background:transparent;pointer-events:none;overflow:hidden;border-radius:8px;visibility:hidden'
-      frame = document.createElement('iframe')
-      frame.setAttribute('allow', 'autoplay; encrypted-media')
-      // unten verankert vergroessert: die Titelzeile oben faellt weg, die Untertitel unten bleiben sichtbar
-      // solange nichts spielt (laden, springen) bleibt das Thumbnail darunter stehen statt eines schwarzen Bildes
-      frame.style.cssText = 'width:100%;height:100%;border:0;pointer-events:none;transform:scale(1.25);transform-origin:50% 100%;opacity:0;transition:opacity .12s'
-      frame.src = `${EMBED}/embed/${id}?autoplay=0&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&fs=0&start=0&vq=small&iv_load_policy=3&cc_load_policy=1&cc_lang_pref=de&hl=de&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`
-      curId = id
-      const track = document.createElement('div')
-      track.style.cssText = 'position:absolute;left:0;right:0;bottom:0;height:5px;background:rgba(255,255,255,.3)'
-      bar = document.createElement('div')
-      bar.style.cssText = 'height:100%;width:0;background:#ff0033'
-      track.append(bar)
-      slide = document.createElement('img')
-      slide.setAttribute('data-ytx-own', '')
-      slide.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;opacity:0;transition:opacity .15s'
-      box.append(slide, frame, track)
-      document.documentElement.append(box)
-      const hello = () => {
-        try { frame.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 'ytx', channel: 'widget' }), EMBED) } catch {}
-        // meldet sich der Player, reicht ein seltener Abgleich, sonst kostet die Dauerschleife nur Rechenzeit
-        hs = setTimeout(hello, ready ? 3000 : 250)
-      }
-      hello()
-    }
-    const stopSlides = () => {
-      clearInterval(slideTimer)
-      slideTimer = 0
-      if (slide) {
-        slide.style.opacity = '0'
-        slide.removeAttribute('src')
-      }
-    }
-    // YouTube stellt drei Standbilder jedes Videos bereit, die laufen sofort, bis der Player spielt
-    const startSlides = (id) => {
-      stopSlides()
-      if (!slide) return
-      let n = 1
-      slide.src = `https://i.ytimg.com/vi/${id}/hq1.jpg`
-      slide.style.opacity = '1'
-      slideTimer = setInterval(() => {
-        n = n % 3 + 1
-        slide.src = `https://i.ytimg.com/vi/${id}/hq${n}.jpg`
-      }, 700)
+      try { live?.frame?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), EMBED) } catch {}
     }
     const stopLive = () => {
       clearTimeout(timer)
-      stopSlides()
       if (live) {
-        cmd('pauseVideo')
+        clearTimeout(live.hello)
+        clearInterval(live.slideTimer)
+        live.box.remove()
         live = null
-      }
-      if (box) {
-        box.style.visibility = 'hidden'
-        frame.style.opacity = '0'
-        bar.style.width = '0'
       }
       press = null
       drag = null
     }
-    // die Vorschau liegt zwischen Kopfzeile und unterer Leiste, nicht darueber
-    const place = (r) => {
-      const top = document.querySelector('ytm-mobile-topbar-renderer, ytm-mobile-topbar')?.getBoundingClientRect().bottom || 0
-      const bottom = document.querySelector('ytm-pivot-bar-renderer')?.getBoundingClientRect().top || innerHeight
-      const cutTop = Math.max(0, top - r.top)
-      const cutBottom = Math.max(0, r.bottom - bottom)
-      Object.assign(box.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`, clipPath: `inset(${cutTop}px 0 ${cutBottom}px 0)` })
-    }
-    const startVideo = (id) => {
-      if (curId !== id) {
-        cmd('mute')
-        cmd('loadVideoById', { videoId: id, startSeconds: 0, suggestedQuality: 'small' })
-        curId = id
-      } else {
-        cmd('seekTo', 0, true)
-        cmd('playVideo')
+    const reveal = () => {
+      if (!live) return
+      if (live.vidOk && live.state === 1 && live.dur > 0 && live.cur > 0.15) live.shown = true
+      live.frame.style.opacity = live.shown ? '1' : '0'
+      if (live.shown && live.slideTimer) {
+        clearInterval(live.slideTimer)
+        live.slideTimer = 0
+        live.slide.style.opacity = '0'
       }
-    }
-    // der Player wird vorab geladen, dann beginnt die Vorschau ohne Wartezeit
-    const preload = () => {
-      const id = idOf(document.querySelector('a[href*="/watch?v="]'))
-      if (id) ensurePlayer(id)
     }
     const begin = (link, how) => {
       const id = idOf(link)
       if (!id) return
-      warmed = false
-      // wann der Finger aufgesetzt wurde, stopLive loescht press
       const t0 = press ? press.t0 : Date.now()
       stopLive()
-      const r = link.getBoundingClientRect()
-      ensurePlayer(id)
-      // steckt das Video schon im Player, melden die Daten sofort das richtige Video, sonst erst nach dem Laden
-      const same = curId === id
-      live = { link, id, how, t0, rect: r, dur: 0, state: -1, cur: 0, vidOk: same, shown: false, target: -1, lastSeek: 0, seeking: false, showAt: 0, loadedAt: Date.now() }
-      place(r)
-      box.style.visibility = 'visible'
-      startSlides(id)
-      frame.style.opacity = '0'
-      bar.style.width = '0'
-      // ist der Player noch nicht bereit, startet das Video sobald er sich meldet
-      if (!ready) live.pending = true
-      else startVideo(id)
-    }
-    // erst zeigen wenn der Player das richtige Video spielt und es wirklich laeuft, vorher bleibt das Thumbnail stehen
-    // (nach einem Wechsel meldet der Player noch kurz Zeit und Laenge des alten Videos, das Poster von YouTube darf nie sichtbar werden)
-    // einmal gezeigt bleibt das letzte Bild beim Springen stehen statt zum Thumbnail zurueckzufallen
-    const reveal = () => {
-      if (!live || !frame) return
-      // jedes Laden oder Springen blendet die Vorschau aus (der Player zeigt dann Lade-Rad und Bedienfeld), danach erst wieder nach der Wartezeit
-      const ok = !!(live.vidOk && live.state === 1 && live.dur > 0 && live.cur > 0.15 && Date.now() >= live.showAt)
-      // schnell: einmal gezeigt bleibt das letzte Bild beim Spulen und Neustart stehen, ohne Zeichen: bei jedem Laden ausblenden
-      if (clean) live.shown = ok && !live.seeking
-      else if (ok) live.shown = true
-      frame.style.opacity = live.shown ? '1' : '0'
-      // der Player spielt, die Diashow wird nicht mehr gebraucht
-      if (live.shown && slideTimer) stopSlides()
-      else if (!live.shown && !slideTimer && live.id) startSlides(live.id)
+      const holder = holderOf(link)
+      // eigener stapel, damit die vorschau in der karte bleibt und nie ueber kopfzeile oder fenster liegt
+      if (getComputedStyle(holder).position === 'static') holder.style.position = 'relative'
+      holder.style.isolation = 'isolate'
+      const box = document.createElement('div')
+      box.setAttribute('data-ytx-own', '')
+      box.className = 'ytx-preview'
+      box.style.cssText = 'position:absolute;inset:0;z-index:1;overflow:hidden;border-radius:inherit;pointer-events:none;background:transparent'
+      // drei standbilder des videos laufen sofort, bis der player spielt
+      const slide = document.createElement('img')
+      slide.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:1'
+      slide.src = `https://i.ytimg.com/vi/${id}/hq1.jpg`
+      const frame = document.createElement('iframe')
+      frame.setAttribute('allow', 'autoplay; encrypted-media')
+      // unten verankert vergroessert: die titelzeile oben faellt weg, die untertitel unten bleiben sichtbar
+      frame.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:0;transform:scale(1.25);transform-origin:50% 100%;opacity:0;transition:opacity .12s'
+      frame.src = `${EMBED}/embed/${id}?autoplay=1&mute=1&controls=0&playsinline=1&rel=0&modestbranding=1&disablekb=1&fs=0&start=0&vq=small&iv_load_policy=3&cc_load_policy=1&cc_lang_pref=de&hl=de&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`
+      const track = document.createElement('div')
+      track.style.cssText = 'position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.3)'
+      const bar = document.createElement('div')
+      bar.style.cssText = 'height:100%;width:0;background:#ff0033'
+      track.append(bar)
+      box.append(slide, frame, track)
+      holder.append(box)
+      let n = 1
+      live = { link, id, how, t0, box, frame, bar, slide, dur: 0, state: -1, cur: 0, vidOk: false, shown: false, target: -1, lastSeek: 0, seeking: false, loadedAt: Date.now() }
+      live.slideTimer = setInterval(() => {
+        n = (n % 3) + 1
+        slide.src = `https://i.ytimg.com/vi/${id}/hq${n}.jpg`
+      }, 700)
+      const me = live
+      const hello = () => {
+        if (live !== me) return
+        try { frame.contentWindow.postMessage(JSON.stringify({ event: 'listening', id: 'ytx', channel: 'widget' }), EMBED) } catch {}
+        me.hello = setTimeout(hello, me.ready ? 3000 : 250)
+      }
+      frame.addEventListener('load', hello, { once: true })
     }
     const onMsg = (e) => {
-      if (!frame || e.source !== frame.contentWindow) return
+      if (!live || e.source !== live.frame.contentWindow) return
       let d
       try { d = JSON.parse(e.data) } catch { return }
-      if (!ready) {
-        ready = true
-        if (live?.pending) {
-          live.pending = false
-          startVideo(live.id)
-        }
+      if (!live.ready) {
+        live.ready = true
+        cmd('mute')
+        cmd('playVideo')
       }
-      if (!live) return
       if (d.event === 'onError') return stopLive()
       const state = d.event === 'onStateChange' ? d.info : d.info?.playerState
       if (typeof state === 'number') {
         live.state = state
-        if (state !== 1) live.notPlaying = true
-        else if (clean && live.notPlaying && live.showAt) {
-          live.notPlaying = false
-          live.showAt = Date.now() + OVERLAY_MS
-          setTimeout(reveal, OVERLAY_MS + 30)
-        }
-        // am Ende von vorn, die Vorschau laeuft so lange das Video im Bild liegt
+        // am ende von vorn, die vorschau laeuft so lange das video im bild liegt
         if (state === 0 && !live.seeking) {
           cmd('seekTo', 0, true)
           cmd('playVideo')
-        }
-        if (state === 1 && !live.showAt) {
-          live.showAt = Date.now() + OVERLAY_MS
-          setTimeout(reveal, OVERLAY_MS + 30)
         }
       }
       const info = d.info
       const vid = info?.videoData?.video_id
       if (vid) live.vidOk = vid === live.id
-      // meldet der Player die Video ID nicht, gilt es nach einer Weile trotzdem als das richtige
       else if (!live.vidOk && live.state === 1 && Date.now() - live.loadedAt > 2500) live.vidOk = true
-      const dur = info?.duration
-      if (!live.dur && dur > 0 && live.vidOk) {
-        live.dur = dur
-        // die Vorschau beginnt am Anfang des Videos
-        cmd('playVideo')
-      }
+      if (!live.dur && info?.duration > 0) live.dur = info.duration
       const cur = info?.currentTime
       if (typeof cur === 'number') live.cur = cur
-      if (!live.seeking && live.dur && cur >= 0) bar.style.width = `${Math.min(100, (cur / live.dur) * 100)}%`
+      if (!live.seeking && live.dur && cur >= 0) live.bar.style.width = `${Math.min(100, (cur / live.dur) * 100)}%`
       reveal()
     }
     window.addEventListener('message', onMsg)
     const seekTo = (x) => {
       if (!live || !live.dur) return
       live.seeking = true
-      if (clean) {
-        live.shown = false
-        frame.style.opacity = '0'
-      }
-      const f = Math.min(1, Math.max(0, (x - live.rect.left) / live.rect.width))
-      bar.style.width = `${f * 100}%`
+      const r = live.box.getBoundingClientRect()
+      const f = Math.min(1, Math.max(0, (x - r.left) / r.width))
+      live.bar.style.width = `${f * 100}%`
       live.target = f * live.dur
       const now = Date.now()
       if (now - live.lastSeek < 300) return
       live.lastSeek = now
-      // auch ungeladene Stellen anfahren, sonst bleibt das Bild beim Ziehen oft stehen
       cmd('seekTo', live.target, true)
     }
     const settleSeek = () => {
@@ -297,11 +209,6 @@ const thumbPreview = {
         live.target = -1
       }
       live.seeking = false
-      if (clean) {
-        live.shown = false
-        live.showAt = Date.now() + OVERLAY_MS
-        setTimeout(reveal, OVERLAY_MS + 30)
-      }
       reveal()
     }
     // ein video in ruhe: mitten im bild, die seite scrollt nicht mehr
@@ -316,23 +223,18 @@ const thumbPreview = {
       }
       return best?.a || null
     }
-    // der Vorschau Rahmen folgt dem Video beim Scrollen, sie endet erst wenn es aus der Bildmitte verschwindet
-    const follow = () => {
-      if (!live) return
-      const r = live.link.getBoundingClientRect()
-      const mid = r.top + r.height / 2
-      if (!live.link.isConnected || mid < innerHeight * 0.1 || mid > innerHeight * 0.92) return stopLive()
-      live.rect = r
-      place(r)
-    }
+    // die vorschau endet, wenn ihr video die bildmitte verlaesst oder ein fenster daruebergeht
+    const overlayOpen = () => !!document.querySelector('ytm-search[open], .ytm-search-suggestions, bottom-sheet-container:not([hidden]) .ytSpecBottomSheetLayoutHost, ytm-menu-popup-renderer, .ytx-panel-open, html[data-ytx-panel]')
     const poll = setInterval(() => {
       if (document.hidden || document.fullscreenElement || press || drag) return
       if (pageFromUrl(location.href) === 'watch' || navigator.connection?.saveData) return live && stopLive()
+      if (live) {
+        const r = live.link.getBoundingClientRect()
+        const mid = r.top + r.height / 2
+        if (!live.link.isConnected || mid < innerHeight * 0.1 || mid > innerHeight * 0.92 || overlayOpen()) return stopLive()
+      }
       const now = Date.now()
-      if (!box) preload()
-      if (live) follow()
-      if (!auto || now - scrollAt < 300) return
-      // die Karten werden nur einmal nach dem Scrollen abgefragt, das ist die teure Messung
+      if (!auto || now - scrollAt < 300 || overlayOpen()) return
       if (checkedAt < scrollAt) {
         checkedAt = now
         dwell = { link: pickDwell(), since: now }
@@ -342,25 +244,22 @@ const thumbPreview = {
       if (c && (!live || (live.how === 'auto' && live.link !== c)) && now - dwell.since > 120) begin(c, 'auto')
     }, 200)
     const onScroll = (e) => {
-      // nur die Seite selbst, nicht Karussells oder Listen darin
       const t = e.target
       if (t !== document && t !== document.documentElement && t !== document.body) return
       scrollAt = Date.now()
-      if (live && live.how === 'auto' && !raf) {
-        raf = requestAnimationFrame(() => {
-          raf = 0
-          follow()
-        })
-      }
     }
-    const inLive = (t) => live && t.clientX >= live.rect.left && t.clientX <= live.rect.right && t.clientY >= live.rect.top && t.clientY <= live.rect.bottom
+    const inLive = (t) => {
+      if (!live) return false
+      const r = live.box.getBoundingClientRect()
+      return t.clientX >= r.left && t.clientX <= r.right && t.clientY >= r.top && t.clientY <= r.bottom
+    }
     const offs = [
       listen(window, 'scroll', onScroll, { passive: true, capture: true }),
       listen(document, 'touchstart', (e) => {
         if (e.touches.length !== 1) return stopLive()
         const t = e.touches[0]
         if (live && live.how === 'auto' && inLive(t)) {
-          drag = { x: t.clientX, y: t.clientY, moved: false }
+          drag = { x: t.clientX, y: t.clientY, moved: false, t0: Date.now() }
           return
         }
         press = null
@@ -370,20 +269,16 @@ const thumbPreview = {
         const link = thumbLink(e.target)
         if (!link) return
         press = { x: t.clientX, y: t.clientY, link, t0: Date.now() }
-        // das Video schon beim Beruehren laden, dann startet die Vorschau ohne Ladezeit
-        const wid = idOf(link)
-        if (ready && wid && curId !== wid && !live) {
-          startVideo(wid)
-          warmed = true
-        }
+        // erst nach dem kurzen tipp beginnen, ein tipp oeffnet das video
         timer = setTimeout(() => {
           if (press) begin(press.link, 'press')
-        }, 90)
+        }, TAP_MS)
       }, { passive: true, capture: true }),
       listen(document, 'touchmove', (e) => {
         const t = e.touches[0]
         if (live && live.how === 'press') {
           e.preventDefault()
+          if (Math.abs(t.clientX - (press?.x ?? t.clientX)) > 8) live.moved = true
           seekTo(t.clientX)
         } else if (live && drag) {
           const dx = t.clientX - drag.x
@@ -398,22 +293,14 @@ const thumbPreview = {
         } else if (press && (Math.abs(t.clientX - press.x) > 12 || Math.abs(t.clientY - press.y) > 12)) {
           clearTimeout(timer)
           press = null
-          if (warmed && !live) {
-            cmd('pauseVideo')
-            warmed = false
-          }
         }
       }, { passive: false, capture: true }),
       listen(document, 'touchend', () => {
         clearTimeout(timer)
-        if (warmed && !live) {
-          cmd('pauseVideo')
-          warmed = false
-        }
         if (live && live.how === 'press') {
           const held = Date.now() - live.t0
           settleSeek()
-          // nach 1,5 Sekunden Halten laeuft die Vorschau weiter, auch ohne Finger
+          // nach 1,5 sekunden halten laeuft die vorschau weiter, auch ohne finger
           if (held >= HOLD_KEEP_MS) live.how = 'auto'
           else stopLive()
           suppressUntil = Date.now() + 500
@@ -432,7 +319,7 @@ const thumbPreview = {
       listen(document, 'contextmenu', (e) => {
         if (live || press) e.preventDefault()
       }, { capture: true }),
-      // der Klick nach dem Spulen oder Halten soll das Video nicht oeffnen, ein normaler Tipp oeffnet es wie immer
+      // der klick nach dem spulen oder halten soll das video nicht oeffnen, ein normaler tipp oeffnet es wie immer
       listen(document, 'click', (e) => {
         if (Date.now() < suppressUntil) {
           e.stopPropagation()
@@ -442,11 +329,9 @@ const thumbPreview = {
     ]
     return () => {
       clearInterval(poll)
-      clearTimeout(hs)
       window.removeEventListener('message', onMsg)
       offs.forEach((off) => off())
       stopLive()
-      box?.remove()
     }
   }
 }
@@ -599,7 +484,7 @@ const appFullscreen = {
   start() {
     if (!window.__ytxNative) return () => {}
     let last = false
-    let wasLand = innerWidth > innerHeight
+    let wasLand = innerWidth > innerHeight && innerHeight >= 250
     let autoFor = ''
     let exitedFor = ''
     let wasFull = false
@@ -793,12 +678,12 @@ const appFullscreen = {
       } else go()
       // hat es nicht geklappt (keine frische Beruehrung), fuellt der Player die Seite selbst
       setTimeout(() => {
-        if (innerWidth > innerHeight && !isFull() && !document.hidden) setFaux(true)
+        if (innerWidth > innerHeight && innerHeight >= 250 && !isFull() && !document.hidden) setFaux(true)
       }, 900)
     }
     const isFull = () => faux || !!document.fullscreenElement || document.body?.getAttribute('faux-fullscreen') === 'true'
     const t = setInterval(() => {
-      const land = innerWidth > innerHeight
+      const land = innerWidth > innerHeight && innerHeight >= 250
       const p = document.getElementById('movie_player')
       const watching = pageFromUrl(location.href) === 'watch' && p
       // wie in der youtube app: quer gehalten ist das video im vollbild, hochkant wieder normal
@@ -860,6 +745,6 @@ const appFullscreen = {
   }
 }
 
-export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus]
+export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, relatedDates]
 
 export const behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]))

@@ -44,6 +44,9 @@ final class YtxRuntime {
         // das lange Druecken loest sonst nach einer halben Sekunde das Kontextmenue aus und danach kommen keine Touch Bewegungen mehr an, die Vorschau braucht sie zum Spulen
         GeckoPreferenceController.setGeckoPref("ui.click_hold_context_menus.delay", 6000, GeckoPreferenceController.PREF_BRANCH_USER)
                 .accept(v -> Log.i(TAG, "long press delay gesetzt"), e -> Log.e(TAG, "long press delay", e));
+        // zurueck soll auch eintraege nehmen, die die seite ohne tippen angelegt hat (music: player zuklappen)
+        GeckoPreferenceController.setGeckoPref("browser.navigation.requireUserInteraction", false, GeckoPreferenceController.PREF_BRANCH_USER)
+                .accept(v -> Log.i(TAG, "zurueck ohne tippen erlaubt"), e -> Log.e(TAG, "requireUserInteraction", e));
         runtime.getWebExtensionController()
                 .ensureBuiltIn(EXT_URI, EXT_ID)
                 .accept(YtxRuntime::onExtension, e -> Log.e(TAG, "erweiterung nicht installiert", e));

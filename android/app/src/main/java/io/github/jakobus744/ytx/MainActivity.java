@@ -590,7 +590,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
             if ("minimize".equals(action)) minimize();
             else if ("expand".equals(action)) expand();
             else if ("close".equals(action)) closeMini();
-            else if ("fsOn".equals(action)) setFullscreen(true);
+            else if ("fsOn".equals(action) && miniBox == null || "fsOn".equals(action) && miniBox.getVisibility() != View.VISIBLE) setFullscreen(true);
             else if ("af1".equals(action) || "af0".equals(action)) {
                 PlaybackService.respectFocus = "af1".equals(action);
                 updateService();
@@ -618,7 +618,11 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
 
     // das video bleibt in seiner sitzung und spielt weiter, die hauptansicht geht zur vorherigen seite
     private void minimize() {
-        if (session == null || fullscreen) return;
+        if (session == null) return;
+        if (fullscreen) {
+            session.exitFullScreen();
+            setFullscreen(false);
+        }
         if (currentUrl == null || !currentUrl.contains("/watch")) return;
         // nur ein kleines fenster, ein neues video ersetzt das alte
         closeMini();
@@ -929,7 +933,11 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     }
 
     private void handleBack() {
-        if (fullscreen) session.exitFullScreen();
+        if (fullscreen) {
+            // auch wenn die seite gar nicht im vollbild ist (nur ihre meldung blieb haengen), sonst wirkt zurueck nie wieder
+            session.exitFullScreen();
+            setFullscreen(false);
+        }
         else if (canGoBack) session.goBack();
         // kein verlauf mehr, aber nicht auf der startseite: erst dorthin, dann erst app schliessen
         // spielt etwas, wuerde das neue laden der startseite die wiedergabe abbrechen

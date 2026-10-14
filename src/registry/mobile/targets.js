@@ -64,6 +64,13 @@ export const targets = [
     sel: ['ytm-browse ytm-reel-shelf-renderer', 'ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)', 'ytm-browse grid-shelf-view-model:has(ytm-shorts-lockup-view-model)']
   },
   {
+    id: 'mb.games',
+    label: 'Spiele-Regale (Playables)',
+    group: 'Startseite',
+    modes: SDCH,
+    sel: ['ytm-rich-section-renderer[data-ytx-mbgames]', 'ytm-rich-item-renderer[data-ytx-mbgames]', 'ytm-item-section-renderer[data-ytx-mbgames]', 'ytm-shelf-renderer[data-ytx-mbgames]']
+  },
+  {
     id: 'mb.home.sections',
     label: 'Themen-Regale (Neu, Nachrichten …)',
     group: 'Startseite',

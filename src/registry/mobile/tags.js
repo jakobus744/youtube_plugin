@@ -3,7 +3,11 @@ import { qsa } from '../../core/dom.js'
 // tagger fuer m.youtube.com
 // untere leiste ueber die klassennamen der tabs, die sind nicht uebersetzt
 
-export const TAG_ATTRS = ['data-ytx-mbpivot', 'data-ytx-mbtab']
+export const TAG_ATTRS = ['data-ytx-mbpivot', 'data-ytx-mbtab', 'data-ytx-mbgames']
+
+// regal "Playables" (Instant-Spiele): erkannt am link nach /playables oder an einer klasse mit mini-game
+const GAME_HINT = 'a[href*="/playables"], [class*="mini-game"], [class*="minigame"], [class*="playables"]'
+const GAME_HOLDER = 'ytm-rich-section-renderer, ytm-rich-item-renderer, ytm-item-section-renderer, ytm-shelf-renderer'
 
 const PIVOT = [
   [/\b(w2w|pivot-w2w|home)\b/, 'home'],
@@ -24,6 +28,21 @@ export const tagRules = [
         const hit = PIVOT.find(([re]) => re.test(cls))
         if (!hit) continue
         if (el.getAttribute('data-ytx-mbpivot') !== hit[1]) el.setAttribute('data-ytx-mbpivot', hit[1])
+        n++
+      }
+      return n
+    }
+  },
+  {
+    id: 'mb.games',
+    label: 'Spiele-Regale (Playables)',
+    pages: ['home', 'subscriptions', 'search', 'watch'],
+    run() {
+      let n = 0
+      for (const hit of qsa(GAME_HINT)) {
+        const holder = hit.closest(GAME_HOLDER)
+        if (!holder) continue
+        if (!holder.hasAttribute('data-ytx-mbgames')) holder.setAttribute('data-ytx-mbgames', '')
         n++
       }
       return n

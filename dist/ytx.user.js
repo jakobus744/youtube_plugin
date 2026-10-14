@@ -4517,6 +4517,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     "mb.pivot.create": H3,
     "mb.top.openApp": H3,
     "mb.home.shorts": H3,
+    "mb.games": H3,
     "mb.home.nudge": H3,
     "mb.watch.shorts": H3,
     "mb.watch.carousel": H3,
@@ -11875,6 +11876,13 @@ ${data2.source}` : ""].join("\n").trim();
       sel: ["ytm-browse ytm-reel-shelf-renderer", "ytm-browse ytm-rich-section-renderer:has(ytm-shorts-lockup-view-model)", "ytm-browse grid-shelf-view-model:has(ytm-shorts-lockup-view-model)"]
     },
     {
+      id: "mb.games",
+      label: "Spiele-Regale (Playables)",
+      group: "Startseite",
+      modes: SDCH,
+      sel: ["ytm-rich-section-renderer[data-ytx-mbgames]", "ytm-rich-item-renderer[data-ytx-mbgames]", "ytm-item-section-renderer[data-ytx-mbgames]", "ytm-shelf-renderer[data-ytx-mbgames]"]
+    },
+    {
       id: "mb.home.sections",
       label: "Themen-Regale (Neu, Nachrichten …)",
       group: "Startseite",
@@ -12061,7 +12069,9 @@ ${data2.source}` : ""].join("\n").trim();
   };
 
   // src/registry/mobile/tags.js
-  var TAG_ATTRS2 = ["data-ytx-mbpivot", "data-ytx-mbtab"];
+  var TAG_ATTRS2 = ["data-ytx-mbpivot", "data-ytx-mbtab", "data-ytx-mbgames"];
+  var GAME_HINT = 'a[href*="/playables"], [class*="mini-game"], [class*="minigame"], [class*="playables"]';
+  var GAME_HOLDER = "ytm-rich-section-renderer, ytm-rich-item-renderer, ytm-item-section-renderer, ytm-shelf-renderer";
   var PIVOT = [
     [/\b(w2w|pivot-w2w|home)\b/, "home"],
     [/\b(shorts|pivot-shorts)\b/, "shorts"],
@@ -12080,6 +12090,21 @@ ${data2.source}` : ""].join("\n").trim();
           const hit = PIVOT.find(([re]) => re.test(cls));
           if (!hit) continue;
           if (el.getAttribute("data-ytx-mbpivot") !== hit[1]) el.setAttribute("data-ytx-mbpivot", hit[1]);
+          n++;
+        }
+        return n;
+      }
+    },
+    {
+      id: "mb.games",
+      label: "Spiele-Regale (Playables)",
+      pages: ["home", "subscriptions", "search", "watch"],
+      run() {
+        let n = 0;
+        for (const hit of qsa(GAME_HINT)) {
+          const holder = hit.closest(GAME_HOLDER);
+          if (!holder) continue;
+          if (!holder.hasAttribute("data-ytx-mbgames")) holder.setAttribute("data-ytx-mbgames", "");
           n++;
         }
         return n;

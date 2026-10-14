@@ -8,6 +8,7 @@ const tidyDisplay = {
   'mb.pivot.create': H,
   'mb.top.openApp': H,
   'mb.home.shorts': H,
+  'mb.games': H,
   'mb.home.nudge': H,
   'mb.watch.shorts': H,
   'mb.watch.carousel': H,

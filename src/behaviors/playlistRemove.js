@@ -110,9 +110,9 @@ const CSS = `
 ${ITEM} { position: relative; }
 ${ITEM} .ytx-plmore { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: none; color: inherit; font-size: 22px; line-height: 1; z-index: 2; }
 ${ITEM} .YtmCompactMediaItemMetadata { padding-right: 36px; box-sizing: border-box; }
-.ytx-plmenu { position: fixed; right: 14px; z-index: 2147483000; background: #2a2a2a; border-radius: 12px; box-shadow: 0 4px 18px #0008; }
+.ytx-plmenu { position: fixed; right: 14px; z-index: 2147483000; background: var(--ytx-menu, #2a2a2a); border-radius: 12px; box-shadow: 0 4px 18px #0008; }
 .ytx-plmenu { display: flex; flex-direction: column; }
-.ytx-plmenu button { text-align: left; border: 0; background: none; color: #fff; font-size: 16px; padding: 14px 18px; }
+.ytx-plmenu button { text-align: left; border: 0; background: none; color: var(--ytx-accent, #fff); font-size: 16px; padding: 14px 18px; }
 ${ITEM}[data-ytx-swipe] { will-change: transform; }`
 
 export const playlistRemove = {

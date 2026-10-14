@@ -12403,9 +12403,9 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
 ${ITEM} { position: relative; }
 ${ITEM} .ytx-plmore { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: none; color: inherit; font-size: 22px; line-height: 1; z-index: 2; }
 ${ITEM} .YtmCompactMediaItemMetadata { padding-right: 36px; box-sizing: border-box; }
-.ytx-plmenu { position: fixed; right: 14px; z-index: 2147483000; background: #2a2a2a; border-radius: 12px; box-shadow: 0 4px 18px #0008; }
+.ytx-plmenu { position: fixed; right: 14px; z-index: 2147483000; background: var(--ytx-menu, #2a2a2a); border-radius: 12px; box-shadow: 0 4px 18px #0008; }
 .ytx-plmenu { display: flex; flex-direction: column; }
-.ytx-plmenu button { text-align: left; border: 0; background: none; color: #fff; font-size: 16px; padding: 14px 18px; }
+.ytx-plmenu button { text-align: left; border: 0; background: none; color: var(--ytx-accent, #fff); font-size: 16px; padding: 14px 18px; }
 ${ITEM}[data-ytx-swipe] { will-change: transform; }`;
   var playlistRemove = {
     id: "playlistRemove",
@@ -13081,6 +13081,8 @@ ${ITEM}[data-ytx-swipe] { will-change: transform; }`;
         if (!name) return;
         accSet = true;
         document.documentElement.style.setProperty("--ytx-accent", `var(${name})`);
+        const menu = discovered().menu?.[0]?.name;
+        if (menu) document.documentElement.style.setProperty("--ytx-menu", `var(${menu})`);
         document.documentElement.setAttribute("data-ytx-acc", "");
       };
       const offClick = listen(document, "click", (e) => {
@@ -13186,7 +13188,7 @@ html[data-ytx-mini] #player-container-id { position: fixed !important; top: 0 !i
 html[data-ytx-mini] #player, html[data-ytx-mini] #movie_player { width: 100% !important; height: 100% !important; padding: 0 !important; margin: 0 !important; }
 html[data-ytx-mini] .player-controls-top, html[data-ytx-mini] .player-controls-bottom, html[data-ytx-mini] yt-progress-bar, html[data-ytx-mini] .ytmA11yStylesHiddenButton { display: none !important; }
 html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #movie_player video { width: 100% !important; height: 100% !important; left: 0 !important; top: 0 !important; }
-.ytx-mini-btn { all: initial; position: fixed; top: 6px; z-index: 2147483600; width: 36px; height: 36px; border-radius: 18px; background: rgba(0,0,0,.6); color: #fff; font: 700 16px/36px sans-serif; text-align: center; cursor: pointer; }
+.ytx-mini-btn { all: initial; position: fixed; top: 6px; z-index: 2147483600; width: 36px; height: 36px; border-radius: 18px; background: rgba(0,0,0,.6); color: var(--ytx-accent, #fff); font: 700 16px/36px sans-serif; text-align: center; cursor: pointer; }
 #ytx-mini-ui { right: 6px; }
 #ytx-mini-expand { left: 6px; }`;
   var native = (a) => window.__ytxNative?.({ a });

@@ -638,6 +638,8 @@ const appFullscreen = {
       if (!name) return
       accSet = true
       document.documentElement.style.setProperty('--ytx-accent', `var(${name})`)
+      const menu = discovered().menu?.[0]?.name
+      if (menu) document.documentElement.style.setProperty('--ytx-menu', `var(${menu})`)
       document.documentElement.setAttribute('data-ytx-acc', '')
     }
     // das vollbild symbol von youtube selbst soll ebenfalls zuverlaessig beenden

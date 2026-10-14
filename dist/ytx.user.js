@@ -73,6 +73,13 @@
     const p = document.getElementById("movie_player");
     return p && typeof p.getPlayerResponse === "function" ? p : null;
   }
+  function ytcfg(key) {
+    try {
+      return pageWindow.ytcfg?.get?.(key);
+    } catch {
+      return void 0;
+    }
+  }
   function pick(obj, path) {
     if (obj == null) return void 0;
     let cur = obj;
@@ -941,9 +948,9 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
     if (/^#[0-9a-f]{6}$/.test(s)) return s;
     m = s.match(/^rgba?\((\d+),(\d+),(\d+)(?:,([\d.]+))?\)$/);
     if (!m) return null;
-    const hex = `#${[m[1], m[2], m[3]].map((x) => Number(x).toString(16).padStart(2, "0")).join("")}`;
+    const hex2 = `#${[m[1], m[2], m[3]].map((x) => Number(x).toString(16).padStart(2, "0")).join("")}`;
     const a = m[4] == null ? 1 : Number(m[4]);
-    return a >= 1 ? hex : `${hex}@${Math.round(a * 1e3) / 1e3}`;
+    return a >= 1 ? hex2 : `${hex2}@${Math.round(a * 1e3) / 1e3}`;
   }
   function discoverTokens(vars, refs) {
     const out = {};
@@ -952,9 +959,9 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
       if (!/^--t[0-9a-f]{8,}$/.test(name)) continue;
       const c = normColor(raw);
       if (!c) continue;
-      const [hex, alpha] = c.split("@");
+      const [hex2, alpha] = c.split("@");
       for (const [role, ref] of wanted) {
-        if (ref === c || role === "bg" && alpha && ref === hex) (out[role] ||= []).push({ name, alpha: alpha ? Number(alpha) : 1 });
+        if (ref === c || role === "bg" && alpha && ref === hex2) (out[role] ||= []).push({ name, alpha: alpha ? Number(alpha) : 1 });
       }
     }
     return out;
@@ -3473,7 +3480,7 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
           toast(e.message, "error");
         }
       }
-      function openMenu2(anchor) {
+      function openMenu3(anchor) {
         const cur = currentTrack2();
         const items = [{ title: "Kopieren als" }];
         for (const [id, label] of FORMATS) items.push({ label, sub: id === s.format ? "Standard" : "", run: () => copy(id, cur, anchor.parentElement?.main) });
@@ -3499,7 +3506,7 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
               position: "before",
               when: available,
               create: () => {
-                const sb = splitButton({ label: "Transkript", icon: "⧉", title: "Transkript kopieren (Alt+T)", onMain: () => copy(s.format, currentTrack2(), sb.main), onMenu: (more) => openMenu2(more) });
+                const sb = splitButton({ label: "Transkript", icon: "⧉", title: "Transkript kopieren (Alt+T)", onMain: () => copy(s.format, currentTrack2(), sb.main), onMenu: (more) => openMenu3(more) });
                 return sb;
               }
             })
@@ -10551,7 +10558,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           g = g.trim();
           if (g && !favs.some((x) => x.toLowerCase() === g.toLowerCase())) setFavs((list) => [...list, g]);
         };
-        const remove = (g) => {
+        const remove2 = (g) => {
           setFavs((list) => list.filter((x) => x !== g));
           if (home.mode === `genre:${g}`) {
             home.mode = "forYou";
@@ -10577,7 +10584,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         return h(
           "div",
           { class: "ytx-m-pick" },
-          favs.length ? h("div", { class: "ytx-m-chips" }, label("Deine Genres"), ...favs.map((g) => chip(`${g} ×`, "Entfernen", () => remove(g)))) : null,
+          favs.length ? h("div", { class: "ytx-m-chips" }, label("Deine Genres"), ...favs.map((g) => chip(`${g} ×`, "Entfernen", () => remove2(g)))) : null,
           h("div", { class: "ytx-m-chips" }, label("Vorschläge"), ...suggestGenres(favs, { extra: last2 ? [last2] : [] }).map((g) => chip(`+ ${g}`, "Als Chip hinzufügen", () => add2(g), true)), input, dl)
         );
       }
@@ -12297,6 +12304,185 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     }
   };
 
+  // src/behaviors/playlistRemove.js
+  var ITEM = "ytm-playlist-panel-video-renderer";
+  var hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  async function authHeader() {
+    const sid = document.cookie.match(/(?:^|;\s*)(?:SAPISID|__Secure-3PAPISID)=([^;]+)/)?.[1];
+    if (!sid) return null;
+    const ts = Math.floor(Date.now() / 1e3);
+    const h2 = hex(await crypto.subtle.digest("SHA-1", new TextEncoder().encode(`${ts} ${sid} ${location.origin}`)));
+    return `SAPISIDHASH ${ts}_${h2}`;
+  }
+  async function post(path, body) {
+    const auth = await authHeader();
+    const key = ytcfg("INNERTUBE_API_KEY");
+    const context = ytcfg("INNERTUBE_CONTEXT");
+    if (!auth || !key || !context) return false;
+    const r = await fetch(`/youtubei/v1/${path}?key=${key}&prettyPrint=false`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json", authorization: auth, "x-origin": location.origin, "x-goog-authuser": "0" },
+      body: JSON.stringify({ context, ...body })
+    });
+    return r.ok ? r.json().catch(() => null) : false;
+  }
+  async function removeFromPlaylist(listId2, videoId) {
+    const j = await post("browse/edit_playlist", { playlistId: listId2, actions: [{ action: "ACTION_REMOVE_VIDEO_BY_VIDEO_ID", removedVideoId: videoId }] });
+    return j?.status === "STATUS_SUCCEEDED";
+  }
+  var listId = () => new URL(location.href).searchParams.get("list");
+  var videoOf = (el) => el.querySelector('a[href*="/watch?"]')?.getAttribute("href")?.match(/[?&]v=([\w-]{11})/)?.[1];
+  async function remove(el) {
+    const id = videoOf(el);
+    const list = listId();
+    if (!id || !list) return;
+    el.style.transition = "opacity .2s";
+    el.style.opacity = "0.4";
+    let ok = false;
+    try {
+      ok = await removeFromPlaylist(list, id);
+    } catch {
+    }
+    if (ok) {
+      el.style.display = "none";
+      toast("Aus Playlist entfernt");
+    } else {
+      el.style.opacity = "";
+      toast("Entfernen nicht möglich (nur eigene Playlists)", "warn");
+    }
+  }
+  function openMenu2(btn2, el) {
+    document.querySelector(".ytx-plmenu")?.remove();
+    const m = document.createElement("div");
+    m.className = "ytx-plmenu";
+    m.setAttribute("data-ytx-own", "");
+    const add2 = (label, fn) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.addEventListener("click", () => {
+        gone();
+        fn();
+      });
+      m.append(b);
+    };
+    const id = videoOf(el);
+    add2("Gefällt mir", async () => {
+      const j = await post("like/like", { target: { videoId: id } }).catch(() => false);
+      toast(j ? "Gefällt mir gesetzt" : "Gefällt mir nicht möglich", j ? "info" : "warn");
+    });
+    add2("Link kopieren", async () => {
+      try {
+        await navigator.clipboard.writeText(`https://youtu.be/${id}`);
+        toast("Link kopiert");
+      } catch {
+        toast("Kopieren nicht möglich", "warn");
+      }
+    });
+    add2("Aus Playlist entfernen", () => remove(el));
+    const r = btn2.getBoundingClientRect();
+    m.style.top = `${Math.min(r.bottom, innerHeight - 190)}px`;
+    document.body.append(m);
+    const close = (e) => {
+      if (m.contains(e.target)) return;
+      gone();
+    };
+    const gone = () => {
+      m.remove();
+      document.removeEventListener("click", close, true);
+      document.removeEventListener("scroll", gone, true);
+      document.removeEventListener("touchmove", gone, true);
+    };
+    setTimeout(() => {
+      document.addEventListener("click", close, true);
+      document.addEventListener("scroll", gone, { capture: true, passive: true });
+      document.addEventListener("touchmove", gone, { capture: true, passive: true });
+    }, 0);
+  }
+  var CSS3 = `
+${ITEM} { position: relative; }
+${ITEM} .ytx-plmore { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: none; color: inherit; font-size: 22px; line-height: 1; z-index: 2; }
+${ITEM} .YtmCompactMediaItemMetadata { padding-right: 36px; box-sizing: border-box; }
+.ytx-plmenu { position: fixed; right: 14px; z-index: 2147483000; background: #2a2a2a; border-radius: 12px; box-shadow: 0 4px 18px #0008; }
+.ytx-plmenu { display: flex; flex-direction: column; }
+.ytx-plmenu button { text-align: left; border: 0; background: none; color: #fff; font-size: 16px; padding: 14px 18px; }
+${ITEM}[data-ytx-swipe] { will-change: transform; }`;
+  var playlistRemove = {
+    id: "playlistRemove",
+    label: "Playlist: Eintrag wischen oder Menü zum Entfernen",
+    description: "In der Liste unter dem Video: Eintrag nach links wischen oder ⋮ antippen entfernt das Video aus der Playlist (eigene Playlists)",
+    type: "toggle",
+    default: true,
+    start() {
+      const style = document.createElement("style");
+      style.setAttribute("data-ytx-own", "");
+      style.textContent = CSS3;
+      document.head.append(style);
+      const off = onSweep("playlistRemove", () => {
+        if (!listId()) return;
+        for (const el of document.querySelectorAll(ITEM)) {
+          if (el.querySelector(".ytx-plmore")) continue;
+          const b = document.createElement("button");
+          b.className = "ytx-plmore";
+          b.setAttribute("data-ytx-own", "");
+          b.setAttribute("aria-label", "Menü");
+          b.textContent = "⋮";
+          b.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openMenu2(b, el);
+          });
+          el.append(b);
+        }
+      });
+      let t = null;
+      const onStart = (e) => {
+        const el = e.target?.closest?.(ITEM);
+        if (!el || e.target.closest(".ytx-plmore") || e.touches.length !== 1) return;
+        t = { el, x: e.touches[0].clientX, y: e.touches[0].clientY, mode: null, w: el.getBoundingClientRect().width };
+      };
+      const onMove = (e) => {
+        if (!t) return;
+        const dx = e.touches[0].clientX - t.x;
+        const dy = e.touches[0].clientY - t.y;
+        if (!t.mode) {
+          if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+          t.mode = Math.abs(dx) > Math.abs(dy) * 1.5 && dx < 0 ? "swipe" : "scroll";
+          if (t.mode === "swipe") t.el.setAttribute("data-ytx-swipe", "");
+        }
+        if (t.mode !== "swipe") return;
+        e.preventDefault();
+        const d = Math.min(0, dx);
+        t.el.style.transform = `translateX(${d}px)`;
+        t.el.style.opacity = String(Math.max(0.3, 1 + d / t.w));
+      };
+      const onEnd = () => {
+        if (!t) return;
+        const { el, mode, w } = t;
+        t = null;
+        if (mode !== "swipe") return;
+        const moved = Number((el.style.transform.match(/-?[\d.]+/) || [0])[0]);
+        el.removeAttribute("data-ytx-swipe");
+        el.style.transform = "";
+        el.style.opacity = "";
+        if (-moved > w * 0.45) remove(el);
+      };
+      document.addEventListener("touchstart", onStart, { capture: true, passive: true });
+      document.addEventListener("touchmove", onMove, { capture: true, passive: false });
+      document.addEventListener("touchend", onEnd, { capture: true, passive: true });
+      document.addEventListener("touchcancel", onEnd, { capture: true, passive: true });
+      return () => {
+        off();
+        style.remove();
+        document.removeEventListener("touchstart", onStart, true);
+        document.removeEventListener("touchmove", onMove, true);
+        document.removeEventListener("touchend", onEnd, true);
+        document.removeEventListener("touchcancel", onEnd, true);
+        document.querySelectorAll(".ytx-plmore, .ytx-plmenu").forEach((e) => e.remove());
+      };
+    }
+  };
+
   // src/behaviors/mobile.js
   var SHARED = ["shortsRedirect", "homeRedirect", "autoplayOff", "forceQuality", "speedMemory", "pauseOnBlur", "channelTrailerPause", "shareClean", "dislikeCount", "likeCount"];
   var swipeDownBack = {
@@ -12989,11 +13175,11 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, relatedDates];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, relatedDates, playlistRemove];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js
-  var CSS3 = `html[data-ytx-mini], html[data-ytx-mini] body { overflow: hidden !important; background: #000 !important; }
+  var CSS4 = `html[data-ytx-mini], html[data-ytx-mini] body { overflow: hidden !important; background: #000 !important; }
 html[data-ytx-mini] ytm-mobile-topbar-renderer, html[data-ytx-mini] .mobile-topbar-header-background, html[data-ytx-mini] ytm-pivot-bar-renderer,
 html[data-ytx-mini] .watch-below-the-player, html[data-ytx-mini] ytm-consent-bump-v2-renderer, html[data-ytx-mini] [data-ytx-mount], html[data-ytx-mini] .ytx-watch-row { display: none !important; }
 html[data-ytx-mini] #player-container-id { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 2147483000 !important; }
@@ -13031,7 +13217,7 @@ html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #m
       }
       html.toggleAttribute("data-ytx-mini", on);
       if (on) {
-        setCss("mobile.mini", CSS3);
+        setCss("mobile.mini", CSS4);
         ui = build();
         (document.body || html).append(ui);
       } else {
@@ -13731,7 +13917,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   var rules = null;
   var version = 0;
   var filterStats = { page: "", checked: 0, hits: 0, reasons: {}, unreadable: 0 };
-  var CSS4 = `
+  var CSS5 = `
 [${ATTR4}="hide"] { display: none !important; }
 [${ATTR4}="dim"]:not([data-ytx-f-open]) { opacity: var(--ytx-dim-opacity, .3) !important; transition: opacity .15s ease !important; }
 [${ATTR4}="dim"]:not([data-ytx-f-open]):hover { opacity: 1 !important; }
@@ -13818,7 +14004,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     sweep2();
   }
   function initFilters() {
-    setCss("filters", CSS4);
+    setCss("filters", CSS5);
     onSweep("filters", sweep2);
     onDispose(() => {
       for (const el of qsa(`[${ATTR4}]`)) clearCard(el);

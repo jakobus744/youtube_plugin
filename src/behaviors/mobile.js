@@ -5,6 +5,7 @@ import { audioFocus } from './appAudio.js'
 import { discovered, normColor, DARK_REFS, LIGHT_REFS } from '../appliers/hashTokens.js'
 import { log } from '../core/log.js'
 import { relatedDates } from './relatedDates.js'
+import { playlistRemove } from './playlistRemove.js'
 
 // verhalten fuer m.youtube.com
 // umleitungen arbeiten mit urls, der rest mit der player api, beides gibt es auch mobil
@@ -745,6 +746,6 @@ const appFullscreen = {
   }
 }
 
-export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, relatedDates]
+export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, relatedDates, playlistRemove]
 
 export const behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]))

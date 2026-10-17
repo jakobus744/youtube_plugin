@@ -2661,18 +2661,39 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
   var PL = "ytm-browse";
   var playlistPage2 = {
     root: PL,
-    polymerItems: "ytx-none",
+    // die Playlist Seite nutzt ytm-playlist-video-renderer (gleiche Bausteine wie im Panel unter dem Video)
+    polymerItems: `${PL} ytm-playlist-video-renderer`,
     lockupItems: `${PL} yt-item-section-renderer yt-lockup-view-model, ${PL} ytm-item-section-renderer yt-lockup-view-model`,
     continuation: [`${PL} yt-continuation-item-view-model`, `${PL} ytm-continuation-item-renderer`],
     dragHandles: "ytx-none",
-    readPolymerItem: () => null,
+    readPolymerItem(el) {
+      const a = qs('a[href*="/watch?"]', el);
+      if (!a) return null;
+      const u = new URL(a.getAttribute("href"), location.origin);
+      const idx = firstInt(u.searchParams.get("index"));
+      const bar = qs('ytw-thumbnail-overlay-resume-playback-renderer [style*="width"], [class*="ResumePlayback"] [style*="width"]', el);
+      const dur = parseDuration(qs("ytm-thumbnail-overlay-time-status-renderer, badge-shape", el)?.textContent || "");
+      const live = qs("ytm-thumbnail-overlay-time-status-renderer", el)?.getAttribute("data-style") === "LIVE";
+      return {
+        el,
+        wrapper: el,
+        videoId: u.searchParams.get("v"),
+        index: idx != null ? idx - 1 : null,
+        title: qs('h4, [class*="Headline"]', el)?.textContent.trim() || "",
+        channel: qs(".YtmCompactMediaItemByline", el)?.textContent.trim() || "",
+        durationSec: dur || null,
+        percent: bar ? firstInt(bar.style.width) : null,
+        live,
+        unavailable: !dur && !live
+      };
+    },
     readLockupItem: (el) => playlistPage.readLockupItem(el),
     listContainer() {
-      return qs(`${PL} yt-item-section-renderer #contents, ${PL} ytm-item-section-renderer #contents`);
+      return qs(`${PL} ytm-playlist-video-list-renderer, ${PL} yt-item-section-renderer #contents, ${PL} ytm-item-section-renderer #contents`);
     },
     // „41 Videos“ im kopf, der kanalname davor kann selbst zahlen enthalten
     total() {
-      const text = qs(`${PL} yt-page-header-view-model yt-content-metadata-view-model`)?.textContent || "";
+      const text = qs(`${PL} yt-page-header-view-model yt-content-metadata-view-model, ${PL} .amsterdam-playlist-stats-text`)?.textContent || "";
       const m = text.match(/(\d[\d.]*)\s*(?:Videos?|videos?|Titel|Folgen)/);
       return m ? firstInt(m[1].replace(/\./g, "")) : null;
     },
@@ -12047,7 +12068,7 @@ ${data2.source}` : ""].join("\n").trim();
     },
     "playlist.header": {
       label: "Playlist-Kopf Statistik",
-      sel: ["ytm-browse yt-page-header-view-model yt-content-metadata-view-model", "ytm-browse yt-page-header-view-model"]
+      sel: ["ytm-browse ytm-playlist-header-renderer-v2", "ytm-browse yt-page-header-view-model yt-content-metadata-view-model", "ytm-browse yt-page-header-view-model"]
     },
     "watch.playlistHeader": {
       label: "Playlist-Panel Kopf",
@@ -12305,7 +12326,9 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
   };
 
   // src/behaviors/playlistRemove.js
-  var ITEM = "ytm-playlist-panel-video-renderer";
+  var PANEL_ITEM = "ytm-playlist-panel-video-renderer";
+  var PAGE_ITEM = "ytm-playlist-video-renderer";
+  var ITEM = `${PANEL_ITEM}, ${PAGE_ITEM}`;
   var hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
   async function authHeader() {
     const sid = document.cookie.match(/(?:^|;\s*)(?:SAPISID|__Secure-3PAPISID)=([^;]+)/)?.[1];
@@ -12400,13 +12423,13 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     }, 0);
   }
   var CSS3 = `
-${ITEM} { position: relative; }
-${ITEM} .ytx-plmore { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: none; color: inherit; font-size: 22px; line-height: 1; z-index: 2; }
-${ITEM} .YtmCompactMediaItemMetadata { padding-right: 36px; box-sizing: border-box; }
+${PANEL_ITEM} { position: relative; }
+${PANEL_ITEM} .ytx-plmore { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: none; color: inherit; font-size: 22px; line-height: 1; z-index: 2; }
+${PANEL_ITEM} .YtmCompactMediaItemMetadata { padding-right: 36px; box-sizing: border-box; }
 .ytx-plmenu { position: fixed; right: 14px; z-index: 2147483000; background: var(--ytx-menu, #2a2a2a); border-radius: 12px; box-shadow: 0 4px 18px #0008; }
 .ytx-plmenu { display: flex; flex-direction: column; }
 .ytx-plmenu button { text-align: left; border: 0; background: none; color: var(--ytx-accent, #fff); font-size: 16px; padding: 14px 18px; }
-${ITEM}[data-ytx-swipe] { will-change: transform; }`;
+${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: transform; }`;
   var playlistRemove = {
     id: "playlistRemove",
     label: "Playlist: Eintrag wischen oder Menü zum Entfernen",
@@ -12420,7 +12443,7 @@ ${ITEM}[data-ytx-swipe] { will-change: transform; }`;
       document.head.append(style);
       const off = onSweep("playlistRemove", () => {
         if (!listId()) return;
-        for (const el of document.querySelectorAll(ITEM)) {
+        for (const el of document.querySelectorAll(PANEL_ITEM)) {
           if (el.querySelector(".ytx-plmore")) continue;
           const b = document.createElement("button");
           b.className = "ytx-plmore";
@@ -13277,7 +13300,8 @@ ytm-mobile-topbar-renderer .ytx-btn { color: inherit !important; background: col
 ytm-slim-video-information-renderer > .ytx-note { padding: 0 12px; }
 /* playlist panel: dauer und suche als eigene zeilen unter dem kopf */
 ytm-playlist-engagement-panel-header > [data-ytx-mount] { margin: 0 12px 8px !important; }
-ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`;
+ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }
+ytm-browse [data-ytx-mount] { margin-left: 12px !important; margin-right: 12px !important; }`;
   var FILTER_PAGES2 = [
     ["home", "Startseite"],
     ["subscriptions", "Abos"],

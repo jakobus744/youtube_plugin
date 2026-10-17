@@ -21,7 +21,7 @@ export const anchors = {
   },
   'playlist.header': {
     label: 'Playlist-Kopf Statistik',
-    sel: ['ytm-browse yt-page-header-view-model yt-content-metadata-view-model', 'ytm-browse yt-page-header-view-model']
+    sel: ['ytm-browse ytm-playlist-header-renderer-v2', 'ytm-browse yt-page-header-view-model yt-content-metadata-view-model', 'ytm-browse yt-page-header-view-model']
   },
   'watch.playlistHeader': {
     label: 'Playlist-Panel Kopf',

@@ -4,7 +4,10 @@ import { toast } from '../features/ui.js'
 
 // die liste im panel unter dem video hat auf m.youtube.com kein drei punkte menue und kein wischen zum entfernen
 // ein eintrag nach links wischen oder das menue antippen entfernt das video aus der playlist, mit dem gleichen aufruf, den auch youtube dafuer nutzt
-const ITEM = 'ytm-playlist-panel-video-renderer'
+const PANEL_ITEM = 'ytm-playlist-panel-video-renderer'
+// auf der Playlist Seite selbst hat YouTube das Menue schon, dort kommt nur das Wischen dazu
+const PAGE_ITEM = 'ytm-playlist-video-renderer'
+const ITEM = `${PANEL_ITEM}, ${PAGE_ITEM}`
 
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
 
@@ -107,13 +110,13 @@ function openMenu(btn, el) {
 }
 
 const CSS = `
-${ITEM} { position: relative; }
-${ITEM} .ytx-plmore { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: none; color: inherit; font-size: 22px; line-height: 1; z-index: 2; }
-${ITEM} .YtmCompactMediaItemMetadata { padding-right: 36px; box-sizing: border-box; }
+${PANEL_ITEM} { position: relative; }
+${PANEL_ITEM} .ytx-plmore { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: none; color: inherit; font-size: 22px; line-height: 1; z-index: 2; }
+${PANEL_ITEM} .YtmCompactMediaItemMetadata { padding-right: 36px; box-sizing: border-box; }
 .ytx-plmenu { position: fixed; right: 14px; z-index: 2147483000; background: var(--ytx-menu, #2a2a2a); border-radius: 12px; box-shadow: 0 4px 18px #0008; }
 .ytx-plmenu { display: flex; flex-direction: column; }
 .ytx-plmenu button { text-align: left; border: 0; background: none; color: var(--ytx-accent, #fff); font-size: 16px; padding: 14px 18px; }
-${ITEM}[data-ytx-swipe] { will-change: transform; }`
+${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: transform; }`
 
 export const playlistRemove = {
   id: 'playlistRemove',
@@ -129,7 +132,7 @@ export const playlistRemove = {
 
     const off = onSweep('playlistRemove', () => {
       if (!listId()) return
-      for (const el of document.querySelectorAll(ITEM)) {
+      for (const el of document.querySelectorAll(PANEL_ITEM)) {
         if (el.querySelector('.ytx-plmore')) continue
         const b = document.createElement('button')
         b.className = 'ytx-plmore'

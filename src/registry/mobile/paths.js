@@ -157,18 +157,39 @@ const PL = 'ytm-browse'
 
 export const playlistPage = {
   root: PL,
-  polymerItems: 'ytx-none',
+  // die Playlist Seite nutzt ytm-playlist-video-renderer (gleiche Bausteine wie im Panel unter dem Video)
+  polymerItems: `${PL} ytm-playlist-video-renderer`,
   lockupItems: `${PL} yt-item-section-renderer yt-lockup-view-model, ${PL} ytm-item-section-renderer yt-lockup-view-model`,
   continuation: [`${PL} yt-continuation-item-view-model`, `${PL} ytm-continuation-item-renderer`],
   dragHandles: 'ytx-none',
-  readPolymerItem: () => null,
+  readPolymerItem(el) {
+    const a = qs('a[href*="/watch?"]', el)
+    if (!a) return null
+    const u = new URL(a.getAttribute('href'), location.origin)
+    const idx = firstInt(u.searchParams.get('index'))
+    const bar = qs('ytw-thumbnail-overlay-resume-playback-renderer [style*="width"], [class*="ResumePlayback"] [style*="width"]', el)
+    const dur = parseDuration(qs('ytm-thumbnail-overlay-time-status-renderer, badge-shape', el)?.textContent || '')
+    const live = qs('ytm-thumbnail-overlay-time-status-renderer', el)?.getAttribute('data-style') === 'LIVE'
+    return {
+      el,
+      wrapper: el,
+      videoId: u.searchParams.get('v'),
+      index: idx != null ? idx - 1 : null,
+      title: qs('h4, [class*="Headline"]', el)?.textContent.trim() || '',
+      channel: qs('.YtmCompactMediaItemByline', el)?.textContent.trim() || '',
+      durationSec: dur || null,
+      percent: bar ? firstInt(bar.style.width) : null,
+      live,
+      unavailable: !dur && !live
+    }
+  },
   readLockupItem: (el) => desktopPlaylistPage.readLockupItem(el),
   listContainer() {
-    return qs(`${PL} yt-item-section-renderer #contents, ${PL} ytm-item-section-renderer #contents`)
+    return qs(`${PL} ytm-playlist-video-list-renderer, ${PL} yt-item-section-renderer #contents, ${PL} ytm-item-section-renderer #contents`)
   },
   // „41 Videos“ im kopf, der kanalname davor kann selbst zahlen enthalten
   total() {
-    const text = qs(`${PL} yt-page-header-view-model yt-content-metadata-view-model`)?.textContent || ''
+    const text = qs(`${PL} yt-page-header-view-model yt-content-metadata-view-model, ${PL} .amsterdam-playlist-stats-text`)?.textContent || ''
     const m = text.match(/(\d[\d.]*)\s*(?:Videos?|videos?|Titel|Folgen)/)
     return m ? firstInt(m[1].replace(/\./g, '')) : null
   },

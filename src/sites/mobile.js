@@ -40,7 +40,8 @@ ytm-mobile-topbar-renderer .ytx-btn { color: inherit !important; background: col
 ytm-slim-video-information-renderer > .ytx-note { padding: 0 12px; }
 /* playlist panel: dauer und suche als eigene zeilen unter dem kopf */
 ytm-playlist-engagement-panel-header > [data-ytx-mount] { margin: 0 12px 8px !important; }
-ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }`
+ytm-playlist-engagement-panel-header > [data-ytx-mount] input { flex: 1; }
+ytm-browse [data-ytx-mount] { margin-left: 12px !important; margin-right: 12px !important; }`
 
 // alles was ytx ueber m.youtube.com wissen muss
 // kern, panel, profile, filter, abo gruppen und schauzeit sind dieselben wie am rechner

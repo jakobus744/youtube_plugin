@@ -462,7 +462,19 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     private String lastUrl() {
         SharedPreferences p = prefs();
         if (System.currentTimeMillis() - p.getLong("lastAt", 0) > 6 * 3600 * 1000L) return null;
-        return p.getString("lastUrl", null);
+        String url = p.getString("lastUrl", null);
+        return isInside(url) ? url : null;
+    }
+
+    // nur eigene seiten merken, sonst oeffnet jeder start eine fremde app erneut
+    private static boolean isInside(String url) {
+        if (url == null) return false;
+        Uri u = Uri.parse(url);
+        String host = u.getHost();
+        if (host == null || !INSIDE.matcher(host.toLowerCase(Locale.ROOT)).find()) return false;
+        // redirect links aus beschreibungen fuehren zu fremden seiten
+        String path = u.getPath() == null ? "" : u.getPath();
+        return !path.startsWith("/redirect") && !path.startsWith("/attribution_link");
     }
 
     // haeufige ursachen in einem satz
@@ -506,7 +518,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
                 if (url != null && url.startsWith("https://") && !url.contains("/watch")) lastBrowse = url;
                 if (url != null && url.contains("/watch") && mini != null) closeMini();
                 updatePip();
-                if (url != null && url.startsWith("https://")) prefs().edit().putString("lastUrl", url).putLong("lastAt", System.currentTimeMillis()).apply();
+                if (url != null && url.startsWith("https://") && isInside(url)) prefs().edit().putString("lastUrl", url).putLong("lastAt", System.currentTimeMillis()).apply();
             }
 
             // statt weissem bildschirm eine seite mit grund und neu laden

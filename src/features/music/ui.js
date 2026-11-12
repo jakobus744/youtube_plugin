@@ -58,6 +58,8 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
   ytmusic-app-layout #player-bar-background { background: transparent !important; }
   ytmusic-player-bar { background: color-mix(in srgb, var(--ytx-tint, #212121) 78%, #000) !important; }
   ytmusic-nav-bar a.app-install-link { display: none !important; }
+  /* stern, mond und warteschlangen info gehoeren zum player, bei geschlossenem player nicht in die seite ragen lassen */
+  ytmusic-app-layout:is([player-ui-state="PLAYER_BAR_ONLY"], [player-ui-state="INACTIVE"]) ytmusic-player-page [data-ytx-mount] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="m.hub.button"] { display: none !important; }
   ytmusic-nav-bar [data-ytx-mount="top.ytx"] { margin: 0 2px !important; padding: 0 7px !important; }
   .ytx-m-shelf { max-width: none; padding-inline: 16px; }

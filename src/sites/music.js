@@ -13,6 +13,7 @@ import { music } from '../features/music/runtime.js'
 import { catalog } from '../features/music/data/catalog.js'
 import { buildMix, checkReleases } from '../features/music/engine.js'
 import { ytxQueue } from '../features/music/ytxQueue.js'
+import { bootHashTokens } from './hashBoot.js'
 
 // alles was ytx ueber music.youtube.com wissen muss an einer stelle
 export const musicSite = {
@@ -56,5 +57,7 @@ export const musicSite = {
   boot() {
     initMusicUiCss()
     registerMusicChecks()
+    // music ist immer dunkel, knoepfe nutzen die hash farben von youtube
+    bootHashTokens(() => true, 'music')
   }
 }

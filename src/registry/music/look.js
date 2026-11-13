@@ -1,3 +1,5 @@
+import { hashTokenDecls } from '../../appliers/hashTokens.js'
+
 // look einstellungen fuer music
 // gleiche control ids wie bei youtube wo es passt, damit themes geteilt wirken
 

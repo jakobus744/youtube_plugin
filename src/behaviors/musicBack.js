@@ -1,3 +1,5 @@
+import { currentTrack, navigateEndpoint, endpoints } from '../registry/music/player.js'
+
 // die zurueck geste der app klappt den grossen player von music zu, wie in der youtube music app
 // music legt beim oeffnen des players selbst einen verlaufseintrag an (die adresse wechselt auf /watch), die app geht dann ganz normal zurueck
 // nur ohne vorherigen eintrag (die app startet mit offenem player) bleibt zurueck wirkungslos, dafuer legt ytx einen eintrag an
@@ -86,5 +88,25 @@ export const musicBack = {
       window.removeEventListener('popstate', onPop, true)
       document.removeEventListener('click', openFromBar, true)
     }
+  }
+}
+
+// im grossen player und in der leiste ist der kuenstlername auf dem handy nur text ohne link
+export const musicByline = {
+  id: 'm.bylineOpensArtist',
+  label: 'Player: Tipp auf den Künstlernamen öffnet den Künstler',
+  description: 'Im großen Player führt ein Tipp auf den Künstlernamen zur Künstler-Seite, der Player klappt dabei zu. Auf dem Handy ist der Name sonst nur Text',
+  type: 'toggle',
+  default: true,
+  start() {
+    const onClick = (e) => {
+      const by = e.target?.closest?.('ytmusic-player-page ytmusic-player-controls .byline')
+      if (!by || e.target.closest('a') || !isOpen()) return
+      const id = currentTrack()?.artists?.find((a) => a.id)?.id
+      // der seitenwechsel klappt den player selbst zu
+      if (id) navigateEndpoint(endpoints.browse(id, null, 'ARTIST'))
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
   }
 }

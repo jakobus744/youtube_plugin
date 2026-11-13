@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261113.0854
+// @version      0.4.1.20261113.0931
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -7398,6 +7398,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     const msg = sections.map((s) => runsText2(s.messageRenderer?.text || s.musicMessageRenderer?.text)).find(Boolean);
     return { available: false, reason: msg || "kein Songtext" };
   }
+  var lastTouchAt = 0;
+  if (typeof document !== "undefined") document.addEventListener("touchend", () => lastTouchAt = Date.now(), { capture: true, passive: true });
   function navigateEndpoint(endpoint) {
     const app = appEl();
     if (!app || !endpoint) return false;
@@ -7411,7 +7413,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       const go = () => {
         const a = ys.querySelector("a");
         if (a) {
-          a.click();
+          if (Date.now() - lastTouchAt < 2600) a.dispatchEvent(new CustomEvent("tap", { bubbles: true, composed: true, cancelable: true, detail: { x: 0, y: 0, sourceEvent: new MouseEvent("click", { bubbles: true, cancelable: true }) } }));
+          else a.click();
           ys.remove();
           resolve(true);
         } else if (++tries > 20) {
@@ -7519,6 +7522,23 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         window.removeEventListener("popstate", onPop, true);
         document.removeEventListener("click", openFromBar, true);
       };
+    }
+  };
+  var musicByline = {
+    id: "m.bylineOpensArtist",
+    label: "Player: Tipp auf den Künstlernamen öffnet den Künstler",
+    description: "Im großen Player führt ein Tipp auf den Künstlernamen zur Künstler-Seite, der Player klappt dabei zu. Auf dem Handy ist der Name sonst nur Text",
+    type: "toggle",
+    default: true,
+    start() {
+      const onClick = (e) => {
+        const by = e.target?.closest?.("ytmusic-player-page ytmusic-player-controls .byline");
+        if (!by || e.target.closest("a") || !isOpen()) return;
+        const id = currentTrack()?.artists?.find((a) => a.id)?.id;
+        if (id) navigateEndpoint(endpoints.browse(id, null, "ARTIST"));
+      };
+      document.addEventListener("click", onClick, true);
+      return () => document.removeEventListener("click", onClick, true);
     }
   };
 
@@ -7790,6 +7810,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     audioFocus,
     shareClean,
     musicBack,
+    musicByline,
     musicRows
   ];
   var behaviorById2 = Object.fromEntries(behaviors2.map((b) => [b.id, b]));
@@ -8962,9 +8983,10 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
 .background-gradient { background-size: 100% 100% !important; background-repeat: no-repeat !important; }
 /* mit dem ytx favorit knopf ist die knopfzeile breiter als die spalte, umbrechen statt links abschneiden */
 ytmusic-responsive-header-renderer .action-buttons { flex-wrap: wrap !important; justify-content: center !important; row-gap: 8px; }
-/* album und playlist kopf: youtube zentriert ihn neben der langen liste, er soll oben stehen bleiben */
-@media (min-width: 936px) {
-  ytmusic-two-column-browse-results-renderer > #primary { position: sticky !important; top: calc(var(--ytmusic-nav-bar-height, 64px) + 16px) !important; align-self: flex-start !important; }
+/* album und playlist kopf: youtube klebt ihn mit hoehe 0 fest, dadurch rutscht er am listenende mit nach unten */
+/* erst ab 1150px stehen kopf und liste nebeneinander, darunter wuerde er die titel verdecken */
+@media (min-width: 1150px) {
+  ytmusic-two-column-browse-results-renderer > #primary { position: sticky !important; top: calc(var(--ytmusic-nav-bar-height, 64px) + 16px) !important; align-self: flex-start !important; height: auto !important; }
   ytmusic-two-column-browse-results-renderer > #primary ytmusic-responsive-header-renderer > :first-child { margin-top: 0 !important; }
 }
 @media (max-width: 600px) {

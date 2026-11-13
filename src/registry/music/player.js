@@ -175,6 +175,10 @@ export function lyricsData() {
 
 // ein polymer link mit endpoint wird von der app selbst navigiert
 // so laeuft wiedergabe und seitenwechsel ohne neu laden und ohne eigene api aufrufe
+// polymer macht nach einer beruehrung 2,5 s lang aus klicks keine tap ereignisse mehr, der link reagiert aber nur auf tap
+let lastTouchAt = 0
+if (typeof document !== 'undefined') document.addEventListener('touchend', () => (lastTouchAt = Date.now()), { capture: true, passive: true })
+
 export function navigateEndpoint(endpoint) {
   const app = appEl()
   if (!app || !endpoint) return false
@@ -188,7 +192,9 @@ export function navigateEndpoint(endpoint) {
     const go = () => {
       const a = ys.querySelector('a')
       if (a) {
-        a.click()
+        // kurz nach einer beruehrung das tap ereignis selbst ausloesen
+        if (Date.now() - lastTouchAt < 2600) a.dispatchEvent(new CustomEvent('tap', { bubbles: true, composed: true, cancelable: true, detail: { x: 0, y: 0, sourceEvent: new MouseEvent('click', { bubbles: true, cancelable: true }) } }))
+        else a.click()
         ys.remove()
         resolve(true)
       } else if (++tries > 20) {

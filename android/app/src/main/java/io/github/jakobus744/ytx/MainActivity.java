@@ -126,7 +126,10 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
 
         String url = urlFrom(getIntent());
         if (url == null) url = lastUrl();
-        session.loadUri(url != null ? url : homeUrl());
+        final String first = url != null ? url : homeUrl();
+        YtxRuntime.whenAdblockReady(() -> {
+            if (!isFinishing()) session.loadUri(first);
+        }, 4000);
         // erst wenn die seite steht, eine leere sitzung fuers verkleinern vorbereiten
         view.postDelayed(() -> {
             if (spare == null && !isFinishing()) {

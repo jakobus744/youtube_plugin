@@ -66,6 +66,8 @@ export function cardTextCss(colors) {
   const text2 = colors.textSecondary || text
   const out = []
   if (text) out.push(`.ytLockupMetadataViewModelTitle, .ytLockupMetadataViewModelTitle * { color: ${text} !important; }`)
+  // schlichte knoepfe (teilen, download, mehr) haben die farbe fest im css von youtube
+  if (text) out.push(`.ytSpecButtonShapeNextMono:is(.ytSpecButtonShapeNextText, .ytSpecButtonShapeNextOutline, .ytSpecButtonShapeNextTonal), .yt-spec-button-shape-next--mono:is(.yt-spec-button-shape-next--text, .yt-spec-button-shape-next--outline, .yt-spec-button-shape-next--tonal) { color: ${text} !important; }`)
   if (text2)
     out.push(
       `.ytContentMetadataViewModelMetadataText, .ytContentMetadataViewModelMetadataText *, .ytAvatarStackViewModelAvatarStackText, .ytAvatarStackViewModelAvatarStackText *, a.ytAttributedStringLink { color: ${text2} !important; }`

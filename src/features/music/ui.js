@@ -52,7 +52,8 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
 .background-gradient { background-size: 100% 100% !important; background-repeat: no-repeat !important; }
 /* album und playlist kopf: youtube zentriert ihn neben der langen liste, er soll oben stehen bleiben */
 @media (min-width: 936px) {
-  ytmusic-two-column-browse-results-renderer > #primary { position: sticky !important; top: calc(var(--ytmusic-nav-bar-height, 64px) + 16px) !important; align-self: flex-start !important; height: auto !important; }
+  ytmusic-two-column-browse-results-renderer > #primary { position: sticky !important; top: calc(var(--ytmusic-nav-bar-height, 64px) + 16px) !important; align-self: flex-start !important; }
+  ytmusic-two-column-browse-results-renderer > #primary ytmusic-responsive-header-renderer > :first-child { margin-top: 0 !important; }
 }
 @media (max-width: 600px) {
   /* handy: das bunte titelbild oben laeuft sanft aus statt mit harter kante zu enden */

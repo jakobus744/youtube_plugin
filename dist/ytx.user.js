@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261113.0825
+// @version      0.4.1.20261113.0844
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -1055,6 +1055,7 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
     const text2 = colors.textSecondary || text;
     const out = [];
     if (text) out.push(`.ytLockupMetadataViewModelTitle, .ytLockupMetadataViewModelTitle * { color: ${text} !important; }`);
+    if (text) out.push(`.ytSpecButtonShapeNextMono:is(.ytSpecButtonShapeNextText, .ytSpecButtonShapeNextOutline, .ytSpecButtonShapeNextTonal), .yt-spec-button-shape-next--mono:is(.yt-spec-button-shape-next--text, .yt-spec-button-shape-next--outline, .yt-spec-button-shape-next--tonal) { color: ${text} !important; }`);
     if (text2)
       out.push(
         `.ytContentMetadataViewModelMetadataText, .ytContentMetadataViewModelMetadataText *, .ytAvatarStackViewModelAvatarStackText, .ytAvatarStackViewModelAvatarStackText *, a.ytAttributedStringLink { color: ${text2} !important; }`
@@ -7106,6 +7107,8 @@ ${chaptersText(true)}
     const map = { bg: "base-background", raised: "raised-background", menu: "menu-background", text: "text-primary", textSecondary: "text-secondary", accent: "call-to-action", outline: "outline" };
     const decl = Object.entries(map).filter(([k]) => colors[k]).map(([k, t]) => `--yt-sys-color-baseline--${t}: ${colors[k]};`);
     if (decl.length) out.push(`html:root:root { ${decl.join(" ")} }`);
+    const text = colors.text;
+    if (text) out.push(`.ytSpecButtonShapeNextMono:is(.ytSpecButtonShapeNextText, .ytSpecButtonShapeNextOutline, .ytSpecButtonShapeNextTonal), .yt-spec-button-shape-next--mono:is(.yt-spec-button-shape-next--text, .yt-spec-button-shape-next--outline, .yt-spec-button-shape-next--tonal) { color: ${text} !important; }`);
     return out.join("\n");
   }
 
@@ -8959,7 +8962,8 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] {
 .background-gradient { background-size: 100% 100% !important; background-repeat: no-repeat !important; }
 /* album und playlist kopf: youtube zentriert ihn neben der langen liste, er soll oben stehen bleiben */
 @media (min-width: 936px) {
-  ytmusic-two-column-browse-results-renderer > #primary { position: sticky !important; top: calc(var(--ytmusic-nav-bar-height, 64px) + 16px) !important; align-self: flex-start !important; height: auto !important; }
+  ytmusic-two-column-browse-results-renderer > #primary { position: sticky !important; top: calc(var(--ytmusic-nav-bar-height, 64px) + 16px) !important; align-self: flex-start !important; }
+  ytmusic-two-column-browse-results-renderer > #primary ytmusic-responsive-header-renderer > :first-child { margin-top: 0 !important; }
 }
 @media (max-width: 600px) {
   /* handy: das bunte titelbild oben laeuft sanft aus statt mit harter kante zu enden */
@@ -11848,7 +11852,6 @@ ${data2.source}` : ""].join("\n").trim();
     boot() {
       initMusicUiCss();
       registerMusicChecks();
-      bootHashTokens(() => true, "music");
     }
   };
 

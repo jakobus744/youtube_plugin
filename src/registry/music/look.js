@@ -1,5 +1,3 @@
-import { hashTokenDecls } from '../../appliers/hashTokens.js'
-
 // look einstellungen fuer music
 // gleiche control ids wie bei youtube wo es passt, damit themes geteilt wirken
 
@@ -203,5 +201,8 @@ export function extraCss(colors) {
     .filter(([k]) => colors[k])
     .map(([k, t]) => `--yt-sys-color-baseline--${t}: ${colors[k]};`)
   if (decl.length) out.push(`html:root:root { ${decl.join(' ')} }`)
+  const text = colors.text
+  // runde knoepfe wie teilen oder download haben die farbe fest im css von youtube
+  if (text) out.push(`.ytSpecButtonShapeNextMono:is(.ytSpecButtonShapeNextText, .ytSpecButtonShapeNextOutline, .ytSpecButtonShapeNextTonal), .yt-spec-button-shape-next--mono:is(.yt-spec-button-shape-next--text, .yt-spec-button-shape-next--outline, .yt-spec-button-shape-next--tonal) { color: ${text} !important; }`)
   return out.join('\n')
 }

@@ -16,8 +16,8 @@ export const colorControls = [
   },
   { id: 'raised', label: 'Flächen & Karten', tokens: [T('brand-background-solid'), T('color-black1'), T('color-black2'), T('search-background'), T('horizontal-action-card-background')] },
   { id: 'menu', label: 'Menüs & Dialoge', tokens: [], extra: (v) => `ytmusic-menu-popup-renderer, tp-yt-paper-listbox, ytmusic-dialog, tp-yt-paper-dialog, ytmusic-search-suggestions-section { background-color: ${v} !important; }` },
-  { id: 'text', label: 'Text', tokens: [T('text-primary'), T('color-white1')] },
-  { id: 'textSecondary', label: 'Text gedimmt', tokens: [T('text-secondary'), T('overlay-text-secondary'), T('search-box-text-secondary')] },
+  { id: 'text', label: 'Text', tokens: [T('text-primary'), T('color-white1'), '--yt-spec-text-primary', '--yt-spec-icon-active-other'] },
+  { id: 'textSecondary', label: 'Text gedimmt', tokens: [T('text-secondary'), T('overlay-text-secondary'), T('search-box-text-secondary'), '--yt-spec-text-secondary', '--yt-spec-icon-inactive'] },
   { id: 'accent', label: 'Akzent & Links', tokens: [T('search-suggestion-focus-active')], extra: (v) => `ytmusic-app a.yt-simple-endpoint:hover, ytmusic-chip-cloud-chip-renderer[is-selected] { color: ${v} !important; }` },
   { id: 'outline', label: 'Rahmen & Trenner', tokens: [T('divider'), T('guide-divider'), T('search-border'), T('search-bar-border-bauhaus')] },
   {

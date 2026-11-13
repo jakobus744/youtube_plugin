@@ -18,8 +18,8 @@ export const colorControls = [
 #frosted-glass, ytd-feed-filter-chip-bar-renderer #chips-wrapper, ytd-rich-grid-renderer > #header, .ytItemSectionRendererStickyHeader, ytd-item-section-renderer[page-subtype="playlist"] > #header { background: ${v} !important; backdrop-filter: none !important; }` },
   { id: 'raised', label: 'Flächen & Karten', tokens: [TOKEN('raised-background'), '--yt-spec-raised-background'] },
   { id: 'menu', label: 'Menüs & Dialoge', tokens: [TOKEN('menu-background'), '--yt-spec-menu-background'] },
-  { id: 'text', label: 'Text', tokens: [TOKEN('text-primary'), '--yt-spec-text-primary'] },
-  { id: 'textSecondary', label: 'Text gedimmt', tokens: [TOKEN('text-secondary'), '--yt-spec-text-secondary'] },
+  { id: 'text', label: 'Text', tokens: [TOKEN('text-primary'), '--yt-spec-text-primary', '--yt-spec-icon-active-other'] },
+  { id: 'textSecondary', label: 'Text gedimmt', tokens: [TOKEN('text-secondary'), '--yt-spec-text-secondary', '--yt-spec-icon-inactive'] },
   { id: 'accent', label: 'Akzent & Links', tokens: [TOKEN('call-to-action'), TOKEN('call-to-action-hover'), '--yt-spec-call-to-action'] },
   { id: 'outline', label: 'Rahmen & Trenner', tokens: [TOKEN('outline'), TOKEN('outline-opaque'), '--yt-spec-10-percent-layer'] },
   {

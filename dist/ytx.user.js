@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1
+// @version      0.4.1.20261113.0815
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -1020,8 +1020,8 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
 #frosted-glass, ytd-feed-filter-chip-bar-renderer #chips-wrapper, ytd-rich-grid-renderer > #header, .ytItemSectionRendererStickyHeader, ytd-item-section-renderer[page-subtype="playlist"] > #header { background: ${v} !important; backdrop-filter: none !important; }` },
     { id: "raised", label: "Flächen & Karten", tokens: [TOKEN("raised-background"), "--yt-spec-raised-background"] },
     { id: "menu", label: "Menüs & Dialoge", tokens: [TOKEN("menu-background"), "--yt-spec-menu-background"] },
-    { id: "text", label: "Text", tokens: [TOKEN("text-primary"), "--yt-spec-text-primary"] },
-    { id: "textSecondary", label: "Text gedimmt", tokens: [TOKEN("text-secondary"), "--yt-spec-text-secondary"] },
+    { id: "text", label: "Text", tokens: [TOKEN("text-primary"), "--yt-spec-text-primary", "--yt-spec-icon-active-other"] },
+    { id: "textSecondary", label: "Text gedimmt", tokens: [TOKEN("text-secondary"), "--yt-spec-text-secondary", "--yt-spec-icon-inactive"] },
     { id: "accent", label: "Akzent & Links", tokens: [TOKEN("call-to-action"), TOKEN("call-to-action-hover"), "--yt-spec-call-to-action"] },
     { id: "outline", label: "Rahmen & Trenner", tokens: [TOKEN("outline"), TOKEN("outline-opaque"), "--yt-spec-10-percent-layer"] },
     {
@@ -6932,8 +6932,8 @@ ${chaptersText(true)}
     },
     { id: "raised", label: "Flächen & Karten", tokens: [T("brand-background-solid"), T("color-black1"), T("color-black2"), T("search-background"), T("horizontal-action-card-background")] },
     { id: "menu", label: "Menüs & Dialoge", tokens: [], extra: (v) => `ytmusic-menu-popup-renderer, tp-yt-paper-listbox, ytmusic-dialog, tp-yt-paper-dialog, ytmusic-search-suggestions-section { background-color: ${v} !important; }` },
-    { id: "text", label: "Text", tokens: [T("text-primary"), T("color-white1")] },
-    { id: "textSecondary", label: "Text gedimmt", tokens: [T("text-secondary"), T("overlay-text-secondary"), T("search-box-text-secondary")] },
+    { id: "text", label: "Text", tokens: [T("text-primary"), T("color-white1"), "--yt-spec-text-primary", "--yt-spec-icon-active-other"] },
+    { id: "textSecondary", label: "Text gedimmt", tokens: [T("text-secondary"), T("overlay-text-secondary"), T("search-box-text-secondary"), "--yt-spec-text-secondary", "--yt-spec-icon-inactive"] },
     { id: "accent", label: "Akzent & Links", tokens: [T("search-suggestion-focus-active")], extra: (v) => `ytmusic-app a.yt-simple-endpoint:hover, ytmusic-chip-cloud-chip-renderer[is-selected] { color: ${v} !important; }` },
     { id: "outline", label: "Rahmen & Trenner", tokens: [T("divider"), T("guide-divider"), T("search-border"), T("search-bar-border-bauhaus")] },
     {
@@ -8915,7 +8915,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   // src/features/music/ui.js
   var PAGE_CSS = `
 .ytx-m-iconbtn { all: initial; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-width: 36px; height: 36px; padding: 0 8px; border-radius: 18px; cursor: pointer; user-select: none;
-  font: 500 18px/1 Roboto, Arial, sans-serif; color: var(--ytmusic-text-secondary, #aaa); background: transparent; flex: none; }
+  font: 500 18px/1 Roboto, Arial, sans-serif; color: var(--ytmusic-text-primary, #fff); background: transparent; flex: none; }
 .ytx-m-iconbtn:hover { color: var(--ytmusic-text-primary, #fff); background: rgba(255,255,255,.1); }
 .ytx-m-iconbtn[aria-pressed="true"] { color: #ffc83d; }
 .ytx-m-iconbtn .ytx-m-lbl { font-size: 13px; margin-left: 6px; }
@@ -8955,12 +8955,17 @@ ytmusic-player-queue-item[data-ytx-skip]:hover { opacity: 1; }
 ytmusic-player-controls .content-info-wrapper { position: relative; padding-right: 120px; box-sizing: border-box; }
 ytmusic-player-controls .content-info-wrapper > [data-ytx-mount] { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
 ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] { right: 40px; }
+/* der farbverlauf ist hoeher als sein bild, die wiederholung zeigte als dunklen balken den anfang nochmal */
+.background-gradient { background-size: 100% 100% !important; background-repeat: no-repeat !important; }
+/* album und playlist kopf: youtube zentriert ihn neben der langen liste, er soll oben stehen bleiben */
+@media (min-width: 936px) {
+  ytmusic-two-column-browse-results-renderer > #primary { position: sticky !important; top: calc(var(--ytmusic-nav-bar-height, 64px) + 16px) !important; align-self: flex-start !important; }
+}
 @media (max-width: 600px) {
   /* handy: das bunte titelbild oben laeuft sanft aus statt mit harter kante zu enden */
   ytmusic-fullbleed-thumbnail-renderer { display: none !important; }
   /* diese ebene deckt auf dem handy die titelbilder der karten komplett ab */
   .image-wrapper ytmusic-background-overlay-renderer { display: none !important; }
-  .background-gradient { background-size: 100% 100% !important; background-repeat: no-repeat !important; }
   /* playerleiste nimmt wie in der music app die farbe des titels an */
   ytmusic-app-layout #player-bar-background { background: transparent !important; }
   ytmusic-player-bar { background: color-mix(in srgb, var(--ytx-tint, #212121) 78%, #000) !important; }

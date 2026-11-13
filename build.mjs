@@ -8,13 +8,17 @@ const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
 const watch = process.argv.includes('--watch')
 const REPO = 'https://github.com/jakobus744/youtube_plugin'
 const RAW = 'https://raw.githubusercontent.com/jakobus744/youtube_plugin/main/dist/ytx.user.js'
+// jeder build bekommt eine eigene version, sonst erkennt tampermonkey neue dateien nicht
+const d = new Date()
+const p2 = (n) => String(n).padStart(2, '0')
+const version = `${pkg.version}.${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}.${p2(d.getHours())}${p2(d.getMinutes())}`
 
 const meta = (name, extra = []) =>
   [
     '// ==UserScript==',
     `// @name         ${name}`,
     '// @namespace    ytx.local',
-    `// @version      ${pkg.version}`,
+    `// @version      ${version}`,
     `// @description  ${pkg.description}`,
     '// @match        https://www.youtube.com/*',
     '// @match        https://music.youtube.com/*',

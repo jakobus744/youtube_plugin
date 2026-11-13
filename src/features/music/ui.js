@@ -50,6 +50,8 @@ ytmusic-player-controls .content-info-wrapper > [data-ytx-mount] { position: abs
 ytmusic-player-controls .content-info-wrapper > [data-ytx-mount="m.sleep.bar"] { right: 40px; }
 /* der farbverlauf ist hoeher als sein bild, die wiederholung zeigte als dunklen balken den anfang nochmal */
 .background-gradient { background-size: 100% 100% !important; background-repeat: no-repeat !important; }
+/* mit dem ytx favorit knopf ist die knopfzeile breiter als die spalte, umbrechen statt links abschneiden */
+ytmusic-responsive-header-renderer .action-buttons { flex-wrap: wrap !important; justify-content: center !important; row-gap: 8px; }
 /* album und playlist kopf: youtube zentriert ihn neben der langen liste, er soll oben stehen bleiben */
 @media (min-width: 936px) {
   ytmusic-two-column-browse-results-renderer > #primary { position: sticky !important; top: calc(var(--ytmusic-nav-bar-height, 64px) + 16px) !important; align-self: flex-start !important; }

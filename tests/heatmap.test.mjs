@@ -24,3 +24,8 @@ test('Pfad bleibt in der Fläche', () => {
   assert.ok(d.endsWith('L100,20 Z'))
   assert.ok(!/NaN|-\d/.test(d))
 })
+
+test('Graph aus der Markerliste', () => {
+  const json = { frameworkUpdates: { entityBatchUpdate: { mutations: [{ payload: { macroMarkersListEntity: { markersList: { markerType: 'MARKER_TYPE_HEATMAP', markers: [{ startMillis: '0', durationMillis: '1000', intensityScoreNormalized: 0.25 }, { startMillis: '1000', durationMillis: '1000', intensityScoreNormalized: 1 }] } } } }] } } }
+  assert.deepEqual(extractHeatmap(json), { id: null, points: [0.25, 1] })
+})

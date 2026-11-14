@@ -17,9 +17,20 @@ function find(o, key, d = 0) {
   return undefined
 }
 
+function findHeatList(o, d = 0) {
+  if (!o || typeof o !== 'object' || d > 40) return undefined
+  if (o.markerType === 'MARKER_TYPE_HEATMAP' && Array.isArray(o.markers)) return o.markers
+  for (const k in o) {
+    const hit = findHeatList(o[k], d + 1)
+    if (hit !== undefined) return hit
+  }
+  return undefined
+}
+
 // liefert { id, points } oder null, points sind werte von 0 bis 1 in zeitlicher reihenfolge
 export function extractHeatmap(json) {
-  const raw = find(json, 'heatMarkers')
+  // zwei formate: heatMarkers im player overlay oder eine markerliste vom typ heatmap in den nachgeladenen daten
+  const raw = find(json, 'heatMarkers') || findHeatList(json)
   if (!Array.isArray(raw) || raw.length < 2) return null
   const points = raw
     .map((m) => m?.heatMarkerRenderer || m)

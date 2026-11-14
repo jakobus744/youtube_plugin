@@ -84,6 +84,7 @@ public class PlaybackService extends Service {
         else if (ACT_PREV.equals(act)) send("prev");
         refresh();
         syncFocus();
+        syncLocks();
         return START_NOT_STICKY;
     }
 
@@ -122,6 +123,34 @@ public class PlaybackService extends Service {
         startForeground(41, b.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
     }
 
+    // ohne diese sperren schlaeft das handy bei ausgeschaltetem bildschirm ein und der ton reisst ab
+    private android.os.PowerManager.WakeLock wake;
+    private android.net.wifi.WifiManager.WifiLock wifi;
+
+    private void syncLocks() {
+        try {
+            if (wake == null) {
+                wake = getSystemService(android.os.PowerManager.class).newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "ytx:playback");
+                wake.setReferenceCounted(false);
+                wifi = getApplicationContext().getSystemService(android.net.wifi.WifiManager.class).createWifiLock(android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF, "ytx:playback");
+                wifi.setReferenceCounted(false);
+            }
+            if (playing) {
+                wake.acquire();
+                wifi.acquire();
+            } else {
+                releaseLocks();
+            }
+        } catch (RuntimeException e) {
+            android.util.Log.e("ytx", "wach bleiben", e);
+        }
+    }
+
+    private void releaseLocks() {
+        if (wake != null && wake.isHeld()) wake.release();
+        if (wifi != null && wifi.isHeld()) wifi.release();
+    }
+
     private void syncFocus() {
         android.media.AudioManager am = getSystemService(android.media.AudioManager.class);
         if (respectFocus && playing && focus == null) {
@@ -152,6 +181,7 @@ public class PlaybackService extends Service {
     @Override
     public void onDestroy() {
         if (focus != null) getSystemService(android.media.AudioManager.class).abandonAudioFocusRequest(focus);
+        releaseLocks();
         session.release();
         super.onDestroy();
     }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261114.1018
+// @version      0.4.1.20261114.1512
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -12571,8 +12571,17 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
     }
     return void 0;
   }
+  function findHeatList(o, d = 0) {
+    if (!o || typeof o !== "object" || d > 40) return void 0;
+    if (o.markerType === "MARKER_TYPE_HEATMAP" && Array.isArray(o.markers)) return o.markers;
+    for (const k in o) {
+      const hit = findHeatList(o[k], d + 1);
+      if (hit !== void 0) return hit;
+    }
+    return void 0;
+  }
   function extractHeatmap(json) {
-    const raw = find(json, "heatMarkers");
+    const raw = find(json, "heatMarkers") || findHeatList(json);
     if (!Array.isArray(raw) || raw.length < 2) return null;
     const points = raw.map((m) => m?.heatMarkerRenderer || m).map((m) => ({ t: Number(m?.timeRangeStartMillis ?? m?.startMillis) || 0, v: Number(m?.heatMarkerIntensityScoreNormalized ?? m?.intensityScoreNormalized) })).filter((p) => Number.isFinite(p.v)).sort((a, b) => a.t - b.t).map((p) => Math.min(1, Math.max(0, p.v)));
     if (points.length < 2) return null;

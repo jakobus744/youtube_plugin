@@ -467,8 +467,8 @@ const tapSeek = {
 // der player erkennt das kleine fenster der app an der fenstergroesse (unter einem drittel des bildschirms) und pausiert dann ohne premium
 const pipKeepPlaying = {
   id: 'pipKeepPlaying',
-  label: 'Im kleinen Fenster weiterspielen (App)',
-  description: 'Beim Verlassen der ytx-App läuft das Video im kleinen Fenster weiter. Ohne diese Einstellung pausiert YouTube es dort, wenn kein Premium-Konto angemeldet ist',
+  label: 'Im kleinen Fenster und bei ausgeschaltetem Bildschirm weiterspielen (App)',
+  description: 'Beim Verlassen der ytx-App oder bei ausgeschaltetem Bildschirm läuft das Video weiter. Ohne diese Einstellung pausiert oder entlädt YouTube es, wenn kein Premium-Konto angemeldet ist',
   type: 'toggle',
   default: true,
   start() {
@@ -481,7 +481,25 @@ const pipKeepPlaying = {
         Object.defineProperty(w, key, { configurable: true, get: () => w.screen[dim] })
       } catch {}
     }
+    // solange etwas spielt, erfaehrt die seite nicht, dass sie unsichtbar ist, sonst entlaedt youtube das video bei bildschirm aus
+    const d = w.document
+    const playingNow = () => [...document.querySelectorAll('video')].some((v) => !v.paused && !v.ended)
+    const vis = { hidden: false, webkitHidden: false, visibilityState: 'visible', webkitVisibilityState: 'visible' }
+    for (const key in vis) {
+      try {
+        const real = Object.getOwnPropertyDescriptor(w.Document.prototype, key)?.get
+        Object.defineProperty(d, key, { configurable: true, get: () => (playingNow() || !real ? vis[key] : real.call(d)) })
+      } catch {}
+    }
+    const block = (e) => {
+      if (playingNow()) e.stopImmediatePropagation()
+    }
+    w.addEventListener('visibilitychange', block, true)
     return () => {
+      w.removeEventListener('visibilitychange', block, true)
+      for (const key in vis) {
+        try { delete d[key] } catch {}
+      }
       for (const key in old) {
         try {
           if (old[key]) Object.defineProperty(w, key, old[key])

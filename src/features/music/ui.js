@@ -58,7 +58,8 @@ ytmusic-responsive-header-renderer .action-buttons { flex-wrap: wrap !important;
   ytmusic-two-column-browse-results-renderer > #primary { position: sticky !important; top: calc(var(--ytmusic-nav-bar-height, 64px) + 16px) !important; align-self: flex-start !important; height: auto !important; }
   ytmusic-two-column-browse-results-renderer > #primary ytmusic-responsive-header-renderer > :first-child { margin-top: 0 !important; }
 }
-@media (max-width: 600px) {
+/* quer ist das handy breiter als 600px, dort zaehlt die geringe hoehe */
+@media (max-width: 600px), (pointer: coarse) and (max-height: 500px) {
   /* handy: das bunte titelbild oben laeuft sanft aus statt mit harter kante zu enden */
   ytmusic-fullbleed-thumbnail-renderer { display: none !important; }
   /* diese ebene deckt auf dem handy die titelbilder der karten komplett ab */

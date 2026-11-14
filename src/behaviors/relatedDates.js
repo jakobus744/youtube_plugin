@@ -1,5 +1,6 @@
 import { pageWindow } from '../core/bridge.js'
 import { onSweep } from '../core/observer.js'
+import { onYtResponse } from '../core/ytResponses.js'
 import { pageFromUrl } from '../registry/youtube/pages.js'
 
 // unter dem Video zeigt YouTube mobil bei den weiteren Videos kein Datum, die Seitendaten enthalten es aber
@@ -18,23 +19,6 @@ export function collectDates(o, d = 0) {
   else for (const k in o) collectDates(o[k], d + 1)
 }
 
-let hooked = false
-function hookFetch() {
-  if (hooked) return
-  hooked = true
-  const w = pageWindow
-  const orig = w.fetch
-  if (typeof orig !== 'function') return
-  w.fetch = function (...a) {
-    const p = orig.apply(this, a)
-    try {
-      const url = String(a[0]?.url || a[0])
-      if (/\/youtubei\/v1\/(next|get_watch|browse|search)/.test(url)) p.then((r) => r.clone().json()).then((j) => collectDates(j)).catch(() => {})
-    } catch {}
-    return p
-  }
-}
-
 const CARDS = 'ytm-watch ytm-video-with-context-renderer, ytm-watch ytm-compact-video-renderer'
 
 export const relatedDates = {
@@ -44,7 +28,7 @@ export const relatedDates = {
   type: 'toggle',
   default: true,
   start() {
-    hookFetch()
+    const offData = onYtResponse((j) => collectDates(j))
     collectDates(pageWindow.ytInitialData)
     let lastInit = pageWindow.ytInitialData
     const run = () => {
@@ -75,6 +59,7 @@ export const relatedDates = {
     run()
     return () => {
       off()
+      offData()
       document.querySelectorAll('.ytx-rdate').forEach((e) => e.remove())
     }
   }

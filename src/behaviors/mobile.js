@@ -6,6 +6,8 @@ import { discovered, normColor, DARK_REFS, LIGHT_REFS } from '../appliers/hashTo
 import { log } from '../core/log.js'
 import { relatedDates } from './relatedDates.js'
 import { playlistRemove } from './playlistRemove.js'
+import { heatmap, progressBarOf } from './heatmap.js'
+import { pageWindow } from '../core/bridge.js'
 
 // verhalten fuer m.youtube.com
 // umleitungen arbeiten mit urls, der rest mit der player api, beides gibt es auch mobil
@@ -427,24 +429,11 @@ const tapSeek = {
   default: true,
   start() {
     let t0 = null
-    // die breiteste leiste unter dem finger, die gespielte teilstrecke ist schmaler
-    const barOf = (el) => {
-      let best = null
-      for (let e = el; e && e !== document.body; e = e.parentElement) {
-        if (e.id === 'movie_player') break
-        const name = `${e.tagName} ${typeof e.className === 'string' ? e.className : ''}`
-        if (/progress.?bar|scrubber|timebar|seek/i.test(name)) {
-          const w = e.getBoundingClientRect().width
-          if (!best || w > best.w) best = { el: e, w }
-        }
-      }
-      return best && best.w > 60 ? best.el : null
-    }
     const offs = [
       listen(document, 'touchstart', (e) => {
         t0 = null
         if (e.touches.length !== 1 || pageFromUrl(location.href) !== 'watch') return
-        const bar = barOf(e.target)
+        const bar = progressBarOf(e.target)
         if (bar) t0 = { bar, x: e.touches[0].clientX, y: e.touches[0].clientY, at: Date.now() }
       }, { passive: true, capture: true }),
       listen(document, 'touchend', (e) => {
@@ -472,6 +461,34 @@ const tapSeek = {
       }, { passive: true, capture: true })
     ]
     return () => offs.forEach((off) => off())
+  }
+}
+
+// der player erkennt das kleine fenster der app an der fenstergroesse (unter einem drittel des bildschirms) und pausiert dann ohne premium
+const pipKeepPlaying = {
+  id: 'pipKeepPlaying',
+  label: 'Im kleinen Fenster weiterspielen (App)',
+  description: 'Beim Verlassen der ytx-App läuft das Video im kleinen Fenster weiter. Ohne diese Einstellung pausiert YouTube es dort, wenn kein Premium-Konto angemeldet ist',
+  type: 'toggle',
+  default: true,
+  start() {
+    if (!window.__ytxNative) return () => {}
+    const w = pageWindow
+    const old = {}
+    for (const [key, dim] of [['outerWidth', 'width'], ['outerHeight', 'height']]) {
+      try {
+        old[key] = Object.getOwnPropertyDescriptor(w, key)
+        Object.defineProperty(w, key, { configurable: true, get: () => w.screen[dim] })
+      } catch {}
+    }
+    return () => {
+      for (const key in old) {
+        try {
+          if (old[key]) Object.defineProperty(w, key, old[key])
+          else delete w[key]
+        } catch {}
+      }
+    }
   }
 }
 
@@ -748,6 +765,6 @@ const appFullscreen = {
   }
 }
 
-export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, relatedDates, playlistRemove]
+export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, heatmap, relatedDates, playlistRemove]
 
 export const behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]))

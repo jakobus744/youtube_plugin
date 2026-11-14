@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261113.1623
+// @version      0.4.1.20261114.1018
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -7607,7 +7607,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     ["search", "Suchen", "M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z"],
     ["library", "Mediathek", "M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1z"]
   ];
-  var NAV_CSS = "#ytx-mnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2100; display: flex; height: calc(56px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; background: color-mix(in srgb, var(--ytx-tint, #212121) 55%, #000); }\n#ytx-mnav[hidden] { display: none; }\n#ytx-mnav button { all: unset; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ytmusic-text-secondary, #aaa); font: 500 11px/1 Roboto, Arial, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }\n#ytx-mnav button[aria-current] { color: var(--ytmusic-text-primary, #fff); }\n#ytx-mnav svg { width: 24px; height: 24px; fill: currentColor; }\nhtml[data-ytx-mnav] ytmusic-player-bar, html[data-ytx-mnav] #player-bar-background { position: fixed !important; left: 0 !important; right: 0 !important; bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important; top: auto !important; transform: none !important; }\nhtml[data-ytx-mnav] ytmusic-player#player { transform: translateY(-56px); }\nhtml[data-ytx-mnav] ytmusic-app-layout #content, html[data-ytx-mnav] ytmusic-browse-response, html[data-ytx-mnav] ytmusic-search-page { padding-bottom: 56px; }";
+  var NAV_CSS = "/* quer zeigt music zusaetzlich seine schmale seitenleiste, die untere leiste ersetzt sie */\nhtml[data-ytx-mnav] ytmusic-app-layout > #mini-guide, html[data-ytx-mnav] #mini-guide-background { display: none !important; }\nhtml[data-ytx-mnav] ytmusic-app-layout { --ytmusic-guide-width: 0px !important; }\n#ytx-mnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2100; display: flex; height: calc(56px + env(safe-area-inset-bottom, 0px)); padding-bottom: env(safe-area-inset-bottom, 0px); box-sizing: border-box; background: color-mix(in srgb, var(--ytx-tint, #212121) 55%, #000); }\n#ytx-mnav[hidden] { display: none; }\n#ytx-mnav button { all: unset; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--ytmusic-text-secondary, #aaa); font: 500 11px/1 Roboto, Arial, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }\n#ytx-mnav button[aria-current] { color: var(--ytmusic-text-primary, #fff); }\n#ytx-mnav svg { width: 24px; height: 24px; fill: currentColor; }\nhtml[data-ytx-mnav] ytmusic-player-bar, html[data-ytx-mnav] #player-bar-background { position: fixed !important; left: 0 !important; right: 0 !important; bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important; top: auto !important; transform: none !important; }\nhtml[data-ytx-mnav] ytmusic-player#player { transform: translateY(-56px); }\nhtml[data-ytx-mnav] ytmusic-app-layout #content, html[data-ytx-mnav] ytmusic-browse-response, html[data-ytx-mnav] ytmusic-search-page { padding-bottom: 56px; }";
   function navIcon(path) {
     const ns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(ns, "svg");
@@ -8989,7 +8989,8 @@ ytmusic-responsive-header-renderer .action-buttons { flex-wrap: wrap !important;
   ytmusic-two-column-browse-results-renderer > #primary { position: sticky !important; top: calc(var(--ytmusic-nav-bar-height, 64px) + 16px) !important; align-self: flex-start !important; height: auto !important; }
   ytmusic-two-column-browse-results-renderer > #primary ytmusic-responsive-header-renderer > :first-child { margin-top: 0 !important; }
 }
-@media (max-width: 600px) {
+/* quer ist das handy breiter als 600px, dort zaehlt die geringe hoehe */
+@media (max-width: 600px), (pointer: coarse) and (max-height: 500px) {
   /* handy: das bunte titelbild oben laeuft sanft aus statt mit harter kante zu enden */
   ytmusic-fullbleed-thumbnail-renderer { display: none !important; }
   /* diese ebene deckt auf dem handy die titelbilder der karten komplett ab */
@@ -12286,6 +12287,41 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     return decl.length ? `html:root:root { ${decl.join(" ")} }` : "";
   }
 
+  // src/core/ytResponses.js
+  var listeners2 = /* @__PURE__ */ new Set();
+  var hooked = false;
+  function hook() {
+    if (hooked) return;
+    hooked = true;
+    const w = pageWindow;
+    const orig = w.fetch;
+    if (typeof orig !== "function") return;
+    w.fetch = function(...a) {
+      const p = orig.apply(this, a);
+      try {
+        const url = String(a[0]?.url || a[0]);
+        if (listeners2.size && /\/youtubei\/v1\/(next|get_watch|browse|search)/.test(url)) {
+          p.then((r) => r.clone().json()).then((j) => {
+            for (const fn of listeners2) {
+              try {
+                fn(j);
+              } catch {
+              }
+            }
+          }).catch(() => {
+          });
+        }
+      } catch {
+      }
+      return p;
+    };
+  }
+  function onYtResponse(fn) {
+    hook();
+    listeners2.add(fn);
+    return () => listeners2.delete(fn);
+  }
+
   // src/behaviors/relatedDates.js
   var dates = /* @__PURE__ */ new Map();
   var textOf = (t) => t?.runs ? t.runs.map((r) => r.text).join("") : t?.simpleText || t?.content || "";
@@ -12298,24 +12334,6 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     if (Array.isArray(o)) for (const x of o) collectDates(x, d + 1);
     else for (const k in o) collectDates(o[k], d + 1);
   }
-  var hooked = false;
-  function hookFetch() {
-    if (hooked) return;
-    hooked = true;
-    const w = pageWindow;
-    const orig = w.fetch;
-    if (typeof orig !== "function") return;
-    w.fetch = function(...a) {
-      const p = orig.apply(this, a);
-      try {
-        const url = String(a[0]?.url || a[0]);
-        if (/\/youtubei\/v1\/(next|get_watch|browse|search)/.test(url)) p.then((r) => r.clone().json()).then((j) => collectDates(j)).catch(() => {
-        });
-      } catch {
-      }
-      return p;
-    };
-  }
   var CARDS = "ytm-watch ytm-video-with-context-renderer, ytm-watch ytm-compact-video-renderer";
   var relatedDates = {
     id: "relatedDates",
@@ -12324,7 +12342,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     type: "toggle",
     default: true,
     start() {
-      hookFetch();
+      const offData = onYtResponse((j) => collectDates(j));
       collectDates(pageWindow.ytInitialData);
       let lastInit = pageWindow.ytInitialData;
       const run2 = () => {
@@ -12355,6 +12373,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       run2();
       return () => {
         off();
+        offData();
         document.querySelectorAll(".ytx-rdate").forEach((e) => e.remove());
       };
     }
@@ -12537,6 +12556,133 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         document.removeEventListener("touchend", onEnd, true);
         document.removeEventListener("touchcancel", onEnd, true);
         document.querySelectorAll(".ytx-plmore, .ytx-plmenu").forEach((e) => e.remove());
+      };
+    }
+  };
+
+  // src/behaviors/heatmap.js
+  var maps = /* @__PURE__ */ new Map();
+  function find(o, key, d = 0) {
+    if (!o || typeof o !== "object" || d > 40) return void 0;
+    if (!Array.isArray(o) && o[key] !== void 0) return o[key];
+    for (const k in o) {
+      const hit = find(o[k], key, d + 1);
+      if (hit !== void 0) return hit;
+    }
+    return void 0;
+  }
+  function extractHeatmap(json) {
+    const raw = find(json, "heatMarkers");
+    if (!Array.isArray(raw) || raw.length < 2) return null;
+    const points = raw.map((m) => m?.heatMarkerRenderer || m).map((m) => ({ t: Number(m?.timeRangeStartMillis ?? m?.startMillis) || 0, v: Number(m?.heatMarkerIntensityScoreNormalized ?? m?.intensityScoreNormalized) })).filter((p) => Number.isFinite(p.v)).sort((a, b) => a.t - b.t).map((p) => Math.min(1, Math.max(0, p.v)));
+    if (points.length < 2) return null;
+    const id = find(find(json, "currentVideoEndpoint"), "videoId");
+    return { id: typeof id === "string" ? id : null, points };
+  }
+  function heatmapPath(points, w, h2) {
+    const n = points.length;
+    const x = (i) => i / (n - 1) * w;
+    const y = (v) => h2 - Math.max(0.04, Math.sqrt(v)) * h2;
+    let d = `M0,${h2} L0,${y(points[0]).toFixed(1)}`;
+    for (let i = 1; i < n; i++) {
+      const mx = ((x(i - 1) + x(i)) / 2).toFixed(1);
+      d += ` C${mx},${y(points[i - 1]).toFixed(1)} ${mx},${y(points[i]).toFixed(1)} ${x(i).toFixed(1)},${y(points[i]).toFixed(1)}`;
+    }
+    return `${d} L${w},${h2} Z`;
+  }
+  function progressBarOf(el) {
+    let best = null;
+    for (let e = el; e && e !== document.body; e = e.parentElement) {
+      if (e.id === "movie_player") break;
+      const name = `${e.tagName} ${typeof e.className === "string" ? e.className : ""}`;
+      if (/progress.?bar|scrubber|timebar|seek/i.test(name)) {
+        const w = e.getBoundingClientRect().width;
+        if (!best || w > best.w) best = { el: e, w };
+      }
+    }
+    return best && best.w > 60 ? best.el : null;
+  }
+  var currentId = () => new URLSearchParams(location.search).get("v");
+  function collect2(json) {
+    const h2 = extractHeatmap(json);
+    if (!h2) return;
+    const id = h2.id || currentId();
+    if (!id) return;
+    maps.set(id, h2.points);
+    if (maps.size > 30) maps.delete(maps.keys().next().value);
+  }
+  var H4 = 40;
+  var heatmap = {
+    id: "heatmap",
+    label: "Graph der meistgesehenen Stellen beim Spulen",
+    description: "Zeigt beim Berühren der Zeitleiste über der Leiste, welche Stellen des Videos am häufigsten angesehen wurden. Die Werte kommen aus den Seitendaten von YouTube, nicht jedes Video hat welche",
+    type: "toggle",
+    default: true,
+    start() {
+      let lastInit = null;
+      const readInit = () => {
+        const init = pageWindow.ytInitialData;
+        if (init && init !== lastInit) {
+          lastInit = init;
+          collect2(init);
+        }
+      };
+      readInit();
+      const offData = onYtResponse(collect2);
+      let box = null;
+      let hideTimer = 0;
+      let showTimer = 0;
+      const hide = () => {
+        box?.remove();
+        box = null;
+      };
+      const show = (bar) => {
+        readInit();
+        const points = maps.get(currentId());
+        let mp = bar.parentElement;
+        while (mp && mp !== document.body && getComputedStyle(mp).position === "static") mp = mp.parentElement;
+        if (!points || !mp) return;
+        clearTimeout(hideTimer);
+        hide();
+        const b = bar.getBoundingClientRect();
+        const p = mp.getBoundingClientRect();
+        const ns = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("data-ytx-own", "");
+        svg.setAttribute("viewBox", `0 0 1000 ${H4}`);
+        svg.setAttribute("preserveAspectRatio", "none");
+        svg.style.cssText = `position:absolute !important;left:${b.left - p.left}px !important;top:${b.top - p.top - H4 - 2}px !important;width:${b.width}px !important;height:${H4}px !important;max-height:none !important;transform:none !important;z-index:70;pointer-events:none;opacity:.6;visibility:hidden;`;
+        const path = document.createElementNS(ns, "path");
+        path.setAttribute("d", heatmapPath(points, 1e3, H4));
+        path.setAttribute("fill", "rgba(255,255,255,.55)");
+        svg.append(path);
+        mp.append(svg);
+        box = svg;
+        clearTimeout(showTimer);
+        showTimer = setTimeout(() => {
+          if (box !== svg) return;
+          const own = [...document.querySelectorAll("yt-progress-bar-heatseeker")].some((e) => e.getBoundingClientRect().height > 4);
+          if (own) hide();
+          else svg.style.visibility = "visible";
+        }, 220);
+      };
+      const offs = [
+        listen(document, "touchstart", (e) => {
+          if (e.touches.length !== 1 || pageFromUrl(location.href) !== "watch") return;
+          const bar = progressBarOf(e.target);
+          if (bar) show(bar);
+        }, { passive: true, capture: true }),
+        listen(document, "touchend", () => {
+          if (box) hideTimer = setTimeout(hide, 700);
+        }, { passive: true, capture: true }),
+        listen(document, "touchcancel", hide, { passive: true, capture: true })
+      ];
+      return () => {
+        clearTimeout(hideTimer);
+        clearTimeout(showTimer);
+        hide();
+        offData();
+        offs.forEach((off) => off());
       };
     }
   };
@@ -12942,23 +13088,11 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
     default: true,
     start() {
       let t0 = null;
-      const barOf = (el) => {
-        let best = null;
-        for (let e = el; e && e !== document.body; e = e.parentElement) {
-          if (e.id === "movie_player") break;
-          const name = `${e.tagName} ${typeof e.className === "string" ? e.className : ""}`;
-          if (/progress.?bar|scrubber|timebar|seek/i.test(name)) {
-            const w = e.getBoundingClientRect().width;
-            if (!best || w > best.w) best = { el: e, w };
-          }
-        }
-        return best && best.w > 60 ? best.el : null;
-      };
       const offs = [
         listen(document, "touchstart", (e) => {
           t0 = null;
           if (e.touches.length !== 1 || pageFromUrl(location.href) !== "watch") return;
-          const bar = barOf(e.target);
+          const bar = progressBarOf(e.target);
           if (bar) t0 = { bar, x: e.touches[0].clientX, y: e.touches[0].clientY, at: Date.now() };
         }, { passive: true, capture: true }),
         listen(document, "touchend", (e) => {
@@ -12984,6 +13118,35 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         }, { passive: true, capture: true })
       ];
       return () => offs.forEach((off) => off());
+    }
+  };
+  var pipKeepPlaying = {
+    id: "pipKeepPlaying",
+    label: "Im kleinen Fenster weiterspielen (App)",
+    description: "Beim Verlassen der ytx-App läuft das Video im kleinen Fenster weiter. Ohne diese Einstellung pausiert YouTube es dort, wenn kein Premium-Konto angemeldet ist",
+    type: "toggle",
+    default: true,
+    start() {
+      if (!window.__ytxNative) return () => {
+      };
+      const w = pageWindow;
+      const old = {};
+      for (const [key, dim] of [["outerWidth", "width"], ["outerHeight", "height"]]) {
+        try {
+          old[key] = Object.getOwnPropertyDescriptor(w, key);
+          Object.defineProperty(w, key, { configurable: true, get: () => w.screen[dim] });
+        } catch {
+        }
+      }
+      return () => {
+        for (const key in old) {
+          try {
+            if (old[key]) Object.defineProperty(w, key, old[key]);
+            else delete w[key];
+          } catch {
+          }
+        }
+      };
     }
   };
   var appFullscreen = {
@@ -13235,7 +13398,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, relatedDates, playlistRemove];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, heatmap, relatedDates, playlistRemove];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js
@@ -14095,12 +14258,12 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   function onPage2(m) {
     return !m.pages || m.pages.includes(nav.page);
   }
-  function call(inst, hook, ...args) {
-    if (!inst?.[hook]) return;
+  function call(inst, hook2, ...args) {
+    if (!inst?.[hook2]) return;
     try {
-      inst[hook](...args);
+      inst[hook2](...args);
     } catch (e) {
-      log.error(`feature ${inst.__id} ${hook}`, e);
+      log.error(`feature ${inst.__id} ${hook2}`, e);
     }
   }
   function initFeatures(list, ctxFactory) {
@@ -15592,21 +15755,21 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
   function bars2(list, limitSec) {
     const top2 = Math.max(60, ...list.map((x) => x.sec));
     const max = limitSec && limitSec <= top2 * 1.25 ? Math.max(top2, limitSec) : top2;
-    const H4 = 90;
+    const H5 = 90;
     const few = list.length <= 14;
     const cols = list.map((x) => {
       const d = /* @__PURE__ */ new Date(`${x.day}T12:00:00`);
       const over = limitSec && x.sec > limitSec;
       return h(
         "div",
-        { title: `${x.day}: ${formatDuration(x.sec)}`, style: { flex: "1", minWidth: "6px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: "2px", height: `${H4 + (few ? 30 : 0)}px` } },
+        { title: `${x.day}: ${formatDuration(x.sec)}`, style: { flex: "1", minWidth: "6px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: "2px", height: `${H5 + (few ? 30 : 0)}px` } },
         few && x.sec ? h("span", { text: `${Math.round(x.sec / 60)}m`, style: { fontSize: "10px", opacity: ".7", whiteSpace: "nowrap" } }) : null,
-        h("div", { style: { width: "100%", height: `${x.sec ? Math.max(3, x.sec / max * H4) : 2}px`, background: over ? "var(--danger, #e53935)" : "var(--accent)", borderRadius: "3px 3px 0 0", opacity: x.sec ? "1" : ".25" } }),
+        h("div", { style: { width: "100%", height: `${x.sec ? Math.max(3, x.sec / max * H5) : 2}px`, background: over ? "var(--danger, #e53935)" : "var(--accent)", borderRadius: "3px 3px 0 0", opacity: x.sec ? "1" : ".25" } }),
         few ? h("span", { text: WD[d.getDay()], style: { fontSize: "10px", opacity: ".7" } }) : null
       );
     });
     const wrap = h("div", { style: { position: "relative", display: "flex", alignItems: "flex-end", gap: "4px", margin: "6px 0 2px" } }, ...cols);
-    if (limitSec && limitSec <= max) wrap.append(h("div", { title: `Tageslimit ${formatDuration(limitSec)}`, style: { position: "absolute", left: 0, right: 0, bottom: `${limitSec / max * H4 + (few ? 16 : 0)}px`, borderTop: "1px dashed var(--danger, #e53935)", opacity: ".7", pointerEvents: "none" } }));
+    if (limitSec && limitSec <= max) wrap.append(h("div", { title: `Tageslimit ${formatDuration(limitSec)}`, style: { position: "absolute", left: 0, right: 0, bottom: `${limitSec / max * H5 + (few ? 16 : 0)}px`, borderTop: "1px dashed var(--danger, #e53935)", opacity: ".7", pointerEvents: "none" } }));
     return wrap;
   }
   function watchStatsTab(app) {

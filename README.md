@@ -54,6 +54,7 @@ Eine richtige App mit zwei Icons, **ytx** (YouTube) und **ytx Music**, ohne Fire
 - YouTube-Links aus anderen Apps (WhatsApp, Teilen-Menü) öffnen sich in ytx. Fremde Links gehen an den normalen Browser.
 - Statusleiste in der Farbe der Seite, also auch im ytx-Theme. Vollbild bei Videos, Zurück-Taste, Teilen über das Android-Menü.
 - Profile, Einstellungen und Verlauf gelten gemeinsam für YouTube und Music in der App (getrennt von Firefox).
+- **Countdown bei geblockter Werbung**: Ohne Premium hält YouTube das Video nach geblockter Werbung einige Sekunden zurück. Im schwarzen Bild steht dann „Werbung geblockt“ mit der Restzeit.
 - **Mini-Player**: Video nach unten wischen verkleinert es unten rechts, ein neues Video ersetzt es, Tippen holt es zurück. Nach oben wischen öffnet den Vollbildmodus.
 - **Hintergrund**: Solange etwas spielt, läuft der Ton weiter, mit Titel, Vorschaubild und Tasten in der Benachrichtigung, auf dem Sperrbildschirm und an Kopfhörern. Beim Verlassen der App schwebt das Video als Bild-in-Bild über anderen Apps.
 - **Nextcloud-Abgleich** der Profile: Panel › Profile › Nextcloud-Abgleich. Adresse, Benutzer und ein in Nextcloud erzeugtes App-Passwort eintragen, dann Hochladen oder Herunterladen. Die Datei liegt unter `ytx/profiles.json`, das Passwort bleibt auf dem Gerät. Auf dem Handy muss Tailscale an sein. Erlaubte Server stehen in `build.mjs` (`@connect`), `background.js` und `manifest.json`.

@@ -139,10 +139,14 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         }, 6000);
     }
 
+    // youtube haelt videos nach geblockter werbung nur bei firefox kennung zurueck, mit chrome kennung starten sie sofort (15.11.26 gemessen)
+    static final String CHROME_UA = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36";
+
     private GeckoSession newSession() {
         GeckoSession s = new GeckoSession(new GeckoSessionSettings.Builder()
                 .userAgentMode(GeckoSessionSettings.USER_AGENT_MODE_MOBILE)
                 .viewportMode(GeckoSessionSettings.VIEWPORT_MODE_MOBILE)
+                .userAgentOverride(CHROME_UA)
                 .build());
         installDelegates(s);
         s.setMediaSessionDelegate(new org.mozilla.geckoview.MediaSession.Delegate() {

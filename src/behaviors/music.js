@@ -104,6 +104,15 @@ export const behaviors = [
       }
       sync()
       const t = setInterval(sync, 400)
+      // DBG-START
+      setInterval(() => {
+        const r = (sel) => { const e = document.querySelector(sel); if (!e) return sel + '=none'; const b = e.getBoundingClientRect(); const cs = getComputedStyle(e); return sel + '=' + [b.x, b.y, b.width, b.height].map(Math.round).join(',') + ' d=' + cs.display + ' v=' + cs.visibility + ' pos=' + cs.position + ' b=' + cs.bottom + ' tf=' + cs.transform }
+        const L = document.querySelector('ytmusic-app-layout')
+        window.__ytxAppLog?.('DBG m ' + innerWidth + 'x' + innerHeight + ' ua=' + navigator.userAgent.slice(-40) + ' st=' + L?.getAttribute('player-ui-state') + ' attrs=' + Array.from(L?.attributes || []).map((x) => x.name).join(' ') + ' | ' + ['ytmusic-player-bar', '#player-bar-background', 'ytmusic-player#player', 'ytmusic-app-layout > ytmusic-miniplayer', 'ytmusic-player-bar .middle-controls', 'ytmusic-player-bar .content-info-wrapper', '#ytx-mnav'].map(r).join(' | ') + ' nMini=' + document.querySelectorAll('ytmusic-miniplayer').length)
+        const pts = [[200, 700], [200, 740], [200, 770]].map(([x, y]) => x + ',' + y + ':' + document.elementsFromPoint(x, y).slice(0, 4).map((e) => e.tagName + (e.id ? '#' + e.id : '') + '.' + String(e.className).split(' ')[0]).join('>'))
+        window.__ytxAppLog?.('DBG pts ' + pts.join(' || '))
+      }, 3000)
+      // DBG-END
       return () => {
         clearInterval(t)
         nav.remove()

@@ -13,7 +13,8 @@
     "ios:sync": "node build.mjs && node tools/ios-sync.mjs",
     "canary": "node tools/canary.mjs",
     "audit": "node tools/selector-audit.mjs",
-    "check:phone": "node tools/phone-check.mjs"
+    "check:phone": "node tools/phone-check.mjs",
+    "check:nightly": "node tools/nightly.mjs --no-notify"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

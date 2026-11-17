@@ -76,6 +76,8 @@ export const appCheck = {
   type: 'toggle',
   default: true,
   start() {
+    // der naechtliche prueflauf (tools/nightly.mjs) fragt den zustand direkt ab
+    pageWindow.__ytxReport = report
     let on = false
     try {
       on = sessionStorage.getItem(KEY) === '1'

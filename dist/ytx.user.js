@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261117.2137
+// @version      0.4.1.20261117.2232
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -53,7 +53,8 @@
       "ios:sync": "node build.mjs && node tools/ios-sync.mjs",
       canary: "node tools/canary.mjs",
       audit: "node tools/selector-audit.mjs",
-      "check:phone": "node tools/phone-check.mjs"
+      "check:phone": "node tools/phone-check.mjs",
+      "check:nightly": "node tools/nightly.mjs --no-notify"
     },
     devDependencies: {
       esbuild: "^0.25.0"
@@ -7870,6 +7871,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     type: "toggle",
     default: true,
     start() {
+      pageWindow.__ytxReport = report;
       let on = false;
       try {
         on = sessionStorage.getItem(KEY2) === "1";

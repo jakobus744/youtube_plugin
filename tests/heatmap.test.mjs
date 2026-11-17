@@ -20,9 +20,15 @@ test('Ohne Graph', () => {
 
 test('Pfad bleibt in der Fläche', () => {
   const d = heatmapPath([0, 1, 0.5], 100, 20)
-  assert.ok(d.startsWith('M0,20 L0,19.2'))
+  assert.ok(d.startsWith('M0,20 L0,18.8'))
   assert.ok(d.endsWith('L100,20 Z'))
   assert.ok(!/NaN|-\d/.test(d))
+})
+
+test('Flache Werte werden gestreckt', () => {
+  const d = heatmapPath([0.6, 0.7, 0.65], 100, 20)
+  assert.ok(d.startsWith('M0,20 L0,18.8'))
+  assert.ok(d.includes(' 50.0,0.0 '))
 })
 
 test('Graph aus der Markerliste', () => {

@@ -2,7 +2,6 @@ import { currentTrack, navigateEndpoint, endpoints } from '../registry/music/pla
 
 // die zurueck geste der app klappt den grossen player von music zu, wie in der youtube music app
 // music legt beim oeffnen des players selbst einen verlaufseintrag an (die adresse wechselt auf /watch), die app geht dann ganz normal zurueck
-// nur ohne vorherigen eintrag (die app startet mit offenem player) bleibt zurueck wirkungslos, dafuer legt ytx einen eintrag an
 const CLOSED = ['', 'PLAYER_BAR_ONLY', 'INACTIVE', 'MINIPLAYER']
 
 const isOpen = () => {
@@ -50,41 +49,33 @@ export const musicBack = {
   default: true,
   start() {
     if (!window.__ytxNative) return () => {}
-    let pushed = false
-    // sofort reagieren statt zu warten, sonst fehlt der eintrag, wenn zurueck gleich nach dem oeffnen kommt
-    const sync = () => {
-      const open = isOpen()
-      if (open && !pushed && history.length <= 1) {
-        history.pushState({ ytxPlayer: 1 }, '', location.href)
-        pushed = true
-      } else if (!open && pushed) {
-        // selbst zugeklappt, der eigene eintrag wird wieder weggenommen
-        pushed = false
-        if (history.state?.ytxPlayer) history.back()
-      }
+    // startet die app direkt im player (letzter titel, geteilter link), fehlt darunter die startseite im verlauf
+    // zurueck sprang dann ins leere oder oeffnete den player wieder, deshalb die startseite als eintrag darunter legen
+    const underlay = () => {
+      if (history.length !== 1 || !location.pathname.startsWith('/watch') || history.state?.ytxHome) return
+      const st = history.state
+      const url = location.href
+      history.replaceState({ ytxHome: 1, command: { browseEndpoint: { browseId: 'FEmusic_home' } } }, '', '/')
+      history.pushState(st, '', url)
     }
-    let mo = null
-    const watch = () => {
-      const layout = document.querySelector('ytmusic-app-layout')
-      if (!layout || mo) return !!mo
-      mo = new MutationObserver(sync)
-      mo.observe(layout, { attributes: true, attributeFilter: ['player-ui-state'] })
-      sync()
-      return true
+    // music zeigt beim zurueckspringen auf diesen eintrag sonst nichts an, dann selbst zur startseite
+    const onPop = () => {
+      if (!history.state?.ytxHome) return
+      setTimeout(() => {
+        if (isOpen()) collapse()
+        if (!document.querySelector('ytmusic-browse-response:not([hidden])')) location.replace('/')
+      }, 400)
     }
     // das layout entsteht erst nach dem start der seite
-    const wait = setInterval(() => watch() && clearInterval(wait), 400)
-    const onPop = () => {
-      if (pushed && isOpen()) {
-        pushed = false
-        collapse()
-      } else pushed = false
-    }
+    const wait = setInterval(() => {
+      if (!document.querySelector('ytmusic-app-layout')) return
+      clearInterval(wait)
+      underlay()
+    }, 300)
     window.addEventListener('popstate', onPop, true)
     document.addEventListener('click', openFromBar, true)
     return () => {
       clearInterval(wait)
-      mo?.disconnect()
       window.removeEventListener('popstate', onPop, true)
       document.removeEventListener('click', openFromBar, true)
     }

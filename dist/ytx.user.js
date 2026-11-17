@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261116.1953
+// @version      0.4.1.20261117.2137
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -52,7 +52,8 @@
       apk: "node build.mjs && cd android && .\\gradlew.bat --no-daemon apk",
       "ios:sync": "node build.mjs && node tools/ios-sync.mjs",
       canary: "node tools/canary.mjs",
-      audit: "node tools/selector-audit.mjs"
+      audit: "node tools/selector-audit.mjs",
+      "check:phone": "node tools/phone-check.mjs"
     },
     devDependencies: {
       esbuild: "^0.25.0"
@@ -3592,11 +3593,11 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
         const icon = ref?.querySelector("svg");
         const label = ref && [...ref.querySelectorAll("span, yt-formatted-string, div")].find((x) => x.children.length === 0 && x.textContent.trim());
         if (icon && label) {
-          const box = item.getBoundingClientRect();
+          const box2 = item.getBoundingClientRect();
           const ir = icon.getBoundingClientRect();
           const lr = label.getBoundingClientRect();
           const cs = getComputedStyle(label);
-          Object.assign(item.style, { paddingLeft: `${Math.max(0, ir.left - box.left)}px`, gap: `${Math.max(0, lr.left - ir.right)}px`, minHeight: `${ref.getBoundingClientRect().height}px`, font: cs.font, color: cs.color });
+          Object.assign(item.style, { paddingLeft: `${Math.max(0, ir.left - box2.left)}px`, gap: `${Math.max(0, lr.left - ir.right)}px`, minHeight: `${ref.getBoundingClientRect().height}px`, font: cs.font, color: cs.color });
           item.querySelector("svg").style.cssText = `width:${ir.width}px;height:${ir.height}px`;
         }
         for (let e = list, i = 0; e && i < 6; e = e.parentElement, i++) {
@@ -4148,7 +4149,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         stats2.panel = { shown, loaded };
         return stats2.panel;
       }
-      function box(kind) {
+      function box2(kind) {
         const input = h("input", { type: "search", placeholder: "In Playlist suchen: Titel oder Kanal", value: q2[kind], spellcheck: "false" });
         const info2 = h("span", { class: "ytx-note" });
         Object.assign(input.style, { all: "initial", boxSizing: "border-box", flex: "1", minWidth: "0", height: "34px", padding: "0 12px", borderRadius: "17px", font: "400 14px Roboto, Arial, sans-serif", color: "var(--yt-sys-color-baseline--text-primary, #f1f1f1)", background: "var(--yt-sys-color-baseline--additive-background, rgba(255,255,255,.08))", border: "1px solid var(--yt-sys-color-baseline--outline, rgba(255,255,255,.15))" });
@@ -4195,14 +4196,14 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         anchor: "playlist.header",
         position: "after",
         when: () => ctx.nav.page === "playlist",
-        create: () => box("page")
+        create: () => box2("page")
       });
       const panelMount = ctx.mount({
         id: "watch.playlist.search",
         anchor: "watch.playlistHeader",
         position: "append",
         when: () => ctx.nav.page === "watch" && !!playlistPanel3.read(),
-        create: () => box("panel")
+        create: () => box2("panel")
       });
       return {
         // nachgeladene eintraege gleich mitfiltern
@@ -7487,38 +7488,29 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     start() {
       if (!window.__ytxNative) return () => {
       };
-      let pushed = false;
-      const sync = () => {
-        const open = isOpen();
-        if (open && !pushed && history.length <= 1) {
-          history.pushState({ ytxPlayer: 1 }, "", location.href);
-          pushed = true;
-        } else if (!open && pushed) {
-          pushed = false;
-          if (history.state?.ytxPlayer) history.back();
-        }
+      const underlay = () => {
+        if (history.length !== 1 || !location.pathname.startsWith("/watch") || history.state?.ytxHome) return;
+        const st = history.state;
+        const url = location.href;
+        history.replaceState({ ytxHome: 1, command: { browseEndpoint: { browseId: "FEmusic_home" } } }, "", "/");
+        history.pushState(st, "", url);
       };
-      let mo = null;
-      const watch4 = () => {
-        const layout = document.querySelector("ytmusic-app-layout");
-        if (!layout || mo) return !!mo;
-        mo = new MutationObserver(sync);
-        mo.observe(layout, { attributes: true, attributeFilter: ["player-ui-state"] });
-        sync();
-        return true;
-      };
-      const wait = setInterval(() => watch4() && clearInterval(wait), 400);
       const onPop = () => {
-        if (pushed && isOpen()) {
-          pushed = false;
-          collapse();
-        } else pushed = false;
+        if (!history.state?.ytxHome) return;
+        setTimeout(() => {
+          if (isOpen()) collapse();
+          if (!document.querySelector("ytmusic-browse-response:not([hidden])")) location.replace("/");
+        }, 400);
       };
+      const wait = setInterval(() => {
+        if (!document.querySelector("ytmusic-app-layout")) return;
+        clearInterval(wait);
+        underlay();
+      }, 300);
       window.addEventListener("popstate", onPop, true);
       document.addEventListener("click", openFromBar, true);
       return () => {
         clearInterval(wait);
-        mo?.disconnect();
         window.removeEventListener("popstate", onPop, true);
         document.removeEventListener("click", openFromBar, true);
       };
@@ -7592,6 +7584,312 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     }
   };
 
+  // src/core/diagnose.js
+  var checks = /* @__PURE__ */ new Map();
+  function registerCheck(id, group, label, run2) {
+    checks.set(id, { id, group, label, run: run2 });
+    return () => checks.delete(id);
+  }
+  function runChecks() {
+    const out = [];
+    for (const c of checks.values()) {
+      let r;
+      try {
+        r = c.run() || { status: "skip", detail: "" };
+      } catch (e) {
+        r = { status: "fail", detail: `Prüfung abgestürzt: ${e.message}` };
+        log.error(`check ${c.id}`, e);
+      }
+      const list = Array.isArray(r) ? r : [r];
+      for (const item of list) out.push({ id: item.id || c.id, group: c.group, label: item.label || c.label, status: item.status, detail: item.detail || "" });
+    }
+    return out;
+  }
+  function summarize2(results) {
+    const s = { ok: 0, warn: 0, fail: 0, skip: 0 };
+    for (const r of results) s[r.status] = (s[r.status] || 0) + 1;
+    return s;
+  }
+  function reportText(results, meta) {
+    const lines2 = [`ytx Diagnose ${(/* @__PURE__ */ new Date()).toISOString()}`, ...Object.entries(meta).map(([k, v]) => `${k}: ${v}`), ""];
+    let group = null;
+    for (const r of results) {
+      if (r.group !== group) {
+        group = r.group;
+        lines2.push(`## ${group}`);
+      }
+      lines2.push(`[${r.status.toUpperCase()}] ${r.label}${r.detail ? ` – ${r.detail}` : ""}`);
+    }
+    const errs = log.entries().filter((e) => e.level !== "info");
+    if (errs.length) {
+      lines2.push("", "## Log");
+      for (const e of errs.slice(-30)) lines2.push(`${new Date(e.t).toISOString()} ${e.level} ${e.msg}${e.n > 1 ? ` ×${e.n}` : ""}`);
+    }
+    return lines2.join("\n");
+  }
+
+  // src/core/ytResponses.js
+  var listeners = /* @__PURE__ */ new Set();
+  var hooked = false;
+  function hook() {
+    if (hooked) return;
+    hooked = true;
+    const w = pageWindow;
+    const orig = w.fetch;
+    if (typeof orig !== "function") return;
+    w.fetch = function(...a) {
+      const p = orig.apply(this, a);
+      try {
+        const url = String(a[0]?.url || a[0]);
+        if (listeners.size && /\/youtubei\/v1\/(next|get_watch|browse|search)/.test(url)) {
+          p.then((r) => r.clone().json()).then((j) => {
+            for (const fn of listeners) {
+              try {
+                fn(j);
+              } catch {
+              }
+            }
+          }).catch(() => {
+          });
+        }
+      } catch {
+      }
+      return p;
+    };
+  }
+  function onYtResponse(fn) {
+    hook();
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  }
+
+  // src/behaviors/heatmap.js
+  var maps = /* @__PURE__ */ new Map();
+  function find(o, key, d = 0) {
+    if (!o || typeof o !== "object" || d > 40) return void 0;
+    if (!Array.isArray(o) && o[key] !== void 0) return o[key];
+    for (const k in o) {
+      const hit = find(o[k], key, d + 1);
+      if (hit !== void 0) return hit;
+    }
+    return void 0;
+  }
+  function findHeatList(o, d = 0) {
+    if (!o || typeof o !== "object" || d > 40) return void 0;
+    if (o.markerType === "MARKER_TYPE_HEATMAP" && Array.isArray(o.markers)) return o.markers;
+    for (const k in o) {
+      const hit = findHeatList(o[k], d + 1);
+      if (hit !== void 0) return hit;
+    }
+    return void 0;
+  }
+  function extractHeatmap(json) {
+    const raw = find(json, "heatMarkers") || findHeatList(json);
+    if (!Array.isArray(raw) || raw.length < 2) return null;
+    const points = raw.map((m) => m?.heatMarkerRenderer || m).map((m) => ({ t: Number(m?.timeRangeStartMillis ?? m?.startMillis) || 0, v: Number(m?.heatMarkerIntensityScoreNormalized ?? m?.intensityScoreNormalized) })).filter((p) => Number.isFinite(p.v)).sort((a, b) => a.t - b.t).map((p) => Math.min(1, Math.max(0, p.v)));
+    if (points.length < 2) return null;
+    const id = find(find(json, "currentVideoEndpoint"), "videoId");
+    return { id: typeof id === "string" ? id : null, points };
+  }
+  function heatmapPath(points, w, h2) {
+    const n = points.length;
+    const x = (i) => i / (n - 1) * w;
+    const lo = Math.min(...points);
+    const span = Math.max(...points) - lo;
+    const y = (v) => h2 - Math.max(0.06, span > 0.05 ? (v - lo) / span : v) * h2;
+    let d = `M0,${h2} L0,${y(points[0]).toFixed(1)}`;
+    for (let i = 1; i < n; i++) {
+      const mx = ((x(i - 1) + x(i)) / 2).toFixed(1);
+      d += ` C${mx},${y(points[i - 1]).toFixed(1)} ${mx},${y(points[i]).toFixed(1)} ${x(i).toFixed(1)},${y(points[i]).toFixed(1)}`;
+    }
+    return `${d} L${w},${h2} Z`;
+  }
+  function progressBarOf(el) {
+    let best = null;
+    for (let e = el; e && e !== document.body; e = e.parentElement) {
+      if (e.id === "movie_player") break;
+      const name = `${e.tagName} ${typeof e.className === "string" ? e.className : ""}`;
+      if (/progress.?bar|scrubber|timebar|seek/i.test(name)) {
+        const w = e.getBoundingClientRect().width;
+        if (!best || w > best.w) best = { el: e, w };
+      }
+    }
+    return best && best.w > 60 ? best.el : null;
+  }
+  function heatmapFor(id) {
+    if (!maps.has(id)) collect(pageWindow.ytInitialData);
+    return maps.get(id) || null;
+  }
+  var currentId = () => new URLSearchParams(location.search).get("v");
+  function collect(json) {
+    const h2 = extractHeatmap(json);
+    if (!h2) return;
+    const id = h2.id || currentId();
+    if (!id) return;
+    maps.set(id, h2.points);
+    if (maps.size > 30) maps.delete(maps.keys().next().value);
+  }
+  var H4 = 40;
+  var heatmap = {
+    id: "heatmap",
+    label: "Graph der meistgesehenen Stellen beim Spulen",
+    description: "Zeigt beim Berühren der Zeitleiste über der Leiste, welche Stellen des Videos am häufigsten angesehen wurden. Die Werte kommen aus den Seitendaten von YouTube, nicht jedes Video hat welche",
+    type: "toggle",
+    default: true,
+    start() {
+      let lastInit = null;
+      const readInit = () => {
+        const init = pageWindow.ytInitialData;
+        if (init && init !== lastInit) {
+          lastInit = init;
+          collect(init);
+        }
+      };
+      readInit();
+      const offData = onYtResponse(collect);
+      let box2 = null;
+      let hideTimer = 0;
+      let showTimer = 0;
+      const hide = () => {
+        box2?.remove();
+        box2 = null;
+      };
+      const show = (bar) => {
+        readInit();
+        const points = maps.get(currentId());
+        let mp = bar.parentElement;
+        while (mp && mp !== document.body && getComputedStyle(mp).position === "static") mp = mp.parentElement;
+        if (!points || !mp) return;
+        clearTimeout(hideTimer);
+        hide();
+        const b = bar.getBoundingClientRect();
+        const p = mp.getBoundingClientRect();
+        const ns = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(ns, "svg");
+        svg.setAttribute("data-ytx-own", "");
+        svg.setAttribute("viewBox", `0 0 1000 ${H4}`);
+        svg.setAttribute("preserveAspectRatio", "none");
+        svg.style.cssText = `position:absolute !important;left:${b.left - p.left}px !important;top:${b.top - p.top - H4 - 2}px !important;width:${b.width}px !important;height:${H4}px !important;max-height:none !important;transform:none !important;z-index:70;pointer-events:none;opacity:.8;visibility:hidden;`;
+        const path = document.createElementNS(ns, "path");
+        path.setAttribute("d", heatmapPath(points, 1e3, H4));
+        path.setAttribute("fill", "rgba(255,255,255,.55)");
+        svg.append(path);
+        mp.append(svg);
+        box2 = svg;
+        clearTimeout(showTimer);
+        showTimer = setTimeout(() => {
+          if (box2 !== svg) return;
+          const own = [...document.querySelectorAll("yt-progress-bar-heatseeker")].some((e) => e.getBoundingClientRect().height > 4);
+          if (own) hide();
+          else svg.style.visibility = "visible";
+        }, 220);
+      };
+      const offs = [
+        listen(document, "touchstart", (e) => {
+          if (e.touches.length !== 1 || pageFromUrl(location.href) !== "watch") return;
+          const bar = progressBarOf(e.target);
+          if (bar) show(bar);
+        }, { passive: true, capture: true }),
+        listen(document, "touchend", () => {
+          if (box2) hideTimer = setTimeout(hide, 700);
+        }, { passive: true, capture: true }),
+        listen(document, "touchcancel", hide, { passive: true, capture: true })
+      ];
+      return () => {
+        clearTimeout(hideTimer);
+        clearTimeout(showTimer);
+        hide();
+        offData();
+        offs.forEach((off) => off());
+      };
+    }
+  };
+
+  // src/behaviors/appCheck.js
+  var KEY2 = "ytx.appCheck";
+  try {
+    if (/ytxcheck/.test(location.hash)) sessionStorage.setItem(KEY2, "1");
+  } catch {
+  }
+  var round = (n) => Math.round(n * 10) / 10;
+  function box(el) {
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    const cs = getComputedStyle(el);
+    let shown = r.width > 0 && r.height > 0 && cs.display !== "none" && r.bottom > 0 && r.top < innerHeight;
+    let hit = null;
+    if (shown) {
+      hit = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 20));
+      shown = !!hit && (hit === el || el.contains(hit) || !!hit.closest?.("[data-ytx-own]"));
+    }
+    const out = { shown, y: Math.round(r.top), h: Math.round(r.height) };
+    if (hit && !shown) out.cover = `${hit.localName}${hit.id ? "#" + hit.id : ""}.${String(hit.className?.baseVal ?? hit.className).split(" ")[0]}`;
+    return out;
+  }
+  function media() {
+    const v = document.querySelector("#movie_player video, ytmusic-player video, video");
+    if (!v) return null;
+    return { ready: v.readyState, paused: v.paused, t: round(v.currentTime), muted: v.muted };
+  }
+  function report() {
+    const host2 = location.hostname;
+    const r = {
+      t: Date.now(),
+      host: host2,
+      path: location.pathname + location.search.slice(0, 20),
+      size: `${innerWidth}x${innerHeight}`,
+      version: pageWindow.__ytx?.version || null,
+      media: media(),
+      fullscreen: !!document.fullscreenElement
+    };
+    try {
+      r.diag = summarize2(runChecks());
+    } catch {
+    }
+    if (host2.startsWith("music.")) {
+      const layout = document.querySelector("ytmusic-app-layout");
+      r.ui = layout?.getAttribute("player-ui-state") || null;
+      r.bar = box(document.querySelector("ytmusic-app-layout > ytmusic-miniplayer") || document.querySelector("ytmusic-app-layout > ytmusic-player-bar") || document.querySelector("ytmusic-player-bar"));
+      r.nav = box(document.getElementById("ytx-mnav"));
+      r.avToggle = box(document.querySelector("ytmusic-player-page ytmusic-av-toggle"));
+      r.history = history.length;
+      r.homeBelow = !!history.state?.ytxHome;
+    } else {
+      const id = new URLSearchParams(location.search).get("v");
+      r.feed = document.querySelectorAll("ytm-rich-item-renderer, ytm-video-with-context-renderer, ytm-compact-video-renderer").length;
+      r.player = box(document.getElementById("movie_player"));
+      r.heatmap = id ? !!heatmapFor(id) : null;
+      r.adWait = !!document.querySelector(".ytx-adwait");
+    }
+    return r;
+  }
+  var appCheck = {
+    id: "appCheck",
+    label: "Prüfmodus für das Prüfskript (App)",
+    description: "Nur für tools/phone-check.mjs: Ist eine Seite mit #ytxcheck geöffnet, meldet ytx ihren Zustand ins Android-Log. Sonst passiert nichts",
+    type: "toggle",
+    default: true,
+    start() {
+      let on = false;
+      try {
+        on = sessionStorage.getItem(KEY2) === "1";
+      } catch {
+      }
+      if (!window.__ytxNative || !on) return () => {
+      };
+      const send = () => {
+        try {
+          window.__ytxAppLog?.("YTXCHECK " + JSON.stringify(report()));
+        } catch (e) {
+          window.__ytxAppLog?.("YTXCHECK " + JSON.stringify({ t: Date.now(), error: e.message }));
+        }
+      };
+      send();
+      const timer2 = setInterval(send, 1500);
+      return () => clearInterval(timer2);
+    }
+  };
+
   // src/behaviors/music.js
   function clickConfirm(dialog) {
     const btn2 = dialog.querySelector("yt-button-renderer#confirm-button button, #confirm-button button, yt-button-renderer button, button");
@@ -7626,10 +7924,10 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     if (key === "search") {
       const sb = document.querySelector("ytmusic-nav-bar yt-icon-button.search-button");
       tapEl(sb?.querySelector("button") || sb);
-      const box = document.querySelector("ytmusic-nav-bar ytmusic-search-box");
+      const box2 = document.querySelector("ytmusic-nav-bar ytmusic-search-box");
       try {
-        if (box) box.opened = true;
-        if (box?.polymerController) box.polymerController.opened = true;
+        if (box2) box2.opened = true;
+        if (box2?.polymerController) box2.polymerController.opened = true;
       } catch {
       }
       setTimeout(() => document.querySelector("ytmusic-search-box input#input, ytmusic-search-box input")?.focus(), 250);
@@ -7811,7 +8109,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     shareClean,
     musicBack,
     musicByline,
-    musicRows
+    musicRows,
+    appCheck
   ];
   var behaviorById2 = Object.fromEntries(behaviors2.map((b) => [b.id, b]));
 
@@ -8809,15 +9108,15 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   };
 
   // src/features/music/ytxQueue.js
-  var KEY2 = "ytx.music.queue";
-  var listeners = /* @__PURE__ */ new Set();
+  var KEY3 = "ytx.music.queue";
+  var listeners2 = /* @__PURE__ */ new Set();
   var q = load2();
   var timer = null;
   var prev = null;
   var lastJumpAt = 0;
   function load2() {
     try {
-      const v = JSON.parse(sessionStorage.getItem(KEY2) || "null");
+      const v = JSON.parse(sessionStorage.getItem(KEY3) || "null");
       if (v && Array.isArray(v.items)) return v;
     } catch {
     }
@@ -8825,10 +9124,10 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   }
   function save() {
     try {
-      sessionStorage.setItem(KEY2, JSON.stringify(q));
+      sessionStorage.setItem(KEY3, JSON.stringify(q));
     } catch {
     }
-    for (const fn of listeners) {
+    for (const fn of listeners2) {
       try {
         fn(q);
       } catch {
@@ -8897,8 +9196,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       return q;
     },
     on(fn) {
-      listeners.add(fn);
-      return () => listeners.delete(fn);
+      listeners2.add(fn);
+      return () => listeners2.delete(fn);
     },
     async play(items, { start = 0, title = "" } = {}) {
       q = { items: items.map((x) => ({ videoId: x.videoId, title: x.title, artists: x.artists || [], album: x.album || null, durationSec: x.durationSec || null, thumbnail: x.thumbnail || "", reasons: x.reasons || [] })), index: -1, active: true, title, note: "" };
@@ -9241,12 +9540,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     else if (f.type === "playlist") navigateEndpoint(endpoints.browse(`VL${f.id}`, null, "PLAYLIST"));
   }
   function favCard(f) {
-    const round = f.type === "artist";
+    const round2 = f.type === "artist";
     const sub = f.type === "artist" ? "Künstler" : [TYPE_LABEL[f.type], (f.artists || []).map((a) => a.name).join(", ")].filter(Boolean).join(" · ");
-    const img = f.thumbnail ? h("img", { src: f.thumbnail, loading: "lazy", alt: "", style: { width: "150px", height: "150px", borderRadius: round ? "50%" : "4px", objectFit: "cover", background: "rgba(255,255,255,.08)" } }) : h("div", { text: (f.name || "?").slice(0, 1).toUpperCase(), style: { width: "150px", height: "150px", borderRadius: round ? "50%" : "4px", background: "rgba(255,255,255,.08)", display: "flex", alignItems: "center", justifyContent: "center", font: "500 48px Roboto, Arial, sans-serif", color: C4.secondary } });
+    const img = f.thumbnail ? h("img", { src: f.thumbnail, loading: "lazy", alt: "", style: { width: "150px", height: "150px", borderRadius: round2 ? "50%" : "4px", objectFit: "cover", background: "rgba(255,255,255,.08)" } }) : h("div", { text: (f.name || "?").slice(0, 1).toUpperCase(), style: { width: "150px", height: "150px", borderRadius: round2 ? "50%" : "4px", background: "rgba(255,255,255,.08)", display: "flex", alignItems: "center", justifyContent: "center", font: "500 48px Roboto, Arial, sans-serif", color: C4.secondary } });
     const card2 = h(
       "div",
-      { title: f.name, style: { flex: "none", width: "150px", cursor: "pointer", color: C4.primary, font: "400 13px/1.35 Roboto, Arial, sans-serif", textAlign: round ? "center" : "left" } },
+      { title: f.name, style: { flex: "none", width: "150px", cursor: "pointer", color: C4.primary, font: "400 13px/1.35 Roboto, Arial, sans-serif", textAlign: round2 ? "center" : "left" } },
       img,
       h("div", { text: `${(f.weight ?? 1) > 1 ? "★ " : ""}${f.name || f.id}`, style: { marginTop: "6px", fontWeight: "500", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } }),
       h("div", { text: sub, style: { color: C4.secondary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } })
@@ -9676,7 +9975,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
   function activeProviders(prefs) {
     return providers.filter((p) => prefs.providers?.[p.id]?.enabled && p.available(prefs));
   }
-  async function collect(prefs, method, ...args) {
+  async function collect2(prefs, method, ...args) {
     const out = [];
     for (const p of activeProviders(prefs)) {
       if (typeof p[method] !== "function") continue;
@@ -9690,8 +9989,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     return out;
   }
   var metadata = {
-    similarArtists: (artist, prefs) => collect(prefs, "similarArtists", artist),
-    genresOf: async (artist, prefs) => [...new Set(await collect(prefs, "genresOf", artist))],
+    similarArtists: (artist, prefs) => collect2(prefs, "similarArtists", artist),
+    genresOf: async (artist, prefs) => [...new Set(await collect2(prefs, "genresOf", artist))],
     status(prefs) {
       return providers.map((p) => ({ id: p.id, label: p.label, external: p.external, enabled: !!prefs.providers?.[p.id]?.enabled, available: p.available(prefs), note: p.note, lastError: p.lastError || null }));
     }
@@ -9714,7 +10013,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     if (!t?.videoId) return null;
     return { videoId: t.videoId, title: t.title, artists: t.artists || [], album: t.album || null, year: t.year ?? null, durationSec: t.durationSec || null, thumbnail: t.thumbnail || "", videoType: t.videoType || null, sources: [source] };
   }
-  function budget(max, report) {
+  function budget(max, report2) {
     const start = loader.stats.requests;
     const errors = [];
     return {
@@ -9730,7 +10029,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           if (!/nicht im cache/.test(e.message)) errors.push(e.message);
           return null;
         } finally {
-          report?.(loader.stats.requests - start, max);
+          report2?.(loader.stats.requests - start, max);
         }
       }
     };
@@ -10281,16 +10580,16 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         }[ui.tab];
         const parts = [what, `Regler ${Math.round(disc * 100)} von 100`];
         if (session) parts.push(`Session ${SESSION_PRESETS.find((p) => p.id === session.presetId)?.label || session.presetId}: filtert ${(SESSION_PRESETS.find((p) => p.id === session.presetId)?.extraTerms || []).join(", ") || "nichts extra"}`);
-        const box = h("div", { class: "info", style: { flexBasis: "100%", fontSize: "12px", opacity: ".75", lineHeight: "1.4" } }, `Berücksichtigt: ${parts.join(" · ")}`);
+        const box2 = h("div", { class: "info", style: { flexBasis: "100%", fontSize: "12px", opacity: ".75", lineHeight: "1.4" } }, `Berücksichtigt: ${parts.join(" · ")}`);
         if (ui.tab === "forYou" && favs.length) {
           const cb = h("input", { type: "checkbox", checked: prefs.genres.inForYou, style: { verticalAlign: "middle", margin: "0 4px 0 10px" } });
           cb.addEventListener("change", () => {
             music.updatePrefs((p) => p.genres.inForYou = cb.checked);
             load4(true, true);
           });
-          box.append(h("label", { style: { whiteSpace: "nowrap", cursor: "pointer" } }, cb, "Lieblingsgenres einbeziehen"));
+          box2.append(h("label", { style: { whiteSpace: "nowrap", cursor: "pointer" } }, cb, "Lieblingsgenres einbeziehen"));
         }
-        return box;
+        return box2;
       }
       function mixArgs() {
         const disc = ui.discovery;
@@ -11562,50 +11861,6 @@ ${data2.source}` : ""].join("\n").trim();
   // src/features/music/index.js
   var featureManifests2 = [historyFeature, favoritesFeature, hubFeature, releasesFeature, weeklyFeature, smartQueueFeature, queueInfoFeature, lyricsFeature, audioFeature, sleepTimerFeature];
 
-  // src/core/diagnose.js
-  var checks = /* @__PURE__ */ new Map();
-  function registerCheck(id, group, label, run2) {
-    checks.set(id, { id, group, label, run: run2 });
-    return () => checks.delete(id);
-  }
-  function runChecks() {
-    const out = [];
-    for (const c of checks.values()) {
-      let r;
-      try {
-        r = c.run() || { status: "skip", detail: "" };
-      } catch (e) {
-        r = { status: "fail", detail: `Prüfung abgestürzt: ${e.message}` };
-        log.error(`check ${c.id}`, e);
-      }
-      const list = Array.isArray(r) ? r : [r];
-      for (const item of list) out.push({ id: item.id || c.id, group: c.group, label: item.label || c.label, status: item.status, detail: item.detail || "" });
-    }
-    return out;
-  }
-  function summarize2(results) {
-    const s = { ok: 0, warn: 0, fail: 0, skip: 0 };
-    for (const r of results) s[r.status] = (s[r.status] || 0) + 1;
-    return s;
-  }
-  function reportText(results, meta) {
-    const lines2 = [`ytx Diagnose ${(/* @__PURE__ */ new Date()).toISOString()}`, ...Object.entries(meta).map(([k, v]) => `${k}: ${v}`), ""];
-    let group = null;
-    for (const r of results) {
-      if (r.group !== group) {
-        group = r.group;
-        lines2.push(`## ${group}`);
-      }
-      lines2.push(`[${r.status.toUpperCase()}] ${r.label}${r.detail ? ` – ${r.detail}` : ""}`);
-    }
-    const errs = log.entries().filter((e) => e.level !== "info");
-    if (errs.length) {
-      lines2.push("", "## Log");
-      for (const e of errs.slice(-30)) lines2.push(`${new Date(e.t).toISOString()} ${e.level} ${e.msg}${e.n > 1 ? ` ×${e.n}` : ""}`);
-    }
-    return lines2.join("\n");
-  }
-
   // src/core/observer.js
   var subs2 = /* @__PURE__ */ new Map();
   var running = false;
@@ -12287,41 +12542,6 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     return decl.length ? `html:root:root { ${decl.join(" ")} }` : "";
   }
 
-  // src/core/ytResponses.js
-  var listeners2 = /* @__PURE__ */ new Set();
-  var hooked = false;
-  function hook() {
-    if (hooked) return;
-    hooked = true;
-    const w = pageWindow;
-    const orig = w.fetch;
-    if (typeof orig !== "function") return;
-    w.fetch = function(...a) {
-      const p = orig.apply(this, a);
-      try {
-        const url = String(a[0]?.url || a[0]);
-        if (listeners2.size && /\/youtubei\/v1\/(next|get_watch|browse|search)/.test(url)) {
-          p.then((r) => r.clone().json()).then((j) => {
-            for (const fn of listeners2) {
-              try {
-                fn(j);
-              } catch {
-              }
-            }
-          }).catch(() => {
-          });
-        }
-      } catch {
-      }
-      return p;
-    };
-  }
-  function onYtResponse(fn) {
-    hook();
-    listeners2.add(fn);
-    return () => listeners2.delete(fn);
-  }
-
   // src/behaviors/relatedDates.js
   var dates = /* @__PURE__ */ new Map();
   var textOf = (t) => t?.runs ? t.runs.map((r) => r.text).join("") : t?.simpleText || t?.content || "";
@@ -12560,142 +12780,6 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
     }
   };
 
-  // src/behaviors/heatmap.js
-  var maps = /* @__PURE__ */ new Map();
-  function find(o, key, d = 0) {
-    if (!o || typeof o !== "object" || d > 40) return void 0;
-    if (!Array.isArray(o) && o[key] !== void 0) return o[key];
-    for (const k in o) {
-      const hit = find(o[k], key, d + 1);
-      if (hit !== void 0) return hit;
-    }
-    return void 0;
-  }
-  function findHeatList(o, d = 0) {
-    if (!o || typeof o !== "object" || d > 40) return void 0;
-    if (o.markerType === "MARKER_TYPE_HEATMAP" && Array.isArray(o.markers)) return o.markers;
-    for (const k in o) {
-      const hit = findHeatList(o[k], d + 1);
-      if (hit !== void 0) return hit;
-    }
-    return void 0;
-  }
-  function extractHeatmap(json) {
-    const raw = find(json, "heatMarkers") || findHeatList(json);
-    if (!Array.isArray(raw) || raw.length < 2) return null;
-    const points = raw.map((m) => m?.heatMarkerRenderer || m).map((m) => ({ t: Number(m?.timeRangeStartMillis ?? m?.startMillis) || 0, v: Number(m?.heatMarkerIntensityScoreNormalized ?? m?.intensityScoreNormalized) })).filter((p) => Number.isFinite(p.v)).sort((a, b) => a.t - b.t).map((p) => Math.min(1, Math.max(0, p.v)));
-    if (points.length < 2) return null;
-    const id = find(find(json, "currentVideoEndpoint"), "videoId");
-    return { id: typeof id === "string" ? id : null, points };
-  }
-  function heatmapPath(points, w, h2) {
-    const n = points.length;
-    const x = (i) => i / (n - 1) * w;
-    const y = (v) => h2 - Math.max(0.04, Math.sqrt(v)) * h2;
-    let d = `M0,${h2} L0,${y(points[0]).toFixed(1)}`;
-    for (let i = 1; i < n; i++) {
-      const mx = ((x(i - 1) + x(i)) / 2).toFixed(1);
-      d += ` C${mx},${y(points[i - 1]).toFixed(1)} ${mx},${y(points[i]).toFixed(1)} ${x(i).toFixed(1)},${y(points[i]).toFixed(1)}`;
-    }
-    return `${d} L${w},${h2} Z`;
-  }
-  function progressBarOf(el) {
-    let best = null;
-    for (let e = el; e && e !== document.body; e = e.parentElement) {
-      if (e.id === "movie_player") break;
-      const name = `${e.tagName} ${typeof e.className === "string" ? e.className : ""}`;
-      if (/progress.?bar|scrubber|timebar|seek/i.test(name)) {
-        const w = e.getBoundingClientRect().width;
-        if (!best || w > best.w) best = { el: e, w };
-      }
-    }
-    return best && best.w > 60 ? best.el : null;
-  }
-  var currentId = () => new URLSearchParams(location.search).get("v");
-  function collect2(json) {
-    const h2 = extractHeatmap(json);
-    if (!h2) return;
-    const id = h2.id || currentId();
-    if (!id) return;
-    maps.set(id, h2.points);
-    if (maps.size > 30) maps.delete(maps.keys().next().value);
-  }
-  var H4 = 40;
-  var heatmap = {
-    id: "heatmap",
-    label: "Graph der meistgesehenen Stellen beim Spulen",
-    description: "Zeigt beim Berühren der Zeitleiste über der Leiste, welche Stellen des Videos am häufigsten angesehen wurden. Die Werte kommen aus den Seitendaten von YouTube, nicht jedes Video hat welche",
-    type: "toggle",
-    default: true,
-    start() {
-      let lastInit = null;
-      const readInit = () => {
-        const init = pageWindow.ytInitialData;
-        if (init && init !== lastInit) {
-          lastInit = init;
-          collect2(init);
-        }
-      };
-      readInit();
-      const offData = onYtResponse(collect2);
-      let box = null;
-      let hideTimer = 0;
-      let showTimer = 0;
-      const hide = () => {
-        box?.remove();
-        box = null;
-      };
-      const show = (bar) => {
-        readInit();
-        const points = maps.get(currentId());
-        let mp = bar.parentElement;
-        while (mp && mp !== document.body && getComputedStyle(mp).position === "static") mp = mp.parentElement;
-        if (!points || !mp) return;
-        clearTimeout(hideTimer);
-        hide();
-        const b = bar.getBoundingClientRect();
-        const p = mp.getBoundingClientRect();
-        const ns = "http://www.w3.org/2000/svg";
-        const svg = document.createElementNS(ns, "svg");
-        svg.setAttribute("data-ytx-own", "");
-        svg.setAttribute("viewBox", `0 0 1000 ${H4}`);
-        svg.setAttribute("preserveAspectRatio", "none");
-        svg.style.cssText = `position:absolute !important;left:${b.left - p.left}px !important;top:${b.top - p.top - H4 - 2}px !important;width:${b.width}px !important;height:${H4}px !important;max-height:none !important;transform:none !important;z-index:70;pointer-events:none;opacity:.6;visibility:hidden;`;
-        const path = document.createElementNS(ns, "path");
-        path.setAttribute("d", heatmapPath(points, 1e3, H4));
-        path.setAttribute("fill", "rgba(255,255,255,.55)");
-        svg.append(path);
-        mp.append(svg);
-        box = svg;
-        clearTimeout(showTimer);
-        showTimer = setTimeout(() => {
-          if (box !== svg) return;
-          const own = [...document.querySelectorAll("yt-progress-bar-heatseeker")].some((e) => e.getBoundingClientRect().height > 4);
-          if (own) hide();
-          else svg.style.visibility = "visible";
-        }, 220);
-      };
-      const offs = [
-        listen(document, "touchstart", (e) => {
-          if (e.touches.length !== 1 || pageFromUrl(location.href) !== "watch") return;
-          const bar = progressBarOf(e.target);
-          if (bar) show(bar);
-        }, { passive: true, capture: true }),
-        listen(document, "touchend", () => {
-          if (box) hideTimer = setTimeout(hide, 700);
-        }, { passive: true, capture: true }),
-        listen(document, "touchcancel", hide, { passive: true, capture: true })
-      ];
-      return () => {
-        clearTimeout(hideTimer);
-        clearTimeout(showTimer);
-        hide();
-        offData();
-        offs.forEach((off) => off());
-      };
-    }
-  };
-
   // src/behaviors/adWait.js
   var has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
   function isLoader(o) {
@@ -12719,7 +12803,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       set(v) {
         if (!on || !isLoader(this)) return plain(this, v);
         let val = v;
-        const report = (x) => {
+        const report2 = (x) => {
           if (on && typeof x === "number") {
             try {
               onDeadline(x);
@@ -12734,12 +12818,12 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
             get: () => val,
             set: (x) => {
               val = x;
-              report(x);
+              report2(x);
             }
           });
         } catch {
         }
-        report(v);
+        report2(v);
       }
     });
     return () => {
@@ -12768,7 +12852,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
     start() {
       const w = pageWindow;
       let deadline = 0;
-      let box = null;
+      let box2 = null;
       let timer2 = 0;
       const style = document.createElement("style");
       style.textContent = CSS4;
@@ -12776,23 +12860,23 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       const hide = () => {
         clearInterval(timer2);
         timer2 = 0;
-        box?.remove();
-        box = null;
+        box2?.remove();
+        box2 = null;
       };
       const draw = () => {
-        if (!box) return;
+        if (!box2) return;
         const s = secondsLeft(deadline, Date.now());
-        box.querySelector("b").textContent = s > 0 ? `${s} s` : "gleich";
+        box2.querySelector("b").textContent = s > 0 ? `${s} s` : "gleich";
       };
       const show = () => {
         if (pageFromUrl(location.href) !== "watch") return;
         const v = document.querySelector("#movie_player video, .html5-video-player video");
         const host2 = document.querySelector("#movie_player") || v?.closest(".html5-video-player");
         if (!host2 || v && v.readyState >= 2) return;
-        if (!box) {
-          box = document.createElement("div");
-          box.className = "ytx-adwait";
-          box.setAttribute("data-ytx-own", "");
+        if (!box2) {
+          box2 = document.createElement("div");
+          box2.className = "ytx-adwait";
+          box2.setAttribute("data-ytx-own", "");
           const top2 = document.createElement("div");
           const bottom = document.createElement("div");
           for (const [parent, tag, text] of [[top2, "span", "Werbung geblockt"], [top2, "small", "YouTube hält das Video so lange zurück"], [bottom, "b", ""]]) {
@@ -12800,13 +12884,13 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
             el.textContent = text;
             parent.append(el);
           }
-          box.append(top2, bottom);
-          host2.append(box);
+          box2.append(top2, bottom);
+          host2.append(box2);
         }
         draw();
         clearInterval(timer2);
         timer2 = setInterval(() => {
-          if (!box?.isConnected || pageFromUrl(location.href) !== "watch") return hide();
+          if (!box2?.isConnected || pageFromUrl(location.href) !== "watch") return hide();
           draw();
         }, 250);
       };
@@ -12821,7 +12905,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       } catch {
       }
       const done2 = (e) => {
-        if (e.target?.tagName === "VIDEO" && box) hide();
+        if (e.target?.tagName === "VIDEO" && box2) hide();
       };
       const offs = [
         listen(document, "playing", done2, true),
@@ -12854,9 +12938,9 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         listen(document, "touchstart", (e) => {
           t0 = null;
           if (e.touches.length !== 1 || pageFromUrl(location.href) !== "watch" || full() || !inPlayer(e.target)) return;
-          const box = (e.target.closest("#movie_player, ytm-custom-control") || e.target).getBoundingClientRect();
+          const box2 = (e.target.closest("#movie_player, ytm-custom-control") || e.target).getBoundingClientRect();
           const y = e.touches[0].clientY;
-          if (box.height && y > box.bottom - 40) return;
+          if (box2.height && y > box2.bottom - 40) return;
           t0 = { x: e.touches[0].clientX, y, at: Date.now(), done: false };
         }, { passive: true, capture: true }),
         listen(document, "touchmove", (e) => {
@@ -12945,10 +13029,10 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         const holder = holderOf(link);
         if (getComputedStyle(holder).position === "static") holder.style.position = "relative";
         holder.style.isolation = "isolate";
-        const box = document.createElement("div");
-        box.setAttribute("data-ytx-own", "");
-        box.className = "ytx-preview";
-        box.style.cssText = "position:absolute;inset:0;z-index:1;overflow:hidden;border-radius:inherit;pointer-events:none;background:transparent";
+        const box2 = document.createElement("div");
+        box2.setAttribute("data-ytx-own", "");
+        box2.className = "ytx-preview";
+        box2.style.cssText = "position:absolute;inset:0;z-index:1;overflow:hidden;border-radius:inherit;pointer-events:none;background:transparent";
         const slide = document.createElement("img");
         slide.style.cssText = "position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:1";
         slide.src = `https://i.ytimg.com/vi/${id}/hq1.jpg`;
@@ -12961,10 +13045,10 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         const bar = document.createElement("div");
         bar.style.cssText = "height:100%;width:0;background:#ff0033";
         track.append(bar);
-        box.append(slide, frame, track);
-        holder.append(box);
+        box2.append(slide, frame, track);
+        holder.append(box2);
         let n = 1;
-        live = { link, id, how, t0, box, frame, bar, slide, dur: 0, state: -1, cur: 0, vidOk: false, shown: false, target: -1, lastSeek: 0, seeking: false, loadedAt: Date.now() };
+        live = { link, id, how, t0, box: box2, frame, bar, slide, dur: 0, state: -1, cur: 0, vidOk: false, shown: false, target: -1, lastSeek: 0, seeking: false, loadedAt: Date.now() };
         live.slideTimer = setInterval(() => {
           n = n % 3 + 1;
           slide.src = `https://i.ytimg.com/vi/${id}/hq${n}.jpg`;
@@ -13340,22 +13424,22 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       let lastWatchVid = "";
       const playerBox = () => document.getElementById("player-container-id") || document.getElementById("movie_player");
       const playerGone = () => {
-        const box = playerBox();
-        if (!box) return false;
+        const box2 = playerBox();
+        if (!box2) return false;
         const scrolled = scrollY > 0 || (document.scrollingElement?.scrollTop || 0) > 0;
-        return scrolled && box.getBoundingClientRect().bottom < innerHeight * 0.1;
+        return scrolled && box2.getBoundingClientRect().bottom < innerHeight * 0.1;
       };
       let pinned = null;
       const pinPlayer = () => {
-        const box = playerBox();
-        if (!box) return;
-        if (pinned !== box) {
-          const top2 = Math.round(box.getBoundingClientRect().top + scrollY);
+        const box2 = playerBox();
+        if (!box2) return;
+        if (pinned !== box2) {
+          const top2 = Math.round(box2.getBoundingClientRect().top + scrollY);
           document.documentElement.style.setProperty("--ytx-pin-top", top2 + "px");
         }
-        box.setAttribute("data-ytx-pin", "");
+        box2.setAttribute("data-ytx-pin", "");
         document.documentElement.toggleAttribute("data-ytx-pinned", true);
-        pinned = box;
+        pinned = box2;
       };
       const unpinPlayer = () => {
         pinned?.removeAttribute("data-ytx-pin");
@@ -13365,9 +13449,9 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       const healLayout = () => {
         heals++;
         if (heals > 6) return pinPlayer();
-        const box = playerBox();
+        const box2 = playerBox();
         const info2 = [];
-        for (let e = box, i = 0; e && i < 4; e = e.parentElement, i++) {
+        for (let e = box2, i = 0; e && i < 4; e = e.parentElement, i++) {
           const cs = getComputedStyle(e);
           const r = e.getBoundingClientRect();
           info2.push(`${e.localName}#${e.id || ""} pos=${cs.position} top=${Math.round(r.top)} h=${Math.round(r.height)}`);
@@ -13454,10 +13538,10 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       }, 100);
       const offUpgrade = listen(document, "click", () => {
         if (!faux || document.fullscreenElement) return;
-        const box = document.getElementById("player-container-id");
+        const box2 = document.getElementById("player-container-id");
         allowEnter = true;
         setTimeout(() => allowEnter = false, 600);
-        box?.requestFullscreen?.().then(() => setFaux(false)).catch(() => {
+        box2?.requestFullscreen?.().then(() => setFaux(false)).catch(() => {
         });
       }, { capture: true });
       let accSet = false;
@@ -13497,10 +13581,10 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       }
       const enterFs = (p) => {
         const go = () => {
-          const box = document.getElementById("player-container-id");
+          const box2 = document.getElementById("player-container-id");
           allowEnter = true;
           setTimeout(() => allowEnter = false, 600);
-          if (box?.requestFullscreen) box.requestFullscreen().catch(() => p.toggleFullscreen?.());
+          if (box2?.requestFullscreen) box2.requestFullscreen().catch(() => p.toggleFullscreen?.());
           else p.toggleFullscreen?.();
         };
         if (scrollY > 0 || document.scrollingElement && document.scrollingElement.scrollTop > 0) {
@@ -13570,7 +13654,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove, appCheck];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js
@@ -13590,7 +13674,7 @@ html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #m
     let timer2 = null;
     const isMini = () => innerWidth <= 480 && innerHeight <= 300;
     function build() {
-      const box = h("div", { "data-ytx-own": "" });
+      const box2 = h("div", { "data-ytx-own": "" });
       const close = h("button", { id: "ytx-mini-ui", class: "ytx-mini-btn", type: "button", text: "✕", "aria-label": "Schließen" });
       const expand = h("button", { id: "ytx-mini-expand", class: "ytx-mini-btn", type: "button", text: "⤢", "aria-label": "Vergrößern" });
       close.addEventListener("click", (e) => {
@@ -13601,8 +13685,8 @@ html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #m
         e.stopPropagation();
         native("expand");
       });
-      box.append(expand, close);
-      return box;
+      box2.append(expand, close);
+      return box2;
     }
     function tick2() {
       const on = isMini() && pageFromUrl(location.href) === "watch";
@@ -14681,20 +14765,20 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
   }
 
   // src/core/radar.js
-  var KEY3 = `ytx.radar.${location.host}`;
+  var KEY4 = `ytx.radar.${location.host}`;
   var EVERY = 45e3;
   var state = emptyState();
   var lastScan = 0;
   var load3 = () => {
     try {
-      return { ...emptyState(), ...JSON.parse(localStorage.getItem(KEY3) || "{}") };
+      return { ...emptyState(), ...JSON.parse(localStorage.getItem(KEY4) || "{}") };
     } catch {
       return emptyState();
     }
   };
   var save2 = () => {
     try {
-      localStorage.setItem(KEY3, JSON.stringify(state));
+      localStorage.setItem(KEY4, JSON.stringify(state));
     } catch {
     }
   };
@@ -15039,10 +15123,10 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       let list = enabled ? current3.slice() : g.items.map(([id]) => id);
       const labels = Object.fromEntries(g.items);
       for (const [id] of g.items) if (!list.includes(id)) list.push(id);
-      const box = h("div", { class: "orderlist" });
+      const box2 = h("div", { class: "orderlist" });
       const save3 = () => update((c) => c.layout.order[gid] = list.slice());
       const draw = () => {
-        box.replaceChildren();
+        box2.replaceChildren();
         list.forEach((id, i) => {
           const up2 = btn("↑", () => {
             if (i === 0) return;
@@ -15056,7 +15140,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
             save3();
             draw();
           }, "tiny");
-          box.append(h("div", { class: "item" }, h("span", { text: labels[id] || id }), up2, down));
+          box2.append(h("div", { class: "item" }, h("span", { text: labels[id] || id }), up2, down));
         });
       };
       draw();
@@ -15065,7 +15149,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
           update((c) => v ? c.layout.order[gid] = list.slice() : delete c.layout.order[gid]);
           app.rerender();
         }), { note: "Buttons, die YouTube ins ⋯-Menü schiebt, erscheinen nicht" }),
-        enabled ? box : h("div")
+        enabled ? box2 : h("div")
       );
     }
     if (site.id !== "youtube") return root;
@@ -15302,11 +15386,11 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     return root;
   }
   function confirmInline(container, text, yes) {
-    const box = h("div", { class: "btns", style: { width: "100%" } }, h("span", { class: "muted", text }), btn("Ja", () => {
-      box.remove();
+    const box2 = h("div", { class: "btns", style: { width: "100%" } }, h("span", { class: "muted", text }), btn("Ja", () => {
+      box2.remove();
       yes();
-    }, "tiny danger"), btn("Nein", () => box.remove(), "tiny"));
-    container.after(box);
+    }, "tiny danger"), btn("Nein", () => box2.remove(), "tiny"));
+    container.after(box2);
   }
   function diagnoseTab(app) {
     const root = h("div");
@@ -15318,15 +15402,15 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       const sum = summarize2(results);
       body.append(h("div", { class: "summary" }, ...["ok", "warn", "fail", "skip"].map((k) => h("span", null, h("span", { class: `dot ${k}`, style: { display: "inline-block", marginRight: "4px" } }), h("b", { text: String(sum[k] || 0) }), { ok: "ok", warn: "Warnung", fail: "Fehler", skip: "n/a" }[k]))));
       let group = null;
-      let box = null;
+      let box2 = null;
       for (const r of results) {
         if (onlyProblems && (r.status === "ok" || r.status === "skip")) continue;
         if (r.group !== group) {
           group = r.group;
-          box = h("div");
-          body.append(h("h3", { text: group }), box);
+          box2 = h("div");
+          body.append(h("h3", { text: group }), box2);
         }
-        box.append(h("div", { class: "status" }, h("span", { class: `dot ${r.status}` }), h("div", { class: "txt" }, r.label, h("small", { text: r.detail }))));
+        box2.append(h("div", { class: "status" }, h("span", { class: `dot ${r.status}` }), h("div", { class: "txt" }, r.label, h("small", { text: r.detail }))));
       }
       if (onlyProblems && !sum.warn && !sum.fail) body.append(h("p", { class: "muted", text: "Keine Probleme auf dieser Seite." }));
       const errs = log.entries().filter((e) => e.level !== "info");
@@ -15464,10 +15548,10 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
   // src/panel/musicTabs.js
   var up = (fn) => music.updatePrefs(fn);
   function async(root, fn) {
-    const box = h("div", null, h("p", { class: "muted", text: "lädt …" }));
-    root.append(box);
-    Promise.resolve().then(fn).then((node) => box.replaceChildren(...[].concat(node || []))).catch((e) => box.replaceChildren(h("p", { class: "err", text: `Fehler: ${e.message}` })));
-    return box;
+    const box2 = h("div", null, h("p", { class: "muted", text: "lädt …" }));
+    root.append(box2);
+    Promise.resolve().then(fn).then((node) => box2.replaceChildren(...[].concat(node || []))).catch((e) => box2.replaceChildren(h("p", { class: "err", text: `Fehler: ${e.message}` })));
+    return box2;
   }
   function when(ts) {
     return ts ? new Date(ts).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" }) : "—";
@@ -15650,7 +15734,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
         const flags = [r.completed ? "✓ komplett" : r.skipped ? `⏭ bei ${formatDuration(r.skipAtSec || 0)}${r.quickSkip ? " (früh)" : ""}` : `${Math.round((r.percent || 0) * 100)} %`, r.repeat && "↻", r.liked && "♥"].filter(Boolean).join(" · ");
         const sub = `${when(r.startedAt)} · ${(r.artists || []).map((a) => a.name).join(", ")} · ${formatDuration(r.listenedSec || 0)} gehört · ${flags}`;
         const menu = btn("⋯", () => {
-          const box = h(
+          const box2 = h(
             "div",
             { class: "btns", style: { width: "100%" } },
             btn("Song nicht ins Profil", async () => app.flash(await music.act("excludeSong", r)), "tiny"),
@@ -15660,7 +15744,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
               draw();
             }, "tiny danger")
           );
-          item.after(box);
+          item.after(box2);
         }, "tiny");
         const item = listItem(r.title || r.videoId, sub, btn("✕", async () => {
           await music.history.remove(r.id);
@@ -15677,12 +15761,12 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     root.append(search, listBox);
     draw().catch((e) => listBox.replaceChildren(h("p", { class: "err", text: e.message })));
     root.append(h("div", { class: "btns" }, btn("Gesamten Verlauf löschen", (e) => {
-      const box = h("div", { class: "btns" }, h("span", { class: "muted", text: "Wirklich alle Hör-Einträge löschen? Favoriten und Feedback bleiben." }), btn("Ja, löschen", async () => {
+      const box2 = h("div", { class: "btns" }, h("span", { class: "muted", text: "Wirklich alle Hör-Einträge löschen? Favoriten und Feedback bleiben." }), btn("Ja, löschen", async () => {
         await music.history.clear();
         app.flash("Verlauf gelöscht");
         app.rerender();
-      }, "tiny danger"), btn("Nein", () => box.remove(), "tiny"));
-      e.currentTarget.parentElement.after(box);
+      }, "tiny danger"), btn("Nein", () => box2.remove(), "tiny"));
+      e.currentTarget.parentElement.after(box2);
     }, "danger")));
     root.append(h("h3", { text: "Vom Profil ausgeschlossen" }));
     const ex = p.excluded;
@@ -15866,11 +15950,11 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
         app.rerender();
       }, "tiny");
       const del = btn("Löschen", () => {
-        const box = h("div", { class: "btns" }, h("span", { class: "muted", text: `„${g.name}“ löschen? Die Kanäle bleiben abonniert.` }), btn("Ja", () => {
+        const box2 = h("div", { class: "btns" }, h("span", { class: "muted", text: `„${g.name}“ löschen? Die Kanäle bleiben abonniert.` }), btn("Ja", () => {
           updateGroups((d) => d.groups = d.groups.filter((y) => y.id !== g.id));
           app.rerender();
-        }, "tiny danger"), btn("Nein", () => box.remove(), "tiny"));
-        rowEl.after(box);
+        }, "tiny danger"), btn("Nein", () => box2.remove(), "tiny"));
+        rowEl.after(box2);
       }, "tiny danger");
       const rowEl = h("div", { class: "row" }, name, h("span", { class: "muted", text: `${g.channels.length} Kanäle` }), up2, del);
       root.append(rowEl);
@@ -16008,13 +16092,13 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
         app.flash(await app.copyText(text) ? "Kopiert" : "Kopieren fehlgeschlagen");
       }),
       btn("Verlauf löschen", (e) => {
-        const box = h("div", { class: "btns" }, h("span", { class: "muted", text: "Gesamte Schauzeit löschen?" }), btn("Ja", async () => {
+        const box2 = h("div", { class: "btns" }, h("span", { class: "muted", text: "Gesamte Schauzeit löschen?" }), btn("Ja", async () => {
           await ytDb().clear("views");
           if (watchTime.instance) watchTime.instance.state.todayBase = 0;
           app.flash("Schauzeit gelöscht");
           app.rerender();
-        }, "tiny danger"), btn("Nein", () => box.remove(), "tiny"));
-        e.currentTarget.parentElement.after(box);
+        }, "tiny danger"), btn("Nein", () => box2.remove(), "tiny"));
+        e.currentTarget.parentElement.after(box2);
       }, "danger")
     ));
     return root;

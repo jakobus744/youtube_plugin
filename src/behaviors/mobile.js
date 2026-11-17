@@ -9,6 +9,7 @@ import { playlistRemove } from './playlistRemove.js'
 import { heatmap, progressBarOf } from './heatmap.js'
 import { pageWindow } from '../core/bridge.js'
 import { adWait } from './adWait.js'
+import { appCheck } from './appCheck.js'
 
 // verhalten fuer m.youtube.com
 // umleitungen arbeiten mit urls, der rest mit der player api, beides gibt es auch mobil
@@ -784,6 +785,6 @@ const appFullscreen = {
   }
 }
 
-export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove]
+export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove, appCheck]
 
 export const behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]))

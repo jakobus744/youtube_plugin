@@ -47,8 +47,10 @@ export function extractHeatmap(json) {
 export function heatmapPath(points, w, h) {
   const n = points.length
   const x = (i) => (i / (n - 1)) * w
-  // wurzel hebt die flachen stellen an, sonst bleibt bei einer einzelnen spitze nur ein strich
-  const y = (v) => h - Math.max(0.04, Math.sqrt(v)) * h
+  // auf den eigenen wertebereich strecken, sonst wirken videos mit gleichmaessig vielen aufrufen wie ein flacher streifen
+  const lo = Math.min(...points)
+  const span = Math.max(...points) - lo
+  const y = (v) => h - Math.max(0.06, span > 0.05 ? (v - lo) / span : v) * h
   let d = `M0,${h} L0,${y(points[0]).toFixed(1)}`
   for (let i = 1; i < n; i++) {
     const mx = ((x(i - 1) + x(i)) / 2).toFixed(1)
@@ -69,6 +71,12 @@ export function progressBarOf(el) {
     }
   }
   return best && best.w > 60 ? best.el : null
+}
+
+// fuer den pruefmodus
+export function heatmapFor(id) {
+  if (!maps.has(id)) collect(pageWindow.ytInitialData)
+  return maps.get(id) || null
 }
 
 const currentId = () => new URLSearchParams(location.search).get('v')
@@ -127,7 +135,7 @@ export const heatmap = {
       svg.setAttribute('viewBox', `0 0 1000 ${H}`)
       svg.setAttribute('preserveAspectRatio', 'none')
       // youtube gibt svg in der leiste eigene masse vor, deshalb mit vorrang setzen
-      svg.style.cssText = `position:absolute !important;left:${b.left - p.left}px !important;top:${b.top - p.top - H - 2}px !important;width:${b.width}px !important;height:${H}px !important;max-height:none !important;transform:none !important;z-index:70;pointer-events:none;opacity:.6;visibility:hidden;`
+      svg.style.cssText = `position:absolute !important;left:${b.left - p.left}px !important;top:${b.top - p.top - H - 2}px !important;width:${b.width}px !important;height:${H}px !important;max-height:none !important;transform:none !important;z-index:70;pointer-events:none;opacity:.8;visibility:hidden;`
       const path = document.createElementNS(ns, 'path')
       path.setAttribute('d', heatmapPath(points, 1000, H))
       path.setAttribute('fill', 'rgba(255,255,255,.55)')

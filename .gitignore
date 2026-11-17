@@ -1,3 +1,5 @@
 node_modules/
 # enthaelt lokalen dateipfad, wird beim build erzeugt
 dist/ytx.dev.user.js
+# berichte und screenshots von tools/phone-check.mjs
+check-out/

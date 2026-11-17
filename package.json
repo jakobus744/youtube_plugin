@@ -12,7 +12,8 @@
     "apk": "node build.mjs && cd android && .\\gradlew.bat --no-daemon apk",
     "ios:sync": "node build.mjs && node tools/ios-sync.mjs",
     "canary": "node tools/canary.mjs",
-    "audit": "node tools/selector-audit.mjs"
+    "audit": "node tools/selector-audit.mjs",
+    "check:phone": "node tools/phone-check.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

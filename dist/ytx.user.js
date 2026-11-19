@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261118.2021
+// @version      0.4.1.20261119.1618
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -4845,6 +4845,18 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           if (!("m.bottomNav" in b)) b["m.bottomNav"] = true;
         }
       }
+    ],
+    [
+      // eigene profile ohne vorlage hatten werbung und spiele regale am handy nie ausgeblendet
+      "mobile-ads-games-hidden",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.mobile;
+          if (!m || p.template === "youtube") continue;
+          m.display ||= {};
+          for (const id of ["mb.ads", "mb.games", "mb.premiumPromo"]) if (!(id in m.display)) m.display[id] = "hide";
+        }
+      }
     ]
   ];
   var data = null;
@@ -7832,6 +7844,17 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     if (hit && !shown) out.cover = `${hit.localName}${hit.id ? "#" + hit.id : ""}.${String(hit.className?.baseVal ?? hit.className).split(" ")[0]}`;
     return out;
   }
+  var PROMO = "ad-slot-renderer, ytm-promoted-video-renderer, ytm-promoted-sparkles-web-renderer, ytm-companion-ad-renderer, [data-ytx-mbgames], ytd-ad-slot-renderer, ytd-promoted-video-renderer, ytd-promoted-sparkles-web-renderer, ytd-banner-promo-renderer, #masthead-ad";
+  function promo() {
+    const shown = [];
+    let hidden = 0;
+    for (const el of document.querySelectorAll(PROMO)) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) shown.push(el.localName + (el.hasAttribute("data-ytx-mbgames") ? "[spiele]" : ""));
+      else hidden++;
+    }
+    return { shown: [...new Set(shown)], hidden };
+  }
   function media() {
     const v = document.querySelector("#movie_player video, ytmusic-player video, video");
     if (!v) return null;
@@ -7866,6 +7889,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       r.player = box(document.getElementById("movie_player"));
       r.heatmap = id ? !!heatmapFor(id) : null;
       r.adWait = !!document.querySelector(".ytx-adwait");
+      r.promo = promo();
     }
     return r;
   }

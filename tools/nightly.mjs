@@ -26,13 +26,16 @@ const UA_DESKTOP = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
 const PHONE = { userAgent: UA_PHONE, viewport: { width: 412, height: 915 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2.6 }
 const DESKTOP = { userAgent: UA_DESKTOP, viewport: { width: 1280, height: 900 } }
 
+// werbe- und spiele-kacheln muessen ausgeblendet sein (appCheck zaehlt sichtbare)
+const noPromo = (r) => ['Keine Werbe- oder Spiele-Kacheln sichtbar', !r.promo?.shown?.length, r.promo?.shown?.join(', ') || `${r.promo?.hidden ?? 0} ausgeblendet`]
+
 // app = so tun, als liefe ytx in der android-app (dort sind die app-funktionen und der pruefmodus aktiv)
 const SITES = [
   { id: 'mobile', registry: 'mobile', ctx: PHONE, app: true, pages: [
     // abgemeldet und ohne verlauf zeigt die startseite keine videos, dort zaehlen nur selektoren und diagnose
-    { id: 'm-home', url: 'https://m.youtube.com/' },
-    { id: 'm-watch', url: 'https://m.youtube.com/watch?v=kJQP7kiw5Fk', expect: (r) => [['Player vorhanden', !!r.player, ''], ['Graph-Daten geliefert', !!r.heatmap, 'Despacito hatte bisher immer welche']] },
-    { id: 'm-search', url: 'https://m.youtube.com/results?search_query=musik', expect: (r) => [['Suchergebnisse', r.feed > 0, `${r.feed} Einträge`]] }
+    { id: 'm-home', url: 'https://m.youtube.com/', expect: (r) => [noPromo(r)] },
+    { id: 'm-watch', url: 'https://m.youtube.com/watch?v=kJQP7kiw5Fk', expect: (r) => [['Player vorhanden', !!r.player, ''], ['Graph-Daten geliefert', !!r.heatmap, 'Despacito hatte bisher immer welche'], noPromo(r)] },
+    { id: 'm-search', url: 'https://m.youtube.com/results?search_query=musik', expect: (r) => [['Suchergebnisse', r.feed > 0, `${r.feed} Einträge`], noPromo(r)] }
   ] },
   { id: 'music-app', registry: 'music', ctx: PHONE, app: true, pages: [
     { id: 'mm-home', url: 'https://music.youtube.com/', expect: (r) => [['Music-Layout vorhanden', r.ui !== null && r.ui !== undefined, `Zustand ${r.ui}`], ['ytx-Navigation unten sichtbar', !!r.nav?.shown, '']] },

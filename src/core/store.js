@@ -244,6 +244,18 @@ const MIGRATIONS = [
         if (!('m.bottomNav' in b)) b['m.bottomNav'] = true
       }
     }
+  ],
+  [
+    // eigene profile ohne vorlage hatten werbung und spiele regale am handy nie ausgeblendet
+    'mobile-ads-games-hidden',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        const m = p.config?.mobile
+        if (!m || p.template === 'youtube') continue
+        m.display ||= {}
+        for (const id of ['mb.ads', 'mb.games', 'mb.premiumPromo']) if (!(id in m.display)) m.display[id] = 'hide'
+      }
+    }
   ]
 ]
 

@@ -88,6 +88,10 @@ async function youtube() {
   expect('Prüfmodus meldet sich', !!r, r ? '' : 'keine YTXCHECK-Zeile, ist die aktuelle APK installiert?')
   if (r) {
     expect('Videos in der Startseite', r.feed > 0, `${r.feed} Einträge`, 'info')
+    for (let i = 0; i < 6; i++) sh('input swipe 540 1900 540 500 300')
+    const rs = await freshReport(4000)
+    if (rs) r = rs
+    expect('Keine Werbe- oder Spiele-Kacheln sichtbar', !r.promo?.shown?.length, r.promo?.shown?.join(', ') || `${r.promo?.hidden ?? 0} ausgeblendet`)
     if (r.diag) note(`Diagnose: ${r.diag.ok} ok, ${r.diag.warn} Warnungen, ${r.diag.fail} Fehler`)
   }
 
@@ -104,6 +108,7 @@ async function youtube() {
   const r2 = await freshReport(4000)
   const t2 = r2?.media?.t ?? null
   expect('Video läuft', t1 != null && t2 != null && t2 > t1, `${t1} s → ${t2} s`)
+  expect('Keine Werbe-Kacheln sichtbar', !r2?.promo?.shown?.length, r2?.promo?.shown?.join(', ') || '')
   expect('Graph-Daten vorhanden', !!r2?.heatmap, r2?.heatmap ? '' : 'keine heatmap in den Seitendaten', 'info')
   if (r?.adWait || r2?.adWait) note('Countdown nach geblockter Werbung wurde angezeigt')
   sh('input keyevent 127')

@@ -30,6 +30,20 @@ function box(el) {
   return out
 }
 
+// werbe- und spiele-kacheln, die trotz ausblenden noch zu sehen sind
+const PROMO = 'ad-slot-renderer, ytm-promoted-video-renderer, ytm-promoted-sparkles-web-renderer, ytm-companion-ad-renderer, [data-ytx-mbgames], ytd-ad-slot-renderer, ytd-promoted-video-renderer, ytd-promoted-sparkles-web-renderer, ytd-banner-promo-renderer, #masthead-ad'
+
+function promo() {
+  const shown = []
+  let hidden = 0
+  for (const el of document.querySelectorAll(PROMO)) {
+    const r = el.getBoundingClientRect()
+    if (r.width > 0 && r.height > 0) shown.push(el.localName + (el.hasAttribute('data-ytx-mbgames') ? '[spiele]' : ''))
+    else hidden++
+  }
+  return { shown: [...new Set(shown)], hidden }
+}
+
 function media() {
   const v = document.querySelector('#movie_player video, ytmusic-player video, video')
   if (!v) return null
@@ -65,6 +79,7 @@ export function report() {
     r.player = box(document.getElementById('movie_player'))
     r.heatmap = id ? !!heatmapFor(id) : null
     r.adWait = !!document.querySelector('.ytx-adwait')
+    r.promo = promo()
   }
   return r
 }

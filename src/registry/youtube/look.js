@@ -68,6 +68,12 @@ export function cardTextCss(colors) {
   if (text) out.push(`.ytLockupMetadataViewModelTitle, .ytLockupMetadataViewModelTitle * { color: ${text} !important; }`)
   // schlichte knoepfe (teilen, download, mehr) haben die farbe fest im css von youtube
   if (text) out.push(`.ytSpecButtonShapeNextMono:is(.ytSpecButtonShapeNextText, .ytSpecButtonShapeNextOutline, .ytSpecButtonShapeNextTonal), .yt-spec-button-shape-next--mono:is(.yt-spec-button-shape-next--text, .yt-spec-button-shape-next--outline, .yt-spec-button-shape-next--tonal) { color: ${text} !important; }`)
+  // angemeldet ist der daumen eine animation mit fest eingetragener farbe statt currentColor, deshalb blieb er weiss
+  if (text)
+    out.push(
+      `:is(like-button-view-model, dislike-button-view-model) svg [fill]:not([fill="none"]) { fill: currentColor !important; }`,
+      `:is(like-button-view-model, dislike-button-view-model) svg [stroke]:not([stroke="none"]) { stroke: currentColor !important; }`
+    )
   if (text2)
     out.push(
       `.ytContentMetadataViewModelMetadataText, .ytContentMetadataViewModelMetadataText *, .ytAvatarStackViewModelAvatarStackText, .ytAvatarStackViewModelAvatarStackText *, a.ytAttributedStringLink { color: ${text2} !important; }`

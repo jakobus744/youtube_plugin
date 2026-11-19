@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261117.2232
+// @version      0.4.1.20261118.2021
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -1058,6 +1058,11 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
     const out = [];
     if (text) out.push(`.ytLockupMetadataViewModelTitle, .ytLockupMetadataViewModelTitle * { color: ${text} !important; }`);
     if (text) out.push(`.ytSpecButtonShapeNextMono:is(.ytSpecButtonShapeNextText, .ytSpecButtonShapeNextOutline, .ytSpecButtonShapeNextTonal), .yt-spec-button-shape-next--mono:is(.yt-spec-button-shape-next--text, .yt-spec-button-shape-next--outline, .yt-spec-button-shape-next--tonal) { color: ${text} !important; }`);
+    if (text)
+      out.push(
+        `:is(like-button-view-model, dislike-button-view-model) svg [fill]:not([fill="none"]) { fill: currentColor !important; }`,
+        `:is(like-button-view-model, dislike-button-view-model) svg [stroke]:not([stroke="none"]) { stroke: currentColor !important; }`
+      );
     if (text2)
       out.push(
         `.ytContentMetadataViewModelMetadataText, .ytContentMetadataViewModelMetadataText *, .ytAvatarStackViewModelAvatarStackText, .ytAvatarStackViewModelAvatarStackText *, a.ytAttributedStringLink { color: ${text2} !important; }`

@@ -120,4 +120,7 @@ test('rechner: erkannte hash variablen landen im look css', async () => {
   assert.match(css, /--t1405e70a39276293: #eceff4 !important;/)
   setDiscovered({})
   assert.doesNotMatch(extraCss({ bg: '#2e3440' }), /--t3e41/)
+  // like daumen folgt der textfarbe, ohne textfarbe bleibt er unberuehrt
+  assert.match(css, /like-button-view-model, dislike-button-view-model\) svg \[fill\]:not\(\[fill="none"\]\) \{ fill: currentColor !important; \}/)
+  assert.doesNotMatch(extraCss({ bg: '#2e3440' }), /like-button-view-model/)
 })

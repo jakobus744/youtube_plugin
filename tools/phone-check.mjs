@@ -44,6 +44,9 @@ function lastReport() {
   }
 }
 
+// unbekannte bausteine aus allen meldungen, je seite (youtube mobil, music)
+const newTypes = { mobile: new Set(), music: new Set() }
+
 async function freshReport(waitMs) {
   sh('logcat -c')
   const end = Date.now() + waitMs
@@ -52,6 +55,7 @@ async function freshReport(waitMs) {
     await sleep(1000)
     r = lastReport() || r
   }
+  for (const n of r?.newTypes || []) newTypes[r.host?.startsWith('music.') ? 'music' : 'mobile'].add(n)
   return r
 }
 
@@ -166,7 +170,15 @@ function writeReport() {
     for (const f of s.shots) lines.push('', `![${f}](${f})`)
     lines.push('')
   }
-  lines.splice(2, 0, fails ? `**${fails} Fehler**` : '**Alles ok**', '')
+  const fresh = Object.entries(newTypes).filter(([, v]) => v.size)
+  if (fresh.length) {
+    lines.push('## Neue YouTube-Bausteine', '', `ytx kennt sie noch nicht. Nach dem Einordnen: \`node tools/known-types.mjs check-out/${stamp}/types.json\``, '')
+    for (const [k, v] of fresh) lines.push(`- ${k}: ${[...v].sort().join(', ')}`)
+    lines.push('')
+    writeFileSync(join(out, 'types.json'), JSON.stringify(Object.fromEntries(fresh.map(([k, v]) => [k, [...v].sort()])), null, 1))
+  }
+  const nNew = fresh.reduce((n, [, v]) => n + v.size, 0)
+  lines.splice(2, 0, fails ? `**${fails} Fehler**` : '**Alles ok**', '', ...(nNew ? [`**${nNew} neue YouTube-Bausteine**, siehe unten`, ''] : []))
   writeFileSync(join(out, 'report.md'), lines.join('\n'))
   return fails
 }
@@ -184,5 +196,6 @@ try {
   } catch {}
 }
 const fails = writeReport()
-console.log(`\n${fails ? `${fails} Fehler` : 'Alles ok'} · Bericht: ${join(out, 'report.md')}`)
+const nNew = newTypes.mobile.size + newTypes.music.size
+console.log(`\n${fails ? `${fails} Fehler` : 'Alles ok'}${nNew ? `, ${nNew} neue YouTube-Bausteine` : ''} · Bericht: ${join(out, 'report.md')}`)
 process.exitCode = fails ? 1 : 0

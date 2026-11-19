@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261119.1618
+// @version      0.4.1.20261119.1702
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -1915,28 +1915,28 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
   // src/core/scheduler.js
   var sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   function debounce(fn, wait = 150, maxWait = 0) {
-    let timer2 = null;
+    let timer3 = null;
     let first = 0;
     const run2 = () => {
-      timer2 = null;
+      timer3 = null;
       first = 0;
       fn();
     };
     const call2 = () => {
       const now = Date.now();
       if (!first) first = now;
-      clearTimeout(timer2);
+      clearTimeout(timer3);
       if (maxWait && now - first >= maxWait) return run2();
-      timer2 = setTimeout(run2, wait);
+      timer3 = setTimeout(run2, wait);
     };
     call2.cancel = () => {
-      clearTimeout(timer2);
-      timer2 = null;
+      clearTimeout(timer3);
+      timer3 = null;
       first = 0;
     };
     call2.flush = () => {
-      if (timer2) {
-        clearTimeout(timer2);
+      if (timer3) {
+        clearTimeout(timer3);
         run2();
       }
     };
@@ -2226,6 +2226,704 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     }
   };
 
+  // src/core/ytResponses.js
+  var listeners = /* @__PURE__ */ new Set();
+  var hooked = false;
+  function hook() {
+    if (hooked) return;
+    hooked = true;
+    const w = pageWindow;
+    const orig = w.fetch;
+    if (typeof orig !== "function") return;
+    w.fetch = function(...a) {
+      const p = orig.apply(this, a);
+      try {
+        const url = String(a[0]?.url || a[0]);
+        if (listeners.size && /\/youtubei\/v1\/(next|get_watch|browse|search)/.test(url)) {
+          p.then((r) => r.clone().json()).then((j) => {
+            for (const fn of listeners) {
+              try {
+                fn(j);
+              } catch {
+              }
+            }
+          }).catch(() => {
+          });
+        }
+      } catch {
+      }
+      return p;
+    };
+  }
+  function onYtResponse(fn) {
+    hook();
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  }
+
+  // src/core/ytTypes.js
+  var TYPE = /^[a-z][A-Za-z0-9]*(Renderer|ViewModel)$/;
+  function collectTypes(obj, out = /* @__PURE__ */ new Map(), parent = "", depth = 0) {
+    if (!obj || typeof obj !== "object" || depth > 80) return out;
+    if (Array.isArray(obj)) {
+      for (const x of obj) collectTypes(x, out, parent, depth + 1);
+      return out;
+    }
+    for (const k in obj) {
+      const v = obj[k];
+      if (TYPE.test(k)) {
+        if (!out.has(k)) out.set(k, parent);
+        collectTypes(v, out, k, depth + 1);
+      } else collectTypes(v, out, parent, depth + 1);
+    }
+    return out;
+  }
+  function siteOfHost(host2) {
+    if (host2.startsWith("music.")) return "music";
+    if (host2.startsWith("m.")) return "mobile";
+    return "youtube";
+  }
+
+  // src/registry/knownTypes.js
+  var KNOWN_TYPES = {
+    youtube: [
+      "aboutThisAdRenderer",
+      "adAvatarViewModel",
+      "adBadgeViewModel",
+      "adButtonGroupViewModel",
+      "adButtonHoverOverlayViewModel",
+      "adButtonViewModel",
+      "adDetailsLineViewModel",
+      "adImageViewModel",
+      "adSlotRenderer",
+      "adsEngagementPanelContentRenderer",
+      "animatedThumbnailOverlayViewModel",
+      "autoplaySwitchButtonRenderer",
+      "avatarStackViewModel",
+      "avatarViewModel",
+      "badgeViewModel",
+      "basicContentViewModel",
+      "bubbleHintRenderer",
+      "buttonRenderer",
+      "buttonViewModel",
+      "cardCollectionRenderer",
+      "cardRenderer",
+      "channelThumbnailWithLinkRenderer",
+      "chapterRenderer",
+      "chipBarViewModel",
+      "chipCloudChipRenderer",
+      "chipCloudRenderer",
+      "chipViewModel",
+      "cinematicContainerRenderer",
+      "collectionThumbnailViewModel",
+      "commentImageAttachmentViewModel",
+      "commentRepliesRenderer",
+      "commentSimpleboxRenderer",
+      "commentThreadRenderer",
+      "commentViewModel",
+      "commentsHeaderRenderer",
+      "compactLandscapeNoButtonLayoutViewModel",
+      "compositeVideoPrimaryInfoRenderer",
+      "confirmDialogRenderer",
+      "consentBumpV2Renderer",
+      "contentMetadataViewModel",
+      "continuationItemRenderer",
+      "createRenderer",
+      "decoratedAvatarViewModel",
+      "decoratedPlayerBarRenderer",
+      "defaultButtonViewModel",
+      "desktopTopbarRenderer",
+      "dialogHeaderViewModel",
+      "dialogViewModel",
+      "dislikeButtonViewModel",
+      "downloadButtonRenderer",
+      "downloadListItemViewModel",
+      "dropdownItemRenderer",
+      "dropdownRenderer",
+      "emojiPickerCategoryButtonRenderer",
+      "emojiPickerCategoryRenderer",
+      "emojiPickerRenderer",
+      "endScreenVideoRenderer",
+      "engagementPanelSectionListRenderer",
+      "engagementPanelTitleHeaderRenderer",
+      "expandableMetadataRenderer",
+      "expandableVideoDescriptionBodyRenderer",
+      "factoidRenderer",
+      "feedAdMetadataViewModel",
+      "feedNudgeRenderer",
+      "feedTabbedHeaderRenderer",
+      "floatingButtonViewModel",
+      "fusionSearchboxRenderer",
+      "gridShelfViewModel",
+      "guideCollapsibleEntryRenderer",
+      "guideEntryRenderer",
+      "guideSectionRenderer",
+      "guideSigninPromoRenderer",
+      "hintRenderer",
+      "horizontalCardListRenderer",
+      "hotkeyDialogRenderer",
+      "hotkeyDialogSectionOptionRenderer",
+      "hotkeyDialogSectionRenderer",
+      "imageAttachmentViewModel",
+      "inFeedAdLayoutRenderer",
+      "infoCardIconRenderer",
+      "itemSectionRenderer",
+      "likeButtonViewModel",
+      "linearLayoutViewModel",
+      "listItemLikeCountViewModel",
+      "listItemViewCountViewModel",
+      "listItemViewModel",
+      "listViewModel",
+      "lockupAttachmentsViewModel",
+      "lockupMetadataViewModel",
+      "lockupViewModel",
+      "macroMarkersListItemRenderer",
+      "macroMarkersListRenderer",
+      "mealbarPromoRenderer",
+      "menuFlexibleItemRenderer",
+      "menuNavigationItemRenderer",
+      "menuPopupRenderer",
+      "menuRenderer",
+      "menuServiceItemDownloadRenderer",
+      "menuServiceItemRenderer",
+      "metadataBadgeRenderer",
+      "metadataRowContainerRenderer",
+      "microformatDataRenderer",
+      "miniplayerRenderer",
+      "modalWithTitleAndButtonRenderer",
+      "movingThumbnailRenderer",
+      "multiMarkersPlayerBarRenderer",
+      "multiPageMenuRenderer",
+      "notificationActionRenderer",
+      "panelFooterViewModel",
+      "playerAnnotationsExpandedRenderer",
+      "playerCaptionsTracklistRenderer",
+      "playerMicroformatRenderer",
+      "playerOverlayAutoplayRenderer",
+      "playerOverlayRenderer",
+      "playerOverlayVideoDetailsRenderer",
+      "quickActionsViewModel",
+      "reelPlayerOverlayRenderer",
+      "richGridRenderer",
+      "richListHeaderRenderer",
+      "richSectionRenderer",
+      "searchFilterGroupRenderer",
+      "searchFilterOptionsDialogRenderer",
+      "searchFilterRenderer",
+      "searchHeaderRenderer",
+      "searchPyvRenderer",
+      "searchSubMenuRenderer",
+      "sectionHeaderViewModel",
+      "sectionListRenderer",
+      "segmentedLikeDislikeButtonViewModel",
+      "sheetViewModel",
+      "shortsLockupViewModel",
+      "sideRailViewModel",
+      "simpleCardTeaserRenderer",
+      "sortFilterSubMenuRenderer",
+      "speedmasterEduViewModel",
+      "structuredDescriptionContentRenderer",
+      "subscribeButtonRenderer",
+      "subscriptionNotificationToggleButtonRenderer",
+      "tabRenderer",
+      "textViewModel",
+      "thumbnailBadgeViewModel",
+      "thumbnailBottomOverlayViewModel",
+      "thumbnailHoverOverlayViewModel",
+      "thumbnailOverlayBadgeViewModel",
+      "thumbnailOverlayButtonViewModel",
+      "thumbnailOverlayInlineUnplayableRenderer",
+      "thumbnailOverlayLoadingPreviewRenderer",
+      "thumbnailOverlayNowPlayingRenderer",
+      "thumbnailOverlayResumePlaybackRenderer",
+      "thumbnailOverlayTimeStatusRenderer",
+      "thumbnailOverlayToggleButtonRenderer",
+      "thumbnailViewModel",
+      "toggleButtonRenderer",
+      "toggleButtonViewModel",
+      "toggledButtonViewModel",
+      "tooltipViewModel",
+      "topbarLogoRenderer",
+      "topbarMenuButtonRenderer",
+      "twoColumnBrowseResultsRenderer",
+      "twoColumnSearchResultsRenderer",
+      "unifiedSharePanelRenderer",
+      "videoDescriptionHeaderRenderer",
+      "videoDescriptionInfocardsSectionRenderer",
+      "videoDescriptionTranscriptSectionRenderer",
+      "videoDisplayCompactButtonGroupLayoutViewModel",
+      "videoOwnerRenderer",
+      "videoPrimaryInfoRenderer",
+      "videoRenderer",
+      "videoSecondaryInfoRenderer",
+      "videoTitleHeaderViewModel",
+      "videoViewCountRenderer",
+      "viewCountFactoidRenderer",
+      "voiceSearchDialogRenderer",
+      "watchNextEndScreenRenderer"
+    ],
+    mobile: [
+      "aboutThisAdRenderer",
+      "actionCompanionAdRenderer",
+      "adBadgeRenderer",
+      "adBadgeViewModel",
+      "adBreakServiceRenderer",
+      "adDurationRemainingRenderer",
+      "adHoverTextButtonRenderer",
+      "adInfoRenderer",
+      "adPlacementRenderer",
+      "adPodIndexViewModel",
+      "adPreviewRenderer",
+      "adSlotRenderer",
+      "attributionViewModel",
+      "autoplaySwitchButtonRenderer",
+      "avatarViewModel",
+      "backgroundabilityRenderer",
+      "backstageImageRenderer",
+      "backstagePostRenderer",
+      "backstagePostThreadRenderer",
+      "badgeViewModel",
+      "basicContentViewModel",
+      "belowPlayerAdLayoutRenderer",
+      "bkaEnforcementMessageViewModel",
+      "buttonRenderer",
+      "buttonViewModel",
+      "cardCollectionRenderer",
+      "cardRenderer",
+      "cardViewModel",
+      "carouselItemViewModel",
+      "carouselTitleViewModel",
+      "channelListSubMenuAvatarRenderer",
+      "channelListSubMenuRenderer",
+      "channelMetadataRenderer",
+      "channelThumbnailWithLinkRenderer",
+      "chapterRenderer",
+      "chipBarViewModel",
+      "chipCloudChipRenderer",
+      "chipCloudRenderer",
+      "chipDividerRenderer",
+      "chipViewModel",
+      "cinematicContainerRenderer",
+      "collapsedRenderer",
+      "collectionThumbnailViewModel",
+      "commentActionButtonsRenderer",
+      "commentTeaserCarouselItemViewModel",
+      "commentsEntryPointTeaserViewModel",
+      "compactChannelRenderer",
+      "compactInfocardRenderer",
+      "compactLinkRenderer",
+      "compactPlaylistRenderer",
+      "compactRadioRenderer",
+      "compactVideoRenderer",
+      "companionSlotRenderer",
+      "confirmDialogRenderer",
+      "consentBumpV2Renderer",
+      "contentLoadingRenderer",
+      "contentMetadataViewModel",
+      "continuationItemRenderer",
+      "decoratedAvatarViewModel",
+      "decoratedPlayerBarRenderer",
+      "defaultButtonViewModel",
+      "descriptionPreviewViewModel",
+      "dialogHeaderViewModel",
+      "dialogViewModel",
+      "dislikeButtonViewModel",
+      "dividerViewModel",
+      "dropdownItemRenderer",
+      "dropdownRenderer",
+      "dynamicTextViewModel",
+      "elementRenderer",
+      "embeddedPlayerOverlayVideoDetailsCollapsedRenderer",
+      "embeddedPlayerOverlayVideoDetailsExpandedRenderer",
+      "embeddedPlayerOverlayVideoDetailsRenderer",
+      "endScreenPlaylistRenderer",
+      "endScreenVideoRenderer",
+      "endscreenElementRenderer",
+      "endscreenRenderer",
+      "engagementPanelSectionListRenderer",
+      "engagementPanelTitleHeaderRenderer",
+      "expandableVideoDescriptionBodyRenderer",
+      "expandedRenderer",
+      "factoidRenderer",
+      "feedFilterChipBarRenderer",
+      "feedNudgeRenderer",
+      "feedTabbedHeaderRenderer",
+      "flexibleActionsViewModel",
+      "floatingButtonViewModel",
+      "fullscreenEngagementActionBarRenderer",
+      "fullscreenEngagementActionBarSaveButtonRenderer",
+      "fullscreenEngagementOverlayRenderer",
+      "fullscreenRelatedVideosEntryPointViewModel",
+      "ghostGridViewModel",
+      "gridShelfViewModel",
+      "heatMarkerRenderer",
+      "heatmapRenderer",
+      "heroCardBackgroundViewModel",
+      "heroCardBodyViewModel",
+      "heroPlaylistThumbnailRenderer",
+      "horizontalCardListRenderer",
+      "inPlayerAdLayoutRenderer",
+      "infoCardIconRenderer",
+      "infoPanelContainerRenderer",
+      "infoPanelContentRenderer",
+      "instreamAdPlayerOverlayRenderer",
+      "instreamVideoAdRenderer",
+      "itemSectionHeaderRenderer",
+      "itemSectionRenderer",
+      "likeButtonRenderer",
+      "likeButtonViewModel",
+      "linearLayoutViewModel",
+      "listItemLikeCountViewModel",
+      "listItemViewModel",
+      "listViewModel",
+      "lockupMetadataViewModel",
+      "lockupViewModel",
+      "logoViewModel",
+      "macroMarkersListItemRenderer",
+      "macroMarkersListRenderer",
+      "mediaLockupRenderer",
+      "menuNavigationItemRenderer",
+      "menuRenderer",
+      "menuServiceItemRenderer",
+      "metadataBadgeRenderer",
+      "microformatDataRenderer",
+      "mobileTopbarRenderer",
+      "modalWithTitleAndButtonRenderer",
+      "moreDrawerViewModel",
+      "movingThumbnailRenderer",
+      "multiMarkersPlayerBarRenderer",
+      "multiPageMenuRenderer",
+      "multiPageMenuSectionRenderer",
+      "navigationItemViewModel",
+      "notificationActionRenderer",
+      "notificationMultiActionRenderer",
+      "notificationTextRenderer",
+      "pageHeaderRenderer",
+      "pageHeaderViewModel",
+      "panelContentRenderer",
+      "panelHeaderViewModel",
+      "pivotBarItemRenderer",
+      "pivotBarRenderer",
+      "playerAnnotationsExpandedRenderer",
+      "playerBytesAdLayoutRenderer",
+      "playerBytesSequentialLayoutRenderer",
+      "playerCaptionsTracklistRenderer",
+      "playerLegacyDesktopWatchAdsRenderer",
+      "playerMicroformatRenderer",
+      "playerOverlayAutoplayRenderer",
+      "playerOverlayRenderer",
+      "playerOverlayVideoDetailsRenderer",
+      "playerStoryboardSpecRenderer",
+      "playlistBylineRenderer",
+      "playlistCardRenderer",
+      "playlistCustomThumbnailRenderer",
+      "playlistHeaderRenderer",
+      "playlistInfoCardContentRenderer",
+      "playlistThumbnailOverlayRenderer",
+      "playlistVideoListRenderer",
+      "playlistVideoRenderer",
+      "playlistVideoThumbnailRenderer",
+      "postMultiImageRenderer",
+      "preskipRenderer",
+      "privacyTosFooterRenderer",
+      "privacyTosViewModel",
+      "quickActionsViewModel",
+      "reelPlayerOverlayRenderer",
+      "reelShelfRenderer",
+      "relatedChipCloudRenderer",
+      "richGridRenderer",
+      "richItemRenderer",
+      "richListHeaderRenderer",
+      "richSectionRenderer",
+      "searchBarEntryPointViewModel",
+      "searchFilterGroupRenderer",
+      "searchFilterRenderer",
+      "searchSubMenuRenderer",
+      "sectionHeaderViewModel",
+      "sectionListRenderer",
+      "segmentedLikeDislikeButtonViewModel",
+      "sentimentFactoidRenderer",
+      "sheetViewModel",
+      "shortsLockupViewModel",
+      "simpleCardTeaserRenderer",
+      "simpleMenuHeaderRenderer",
+      "singleColumnBrowseResultsRenderer",
+      "skipAdRenderer",
+      "skipButtonRenderer",
+      "skipOrPreviewRenderer",
+      "skippableRenderer",
+      "slimMetadataButtonRenderer",
+      "slimMetadataToggleButtonRenderer",
+      "slimOwnerRenderer",
+      "slimVideoActionBarRenderer",
+      "slimVideoInformationRenderer",
+      "slimVideoMetadataSectionRenderer",
+      "standaloneCollectionBadgeRenderer",
+      "structuredDescriptionContentRenderer",
+      "structuredDescriptionVideoLockupRenderer",
+      "subscribeButtonRenderer",
+      "subscribeButtonViewModel",
+      "tabRenderer",
+      "thumbnailBadgeViewModel",
+      "thumbnailBottomOverlayViewModel",
+      "thumbnailOverlayBadgeViewModel",
+      "thumbnailOverlayBottomPanelRenderer",
+      "thumbnailOverlayProgressBarViewModel",
+      "thumbnailOverlayResumePlaybackRenderer",
+      "thumbnailOverlaySidePanelRenderer",
+      "thumbnailOverlayTimeStatusRenderer",
+      "thumbnailRenderer",
+      "thumbnailViewModel",
+      "timedMarkerDecorationRenderer",
+      "toggleButtonRenderer",
+      "toggleButtonViewModel",
+      "toggledButtonViewModel",
+      "topbarLogoRenderer",
+      "topbarMenuButtonRenderer",
+      "videoBadgeViewModel",
+      "videoCardRenderer",
+      "videoDescriptionHeaderRenderer",
+      "videoDescriptionInfocardsSectionRenderer",
+      "videoInfoCardContentRenderer",
+      "videoMetadataCarouselViewModel",
+      "videoMetadataViewModel",
+      "videoSubtitleViewModel",
+      "videoTitleHeaderViewModel",
+      "videoWithContextRenderer",
+      "visitAdvertiserRenderer",
+      "voiceSearchDialogRenderer",
+      "watchNextEndScreenRenderer",
+      "watchOnYoutubeButtonViewModel",
+      "youThereRenderer"
+    ],
+    music: [
+      "aboutThisAdRenderer",
+      "adBadgeRenderer",
+      "adBreakServiceRenderer",
+      "adDurationRemainingRenderer",
+      "adHoverTextButtonRenderer",
+      "adInfoRenderer",
+      "adPlacementRenderer",
+      "adPreviewRenderer",
+      "adSlotRenderer",
+      "audioOnlyPlayabilityRenderer",
+      "automixPlaylistVideoRenderer",
+      "automixPreviewVideoRenderer",
+      "browserMediaSessionRenderer",
+      "buttonRenderer",
+      "buttonViewModel",
+      "cardCollectionRenderer",
+      "cardRenderer",
+      "chipCloudChipRenderer",
+      "chipCloudRenderer",
+      "compactLinkRenderer",
+      "confirmDialogRenderer",
+      "counterpartRenderer",
+      "defaultButtonViewModel",
+      "dialogHeaderViewModel",
+      "dialogViewModel",
+      "dislikeButtonViewModel",
+      "endscreenElementRenderer",
+      "endscreenRenderer",
+      "gridRenderer",
+      "guideEntryRenderer",
+      "guideSectionRenderer",
+      "guideSigninPromoRenderer",
+      "inPlayerAdLayoutRenderer",
+      "infoCardIconRenderer",
+      "instreamAdPlayerOverlayRenderer",
+      "instreamVideoAdRenderer",
+      "likeButtonRenderer",
+      "likeButtonViewModel",
+      "menuNavigationItemRenderer",
+      "menuRenderer",
+      "menuServiceItemDownloadRenderer",
+      "menuServiceItemRenderer",
+      "microformatDataRenderer",
+      "miniplayerRenderer",
+      "modalWithTitleAndButtonRenderer",
+      "multiPageMenuRenderer",
+      "multiPageMenuSectionRenderer",
+      "musicCarouselShelfBasicHeaderRenderer",
+      "musicCarouselShelfRenderer",
+      "musicCustomIndexColumnRenderer",
+      "musicInlineBadgeRenderer",
+      "musicItemThumbnailOverlayRenderer",
+      "musicMenuTitleRenderer",
+      "musicMultiSelectMenuItemRenderer",
+      "musicMultiSelectMenuRenderer",
+      "musicNavigationButtonRenderer",
+      "musicPlayButtonRenderer",
+      "musicQueueHeaderRenderer",
+      "musicQueueRenderer",
+      "musicResponsiveListItemFlexColumnRenderer",
+      "musicResponsiveListItemRenderer",
+      "musicSideAlignedItemRenderer",
+      "musicSortFilterButtonRenderer",
+      "musicTastebuilderShelfRenderer",
+      "musicTastebuilderShelfThumbnailRenderer",
+      "musicThumbnailRenderer",
+      "musicTwoRowItemRenderer",
+      "notificationActionRenderer",
+      "notificationTextRenderer",
+      "optionSelectableItemRenderer",
+      "optionsRenderer",
+      "panelFooterViewModel",
+      "playerAnnotationsExpandedRenderer",
+      "playerBytesAdLayoutRenderer",
+      "playerCaptionsTracklistRenderer",
+      "playerLegacyDesktopWatchAdsRenderer",
+      "playerOverlayRenderer",
+      "playerStoryboardSpecRenderer",
+      "playlistInfoCardContentRenderer",
+      "playlistPanelRenderer",
+      "playlistPanelVideoRenderer",
+      "playlistPanelVideoWrapperRenderer",
+      "primaryRenderer",
+      "radioButtonGroupViewModel",
+      "radioButtonItemViewModel",
+      "reportFormModalRenderer",
+      "sectionListRenderer",
+      "segmentedLikeDislikeButtonViewModel",
+      "simpleAdBadgeRenderer",
+      "simpleCardButtonRenderer",
+      "simpleCardContentRenderer",
+      "simpleCardTeaserRenderer",
+      "singleColumnBrowseResultsRenderer",
+      "singleColumnMusicWatchNextResultsRenderer",
+      "skipOrPreviewRenderer",
+      "subscribeButtonRenderer",
+      "tabRenderer",
+      "tabbedRenderer",
+      "thumbnailOverlayTimeStatusRenderer",
+      "thumbnailRenderer",
+      "toggleButtonRenderer",
+      "toggleButtonViewModel",
+      "toggleMenuServiceItemRenderer",
+      "toggledButtonViewModel",
+      "videoActionBarViewModel",
+      "visitAdvertiserRenderer",
+      "watchNextTabbedResultsRenderer"
+    ]
+  };
+
+  // src/registry/music/initialData.js
+  var RE = /initialData\.push\(\{path: '((?:\\.|[^'])*)', params: JSON\.parse\('((?:\\.|[^'])*)'\), data: '((?:\\.|[^'])*)'\}\)/g;
+  var SIMPLE = { n: "\n", r: "\r", t: "	", b: "\b", f: "\f", v: "\v", 0: "\0" };
+  function unescapeJs(s) {
+    return s.replace(/\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|[\s\S])/g, (_, e) => {
+      if (e[0] === "x" && e.length === 3) return String.fromCharCode(parseInt(e.slice(1), 16));
+      if (e[0] === "u" && e.length === 5) return String.fromCharCode(parseInt(e.slice(1), 16));
+      return SIMPLE[e] ?? e;
+    });
+  }
+  function extractInitialData(html) {
+    const out = [];
+    RE.lastIndex = 0;
+    let m;
+    while (m = RE.exec(html)) {
+      try {
+        out.push({ path: unescapeJs(m[1]), params: JSON.parse(unescapeJs(m[2])), data: JSON.parse(unescapeJs(m[3])) });
+      } catch (e) {
+        out.push({ path: null, error: e.message });
+      }
+    }
+    return out;
+  }
+  function mainData(html) {
+    const blocks = extractInitialData(html);
+    const main = blocks.find((b) => b.path && b.path !== "/guide");
+    return main ? { path: main.path, params: main.params, data: main.data } : null;
+  }
+
+  // src/behaviors/typeRadar.js
+  var KEY = "ytx.newTypes";
+  var MAX2 = 200;
+  var site = "";
+  var known2 = /* @__PURE__ */ new Set();
+  function init() {
+    if (site) return;
+    site = siteOfHost(location.hostname);
+    known2 = new Set(KNOWN_TYPES[site] || []);
+  }
+  var seen = /* @__PURE__ */ new Map();
+  function load() {
+    try {
+      const v = JSON.parse(localStorage.getItem(KEY) || "{}");
+      return v && typeof v === "object" ? v : {};
+    } catch {
+      return {};
+    }
+  }
+  var saved = null;
+  var timer = 0;
+  function remember(types) {
+    init();
+    saved ||= load();
+    let changed = false;
+    for (const [name, parent] of types) {
+      if (!seen.has(name)) seen.set(name, parent);
+      if (known2.has(name)) continue;
+      const e = saved[name];
+      if (e) {
+        e.n++;
+        e.last = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      } else if (Object.keys(saved).length < MAX2) {
+        saved[name] = { first: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10), last: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10), parent, page: location.pathname, n: 1 };
+      }
+      changed = true;
+    }
+    if (changed && !timer) {
+      timer = setTimeout(() => {
+        timer = 0;
+        try {
+          localStorage.setItem(KEY, JSON.stringify(saved));
+        } catch {
+        }
+      }, 2e3);
+    }
+  }
+  function newTypes() {
+    init();
+    saved ||= load();
+    return Object.entries(saved).filter(([name]) => !known2.has(name)).map(([name, e]) => ({ name, ...e })).sort((a, b) => a.first < b.first ? 1 : -1);
+  }
+  function scanInitial() {
+    init();
+    const w = pageWindow;
+    const out = /* @__PURE__ */ new Map();
+    collectTypes(w.ytInitialData, out);
+    collectTypes(w.ytInitialPlayerResponse, out);
+    if (site === "music") {
+      for (const s of document.scripts) {
+        if (s.src || !s.textContent.includes("initialData.push")) continue;
+        for (const b of extractInitialData(s.textContent)) collectTypes(b.data, out);
+      }
+    }
+    remember(out);
+  }
+  var typeRadar = {
+    id: "typeRadar",
+    label: "Neue YouTube-Bausteine erkennen",
+    description: "Merkt sich, wenn YouTube Seitenteile ausliefert, die ytx noch nicht kennt (neue Regale, Werbeformen, Umbauten). Zu sehen unter Diagnose",
+    type: "toggle",
+    default: true,
+    start() {
+      pageWindow.__ytxTypes = () => Object.fromEntries(seen);
+      const t = setTimeout(scanInitial, 1500);
+      const off = onYtResponse((j) => remember(collectTypes(j)));
+      return () => {
+        clearTimeout(t);
+        off();
+      };
+    },
+    health() {
+      const list = newTypes();
+      if (!list.length) return { status: "ok", detail: `${seen.size} Bausteine gesehen, alle bekannt` };
+      return { status: "warn", detail: `${list.length} neue: ${list.slice(0, 8).map((e) => `${e.name} (in ${e.parent || "?"}, seit ${e.first})`).join(", ")}${list.length > 8 ? " …" : ""}` };
+    }
+  };
+
   // src/behaviors/youtube.js
   var QUALITY_ORDER = ["highres", "hd2880", "hd2160", "hd1440", "hd1080", "hd720", "large", "medium", "small", "tiny"];
   function shortsId(url) {
@@ -2388,7 +3086,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       type: "toggle",
       default: false,
       start(ctx) {
-        let saved = Number(ctx.state.get("speed", 1)) || 1;
+        let saved2 = Number(ctx.state.get("speed", 1)) || 1;
         let setting = false;
         const inMainPlayer = (v) => v?.tagName === "VIDEO" && v.closest("#movie_player");
         const adShowing2 = () => !!qs("#movie_player.ad-showing");
@@ -2397,8 +3095,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
           "ratechange",
           (e) => {
             if (setting || !inMainPlayer(e.target) || adShowing2()) return;
-            saved = e.target.playbackRate;
-            ctx.state.set("speed", saved);
+            saved2 = e.target.playbackRate;
+            ctx.state.set("speed", saved2);
           },
           true
         );
@@ -2407,12 +3105,12 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
           "playing",
           (e) => {
             const v = e.target;
-            if (!inMainPlayer(v) || adShowing2() || Math.abs(v.playbackRate - saved) < 0.01) return;
+            if (!inMainPlayer(v) || adShowing2() || Math.abs(v.playbackRate - saved2) < 0.01) return;
             setting = true;
             try {
               const p = player();
-              if (p?.setPlaybackRate) p.setPlaybackRate(saved);
-              else v.playbackRate = saved;
+              if (p?.setPlaybackRate) p.setPlaybackRate(saved2);
+              else v.playbackRate = saved2;
             } finally {
               setTimeout(() => setting = false, 100);
             }
@@ -2506,7 +3204,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     },
     shareClean,
     dislikeCount,
-    likeCount
+    likeCount,
+    typeRadar
   ];
   function parseFlags(text) {
     const out = {};
@@ -2975,7 +3674,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     u.searchParams.set("fmt", "json3");
     return u.toString();
   }
-  async function load(url) {
+  async function load2(url) {
     const res = await fetch(url, { credentials: "include" });
     const text = await res.text();
     if (!res.ok || !text.trim()) return null;
@@ -2990,7 +3689,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     let json = null;
     let base2 = hasToken(videoId) ? tokenUrls.get(videoId) : null;
     if (base2) {
-      json = await load(buildUrl(base2, track));
+      json = await load2(buildUrl(base2, track));
       if (json) sourceStats.lastMethod = "Token (bereits vorhanden)";
     }
     let panelTried = false;
@@ -3017,7 +3716,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       onStatus?.("Lädt …");
       base2 = await triggerPlayer(videoId, track);
       if (base2) {
-        json = await load(buildUrl(base2, track));
+        json = await load2(buildUrl(base2, track));
         if (json) sourceStats.lastMethod = "Token (über Player angefordert)";
       }
     }
@@ -4319,8 +5018,8 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         for (const [gid, list] of Object.entries(src2.layout.order)) {
           const g = presets.orderGroups[gid];
           if (!g) continue;
-          const known2 = new Set(g.items.map(([id]) => id));
-          const clean = strList(list).filter((id) => known2.has(id));
+          const known3 = new Set(g.items.map(([id]) => id));
+          const clean = strList(list).filter((id) => known3.has(id));
           if (clean.length) cfg.layout.order[gid] = [...new Set(clean)];
         }
       }
@@ -4622,7 +5321,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
   }
 
   // src/core/store.js
-  var KEY = "ytx.store";
+  var KEY2 = "ytx.store";
   var STATE_KEY = "ytx.state";
   var hasGM = () => typeof GM_getValue === "function" && typeof GM_setValue === "function";
   function readRaw(key) {
@@ -4867,7 +5566,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
   var pending = false;
   function persist() {
     pending = false;
-    const stored = readRaw(KEY);
+    const stored = readRaw(KEY2);
     if (stored && base && JSON.stringify(stored) !== base) {
       const merged = structuredClone(merge3(JSON.parse(base), data, stored));
       const changed = !same(merged, data);
@@ -4877,7 +5576,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         emit("sync");
       }
     }
-    writeRaw(KEY, data);
+    writeRaw(KEY2, data);
     base = JSON.stringify(data);
   }
   var saveSoon = debounce(persist, 250, 1500);
@@ -4906,13 +5605,13 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
   function watchRemote() {
     try {
       if (typeof GM_addValueChangeListener === "function") {
-        GM_addValueChangeListener(KEY, (name, oldValue, newValue, remote) => remote && onRemote(newValue));
+        GM_addValueChangeListener(KEY2, (name, oldValue, newValue, remote) => remote && onRemote(newValue));
         return "gm";
       }
     } catch (e) {
       log.warn("GM_addValueChangeListener", e);
     }
-    window.addEventListener("storage", (e) => e.key === KEY && e.newValue && onRemote(e.newValue));
+    window.addEventListener("storage", (e) => e.key === KEY2 && e.newValue && onRemote(e.newValue));
     return "storage";
   }
   var runtime = readRaw(STATE_KEY) || {};
@@ -4930,14 +5629,14 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       data.migrations.push(id);
       changed = true;
     }
-    if (changed) writeRaw(KEY, data);
+    if (changed) writeRaw(KEY2, data);
     base = JSON.stringify(data);
   }
   function activeProfile() {
     return data.profiles[data.active] || data.profiles[Object.keys(data.profiles)[0]];
   }
   function recompute() {
-    config = normalize(activeProfile()?.config?.[site.id], site);
+    config = normalize(activeProfile()?.config?.[site2.id], site2);
   }
   function emit(reason) {
     for (const fn of subs) {
@@ -4950,7 +5649,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
   }
   function linkVars(p, oldVars, newVars) {
     for (const id of SITE_KEYS) {
-      if (id === site.id) continue;
+      if (id === site2.id) continue;
       const other = normalize(p.config?.[id], sites[id]);
       let touched = false;
       for (const k of /* @__PURE__ */ new Set([...Object.keys(oldVars), ...Object.keys(newVars)])) {
@@ -4969,10 +5668,10 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
   }
   var store = {
     init() {
-      data = readRaw(KEY);
+      data = readRaw(KEY2);
       if (!data || typeof data !== "object" || !data.profiles || !Object.keys(data.profiles).length) {
         data = freshData();
-        writeRaw(KEY, data);
+        writeRaw(KEY2, data);
       }
       data.settings ||= defaultSettings();
       data.buckets ||= {};
@@ -5005,7 +5704,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       return data.active;
     },
     get siteId() {
-      return site.id;
+      return site2.id;
     },
     get syncMode() {
       return syncMode;
@@ -5020,11 +5719,11 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     // mutator bekommt den abschnitt der aktuellen seite
     update(mutator, reason = "update") {
       const p = activeProfile();
-      const draft = normalize(p.config?.[site.id], site);
+      const draft = normalize(p.config?.[site2.id], site2);
       const oldVars = { ...draft.vars };
       mutator(draft);
-      const next = normalize(draft, site);
-      p.config = { ...p.config || {}, schema: SCHEMA, [site.id]: next };
+      const next = normalize(draft, site2);
+      p.config = { ...p.config || {}, schema: SCHEMA, [site2.id]: next };
       if (data.settings.linkLook) linkVars(p, oldVars, next.vars);
       commit(reason);
     },
@@ -5034,14 +5733,14 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     // look beider seiten koppeln, beim einschalten einmal alle profile angleichen
     setLinkLook(on) {
       data.settings.linkLook = !!on;
-      if (on) for (const p of Object.values(data.profiles)) linkVars(p, {}, normalize(p.config?.[site.id], site).vars);
+      if (on) for (const p of Object.values(data.profiles)) linkVars(p, {}, normalize(p.config?.[site2.id], site2).vars);
       commit("profile");
     },
     // look (theme/farben/dichte/typografie) der jeweils anderen seite im selben profil
     // dient dazu, den style zwischen youtube und music zu uebertragen
     otherLooks() {
       const p = activeProfile();
-      return SITE_KEYS.filter((id) => id !== site.id).map((id) => ({
+      return SITE_KEYS.filter((id) => id !== site2.id).map((id) => ({
         id,
         label: sites[id].label,
         vars: normalize(p.config?.[id], sites[id]).vars
@@ -5105,7 +5804,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       if (!p) return;
       const t = templateById2[p.template];
       const fresh = t ? t.config() : {};
-      p.config = allSites ? fresh : { ...p.config || {}, schema: SCHEMA, [site.id]: fresh[site.id] || {} };
+      p.config = allSites ? fresh : { ...p.config || {}, schema: SCHEMA, [site2.id]: fresh[site2.id] || {} };
       commit("profile");
     },
     exportJson(all = false) {
@@ -5164,12 +5863,12 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
   }
   function normalizeGroups(raw) {
     const out = { groups: [] };
-    const seen2 = /* @__PURE__ */ new Set();
+    const seen3 = /* @__PURE__ */ new Set();
     for (const g of isObj3(raw) && Array.isArray(raw.groups) ? raw.groups : []) {
       if (!isObj3(g) || !String(g.name || "").trim()) continue;
       let id = String(g.id || "").trim() || `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-      while (seen2.has(id)) id += "x";
-      seen2.add(id);
+      while (seen3.has(id)) id += "x";
+      seen3.add(id);
       const chans = /* @__PURE__ */ new Map();
       for (const c of Array.isArray(g.channels) ? g.channels : []) {
         const ch = cleanChannel(c);
@@ -5219,10 +5918,10 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
   }
 
   // src/features/youtube/subGroups/index.js
-  var cards = () => site.filters;
-  var channelRefOf2 = (card2) => site.channels.channelRefOf(card2);
-  var channelPageInfo3 = () => site.channels.channelPageInfo();
-  var subscribedChannels3 = () => site.channels.subscribedChannels();
+  var cards = () => site2.filters;
+  var channelRefOf2 = (card2) => site2.channels.channelRefOf(card2);
+  var channelPageInfo3 = () => site2.channels.channelPageInfo();
+  var subscribedChannels3 = () => site2.channels.subscribedChannels();
   var readCard4 = (el) => cards().readCard(el);
   var ATTR3 = "data-ytx-sg-hide";
   var groupsData = () => store.bucket(GROUPS_BUCKET, normalizeGroups);
@@ -5610,8 +6309,8 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     if (breakMin > 0 && streakSec >= breakMin * 60 && (state2.breakAt == null || streakSec >= state2.breakAt + breakMin * 60)) return { kind: "break", mark: streakSec };
     return null;
   }
-  function add(map, key, init, sec) {
-    const v = map.get(key) || { ...init, sec: 0, count: 0 };
+  function add(map, key, init2, sec) {
+    const v = map.get(key) || { ...init2, sec: 0, count: 0 };
     v.sec += sec;
     v.count++;
     map.set(key, v);
@@ -5647,8 +6346,8 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
   }
 
   // src/features/youtube/watchtime/index.js
-  var activePlayback3 = () => site.playback.activePlayback();
-  var pauseActive3 = () => site.playback.pauseActive();
+  var activePlayback3 = () => site2.playback.activePlayback();
+  var pauseActive3 = () => site2.playback.pauseActive();
   var current = null;
   var watchTime = {
     get instance() {
@@ -5781,7 +6480,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           remind(due.kind);
         }
       };
-      const timer2 = setInterval(tick2, 1e3);
+      const timer3 = setInterval(tick2, 1e3);
       const badgeTimer = setInterval(() => badge2.refresh(), 1e4);
       const offHide = listen(window, "pagehide", () => save3(st.session));
       const prune = () => db3.deleteWhere("views", "startedAt", IDBKeyRange.upperBound(Date.now() - s.retentionDays * DAY)).catch(() => {
@@ -5799,7 +6498,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           badge2.refresh();
         },
         dispose() {
-          clearInterval(timer2);
+          clearInterval(timer3);
           clearInterval(badgeTimer);
           clearTimeout(pruneTimer);
           offHide();
@@ -6119,7 +6818,7 @@ ${chaptersText(true)}
   var featureManifests = [transcript_default, copyInfo, duration_default, search_default, sort_default, subGroups_default, watchtime_default, dimWatched_default, endsAt, publishDate, progressBadge, proxyButtons];
 
   // src/appliers/vars.js
-  function buildVarsCss(vars, look = site.look) {
+  function buildVarsCss(vars, look = site2.look) {
     const theme = look.themes.find((t) => t.id === vars.theme) || look.themes[0];
     const colors = { ...theme.values };
     for (const c of look.colorControls) if (vars[c.id]) colors[c.id] = vars[c.id];
@@ -7646,41 +8345,6 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     return lines2.join("\n");
   }
 
-  // src/core/ytResponses.js
-  var listeners = /* @__PURE__ */ new Set();
-  var hooked = false;
-  function hook() {
-    if (hooked) return;
-    hooked = true;
-    const w = pageWindow;
-    const orig = w.fetch;
-    if (typeof orig !== "function") return;
-    w.fetch = function(...a) {
-      const p = orig.apply(this, a);
-      try {
-        const url = String(a[0]?.url || a[0]);
-        if (listeners.size && /\/youtubei\/v1\/(next|get_watch|browse|search)/.test(url)) {
-          p.then((r) => r.clone().json()).then((j) => {
-            for (const fn of listeners) {
-              try {
-                fn(j);
-              } catch {
-              }
-            }
-          }).catch(() => {
-          });
-        }
-      } catch {
-      }
-      return p;
-    };
-  }
-  function onYtResponse(fn) {
-    hook();
-    listeners.add(fn);
-    return () => listeners.delete(fn);
-  }
-
   // src/behaviors/heatmap.js
   var maps = /* @__PURE__ */ new Map();
   function find(o, key, d = 0) {
@@ -7757,10 +8421,10 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     start() {
       let lastInit = null;
       const readInit = () => {
-        const init = pageWindow.ytInitialData;
-        if (init && init !== lastInit) {
-          lastInit = init;
-          collect(init);
+        const init2 = pageWindow.ytInitialData;
+        if (init2 && init2 !== lastInit) {
+          lastInit = init2;
+          collect(init2);
         }
       };
       readInit();
@@ -7824,9 +8488,9 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   };
 
   // src/behaviors/appCheck.js
-  var KEY2 = "ytx.appCheck";
+  var KEY3 = "ytx.appCheck";
   try {
-    if (/ytxcheck/.test(location.hash)) sessionStorage.setItem(KEY2, "1");
+    if (/ytxcheck/.test(location.hash)) sessionStorage.setItem(KEY3, "1");
   } catch {
   }
   var round = (n) => Math.round(n * 10) / 10;
@@ -7875,6 +8539,10 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       r.diag = summarize2(runChecks());
     } catch {
     }
+    try {
+      r.newTypes = newTypes().map((e) => e.name);
+    } catch {
+    }
     if (host2.startsWith("music.")) {
       const layout = document.querySelector("ytmusic-app-layout");
       r.ui = layout?.getAttribute("player-ui-state") || null;
@@ -7903,7 +8571,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       pageWindow.__ytxReport = report;
       let on = false;
       try {
-        on = sessionStorage.getItem(KEY2) === "1";
+        on = sessionStorage.getItem(KEY3) === "1";
       } catch {
       }
       if (!window.__ytxNative || !on) return () => {
@@ -7916,8 +8584,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         }
       };
       send();
-      const timer2 = setInterval(send, 1500);
-      return () => clearInterval(timer2);
+      const timer3 = setInterval(send, 1500);
+      return () => clearInterval(timer3);
     }
   };
 
@@ -8141,6 +8809,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     musicBack,
     musicByline,
     musicRows,
+    typeRadar,
     appCheck
   ];
   var behaviorById2 = Object.fromEntries(behaviors2.map((b) => [b.id, b]));
@@ -8386,10 +9055,10 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     return s;
   }
   var decay = (ageMs, halfLifeDays = 120) => Math.pow(0.5, Math.max(0, ageMs) / (halfLifeDays * DAY2));
-  function bump(map, key, init) {
+  function bump(map, key, init2) {
     let v = map.get(key);
     if (!v) {
-      v = init();
+      v = init2();
       map.set(key, v);
     }
     return v;
@@ -8871,8 +9540,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         emit2("releases", null);
       },
       async unseenCount() {
-        const seen2 = await getMeta("releasesSeenAt", 0) || 0;
-        const list = await musicDb().byIndex("releases", "firstSeen", IDBKeyRange.lowerBound(seen2 + 1));
+        const seen3 = await getMeta("releasesSeenAt", 0) || 0;
+        const list = await musicDb().byIndex("releases", "firstSeen", IDBKeyRange.lowerBound(seen3 + 1));
         return list.filter((r) => r.fresh).length;
       }
     },
@@ -8973,7 +9642,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         const out = tracker.sample({ ts: now, videoId: t.videoId, pos: t.pos, dur: t.dur, playing: t.playing, ad: t.ad, liked: t.liked, rate: t.rate, meta, context: { page: ctx.nav.page, playlistId: ctx.nav.playlistId || null, session: session?.presetId || null, videoType: t.videoType } });
         if (out.length) save3(out);
       };
-      const timer2 = setInterval(tick2, 1e3);
+      const timer3 = setInterval(tick2, 1e3);
       const offHide = listen(window, "pagehide", () => save3(tracker.finish("close", Date.now())));
       scheduleRetention();
       const daily = setInterval(scheduleRetention, 6 * 3600 * 1e3);
@@ -8982,7 +9651,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         stats: stats2,
         tracker,
         dispose() {
-          clearInterval(timer2);
+          clearInterval(timer3);
           clearInterval(daily);
           offHide();
           save3(tracker.finish("close", Date.now()));
@@ -9023,7 +9692,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       if (!parsed) throw new Error("keine seitendaten im html");
       return parsed;
     }
-    async function load4(path, { maxAge = maxAgeMs, force = false, cacheOnly = false, transform = (x) => x } = {}) {
+    async function load5(path, { maxAge = maxAgeMs, force = false, cacheOnly = false, transform = (x) => x } = {}) {
       const key = `page:${path}`;
       if (!force && cache4) {
         try {
@@ -9062,40 +9731,11 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     }
     return {
       stats: stats2,
-      load: load4,
+      load: load5,
       stop() {
         stopped = true;
       }
     };
-  }
-
-  // src/registry/music/initialData.js
-  var RE = /initialData\.push\(\{path: '((?:\\.|[^'])*)', params: JSON\.parse\('((?:\\.|[^'])*)'\), data: '((?:\\.|[^'])*)'\}\)/g;
-  var SIMPLE = { n: "\n", r: "\r", t: "	", b: "\b", f: "\f", v: "\v", 0: "\0" };
-  function unescapeJs(s) {
-    return s.replace(/\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|[\s\S])/g, (_, e) => {
-      if (e[0] === "x" && e.length === 3) return String.fromCharCode(parseInt(e.slice(1), 16));
-      if (e[0] === "u" && e.length === 5) return String.fromCharCode(parseInt(e.slice(1), 16));
-      return SIMPLE[e] ?? e;
-    });
-  }
-  function extractInitialData(html) {
-    const out = [];
-    RE.lastIndex = 0;
-    let m;
-    while (m = RE.exec(html)) {
-      try {
-        out.push({ path: unescapeJs(m[1]), params: JSON.parse(unescapeJs(m[2])), data: JSON.parse(unescapeJs(m[3])) });
-      } catch (e) {
-        out.push({ path: null, error: e.message });
-      }
-    }
-    return out;
-  }
-  function mainData(html) {
-    const blocks = extractInitialData(html);
-    const main = blocks.find((b) => b.path && b.path !== "/guide");
-    return main ? { path: main.path, params: main.params, data: main.data } : null;
   }
 
   // src/features/music/data/catalog.js
@@ -9139,15 +9779,15 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   };
 
   // src/features/music/ytxQueue.js
-  var KEY3 = "ytx.music.queue";
+  var KEY4 = "ytx.music.queue";
   var listeners2 = /* @__PURE__ */ new Set();
-  var q = load2();
-  var timer = null;
+  var q = load3();
+  var timer2 = null;
   var prev = null;
   var lastJumpAt = 0;
-  function load2() {
+  function load3() {
     try {
-      const v = JSON.parse(sessionStorage.getItem(KEY3) || "null");
+      const v = JSON.parse(sessionStorage.getItem(KEY4) || "null");
       if (v && Array.isArray(v.items)) return v;
     } catch {
     }
@@ -9155,7 +9795,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   }
   function save() {
     try {
-      sessionStorage.setItem(KEY3, JSON.stringify(q));
+      sessionStorage.setItem(KEY4, JSON.stringify(q));
     } catch {
     }
     for (const fn of listeners2) {
@@ -9216,11 +9856,11 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     prev = { videoId: t.videoId, counterpartVideoId: t.counterpartVideoId, pos: t.pos, dur: t.dur };
   }
   function startTimer() {
-    if (!timer) timer = setInterval(tick, 500);
+    if (!timer2) timer2 = setInterval(tick, 500);
   }
   function stopTimer() {
-    clearInterval(timer);
-    timer = null;
+    clearInterval(timer2);
+    timer2 = null;
   }
   var ytxQueue = {
     get state() {
@@ -9849,14 +10489,14 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     let rel = 0;
     let fit = 0;
     const reasons = [];
-    const seen2 = /* @__PURE__ */ new Set();
+    const seen3 = /* @__PURE__ */ new Set();
     for (const s of c.sources) {
       const w = (SOURCE_WEIGHTS[s.kind] ?? 0.3) * (s.weight ?? 1);
       rel = Math.max(rel, w) + Math.min(w, rel) * 0.25;
       if (s.viaKey) fit = Math.max(fit, profile.artistAffinity(s.viaKey) * (s.kind === "similar" ? 0.6 : 0.4));
       const txt = reasonText(s);
-      if (txt && !seen2.has(txt)) {
-        seen2.add(txt);
+      if (txt && !seen3.has(txt)) {
+        seen3.add(txt);
         reasons.push(txt);
       }
     }
@@ -9903,8 +10543,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       if (isExcluded(c, opts.excluded)) continue;
       if (opts.hideVersions.length && versionTags(c.title).some((t) => opts.hideVersions.includes(t))) continue;
       if (opts.onlyKnownArtists) {
-        const known2 = (c.artists || []).some((a) => profile.artistPlays(artistKey(a)) >= 2 || profile.artists.get(artistKey(a))?.favorite);
-        if (!known2) continue;
+        const known3 = (c.artists || []).some((a) => profile.artistPlays(artistKey(a)) >= 2 || profile.artists.get(artistKey(a))?.favorite);
+        if (!known3) continue;
       }
       scored.push({ ...c, ...scoreCandidate(c, profile, opts) });
     }
@@ -10080,15 +10720,15 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
   async function seedArtists(profile, max = 8, { fixed = 2 } = {}) {
     const favs = (await music.favorites.byType("artist")).sort((a, b) => (b.weight ?? 1) - (a.weight ?? 1));
     const out = [];
-    const seen2 = /* @__PURE__ */ new Set();
+    const seen3 = /* @__PURE__ */ new Set();
     for (const f of favs) {
-      if (!f.id || seen2.has(f.id)) continue;
-      seen2.add(f.id);
+      if (!f.id || seen3.has(f.id)) continue;
+      seen3.add(f.id);
       out.push({ id: f.id, name: f.name, key: f.id, kind: "favoriteArtist" });
     }
     for (const a of profile.topArtists(30)) {
-      if (!a.id || seen2.has(a.id) || a.feedback < 0) continue;
-      seen2.add(a.id);
+      if (!a.id || seen3.has(a.id) || a.feedback < 0) continue;
+      seen3.add(a.id);
       out.push({ id: a.id, name: a.name, key: a.key, kind: "topArtist" });
     }
     return [...out.slice(0, fixed), ...shuffled(out.slice(fixed))].slice(0, max);
@@ -10111,8 +10751,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     return (await music.releases.latest(limit * 2)).filter((r) => ids.has(r.artistId) && (r.fresh || r.recent)).slice(0, limit);
   }
   async function unseenReleaseCount() {
-    const seen2 = await music.getMeta("releasesSeenAt", 0) || 0;
-    return (await followedReleases(100)).filter((r) => r.fresh && r.firstSeen > seen2).length;
+    const seen3 = await music.getMeta("releasesSeenAt", 0) || 0;
+    return (await followedReleases(100)).filter((r) => r.fresh && r.firstSeen > seen3).length;
   }
   function shuffled(list) {
     const a = list.slice();
@@ -10366,7 +11006,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     setup(ctx) {
       let s = ctx.settings;
       let last2 = null;
-      let timer2 = null;
+      let timer3 = null;
       let stopped = false;
       const run2 = async (force = false) => {
         const p = music.prefs();
@@ -10384,7 +11024,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         }
       };
       const first = setTimeout(() => !stopped && run2(false), 25 * 1e3);
-      timer2 = setInterval(() => !stopped && !document.hidden && run2(false), 60 * 60 * 1e3);
+      timer3 = setInterval(() => !stopped && !document.hidden && run2(false), 60 * 60 * 1e3);
       music.getMeta("lastReleaseCheck").then((v) => last2 ||= v).catch(() => {
       });
       return {
@@ -10398,7 +11038,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         dispose() {
           stopped = true;
           clearTimeout(first);
-          clearInterval(timer2);
+          clearInterval(timer3);
         },
         health() {
           const p = music.prefs();
@@ -10516,14 +11156,14 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         slider.addEventListener("input", () => val.textContent = slider.value);
         slider.addEventListener("change", () => {
           ui.discovery = Number(slider.value) / 100;
-          load4(true);
+          load5(true);
         });
         t.append(h("label", { title: "Nur für diese Ansicht, Standard im ytx-Panel" }, "Bekannt", slider, "Entdecken"));
         const sel = h("select", { title: "Session-Preset, gilt nur in diesem Tab" }, h("option", { value: "", text: "Keine Session", selected: !session }), ...SESSION_PRESETS.map((p) => h("option", { value: p.id, text: p.label, selected: session?.presetId === p.id })));
         sel.addEventListener("change", () => {
           music.setSession(sel.value || null);
           ui.discovery = null;
-          load4(true);
+          load5(true);
         });
         t.append(sel);
         if (ui.tab === "genre") {
@@ -10535,7 +11175,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
             if (!input.value.trim()) return;
             ui.genre = input.value.trim();
             ctx.state.set("m.hub.genre", ui.genre);
-            load4(true);
+            load5(true);
           });
           t.append(input, dl);
           const favs = prefs.genres.favorites;
@@ -10558,7 +11198,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
             c.addEventListener("click", () => {
               ui.genre = g;
               ctx.state.set("m.hub.genre", g);
-              load4(true);
+              load5(true);
             });
             t.append(c);
           }
@@ -10570,7 +11210,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
             run2.textContent = "prüft …";
             const r = await checkReleases({ force: true, onProgress: (n, total) => run2.textContent = `prüft ${n}/${total}` }).catch((e) => ({ error: e.message }));
             toast(r.error ? `Prüfung fehlgeschlagen: ${r.error}` : `${r.checked} Künstler geprüft, ${r.fresh} neu`);
-            load4(true);
+            load5(true);
           });
           t.append(run2);
         }
@@ -10587,12 +11227,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           const seedSel = h("select", null, ...opts.map(([v, l]) => h("option", { value: v, text: l, selected: v === cur })));
           seedSel.addEventListener("change", () => {
             ui.seed = { key: seedSel.value };
-            load4(true);
+            load5(true);
           });
           t.append(seedSel);
         }
         const reload = h("button", { class: "btn sec", type: "button", text: "↻", title: "Neu berechnen" });
-        reload.addEventListener("click", () => load4(true, true));
+        reload.addEventListener("click", () => load5(true, true));
         t.append(reload);
         t.append(infoLine(prefs, session, disc));
       }
@@ -10616,7 +11256,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           const cb = h("input", { type: "checkbox", checked: prefs.genres.inForYou, style: { verticalAlign: "middle", margin: "0 4px 0 10px" } });
           cb.addEventListener("change", () => {
             music.updatePrefs((p) => p.genres.inForYou = cb.checked);
-            load4(true, true);
+            load5(true, true);
           });
           box2.append(h("label", { style: { whiteSpace: "nowrap", cursor: "pointer" } }, cb, "Lieblingsgenres einbeziehen"));
         }
@@ -10640,7 +11280,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       function cacheKey(args) {
         return JSON.stringify([ui.tab, args.genre, args.artist?.id, args.seed?.videoId || args.seed?.id || args.seed?.name || args.seed?.presetId, args.discovery, music.session()?.presetId]);
       }
-      async function load4(redraw = false, force = false) {
+      async function load5(redraw = false, force = false) {
         if (redraw) drawTools();
         const token = ++renderToken;
         const tab = ui.tab;
@@ -10783,7 +11423,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           return;
         }
         if (ui.result) drawBody();
-        else load4();
+        else load5();
       }
       const offQueue = ytxQueue.on(() => drawer.isOpen && ui.tab === "queue" && drawQueue());
       const T2 = { primary: "var(--ytmusic-text-primary, #fff)", secondary: "var(--ytmusic-text-secondary, #aaa)" };
@@ -11194,11 +11834,11 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       s.plays++;
       s.listenedSec += p.listenedSec || 0;
       songs.set(p.videoId, s);
-      const seen2 = /* @__PURE__ */ new Set();
+      const seen3 = /* @__PURE__ */ new Set();
       for (const a of p.artists || []) {
         const k = artistKey(a);
-        if (!k || seen2.has(k)) continue;
-        seen2.add(k);
+        if (!k || seen3.has(k)) continue;
+        seen3.add(k);
         const v = artists.get(k) || { key: k, id: a.id || null, name: a.name, plays: 0, listenedSec: 0, isNew: firstSeen.get(k) >= start };
         v.plays++;
         v.listenedSec += p.listenedSec || 0;
@@ -11435,14 +12075,14 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     const blocked = rules2 && blockReason(track, rules2);
     if (blocked) return blocked;
     if (settings.onlyKnownArtists && profile) {
-      const known2 = (track.artists || []).some((a) => profile.artistPlays(artistKey(a)) >= 2 || profile.artists.get(artistKey(a))?.favorite);
-      if (!known2) return { kind: "unknown", label: "Unbekannter Künstler (Session „Nur bekannte Musik“)" };
+      const known3 = (track.artists || []).some((a) => profile.artistPlays(artistKey(a)) >= 2 || profile.artists.get(artistKey(a))?.favorite);
+      if (!known3) return { kind: "unknown", label: "Unbekannter Künstler (Session „Nur bekannte Musik“)" };
     }
     if (settings.skipHighSkip && profile?.isHighSkip(track.videoId)) return { kind: "highSkip", label: "Oft übersprungen" };
     if (settings.skipDuplicates !== false && recentKeys) {
       const k = trackKey(track);
-      const seen2 = recentKeys.get(k);
-      if (seen2 && seen2.videoId !== track.videoId && now - seen2.ts < 3 * 3600 * 1e3) return { kind: "duplicate", label: "Andere Fassung schon gespielt" };
+      const seen3 = recentKeys.get(k);
+      if (seen3 && seen3.videoId !== track.videoId && now - seen3.ts < 3 * 3600 * 1e3) return { kind: "duplicate", label: "Andere Fassung schon gespielt" };
     }
     if (settings.skipRecentlyPlayed && recentIds2) {
       const ts = recentIds2.get(track.videoId);
@@ -11612,7 +12252,7 @@ ${data2.source}` : ""].join("\n").trim();
         }
         stats2.marked = n;
       };
-      const timer2 = setInterval(tick2, 700);
+      const timer3 = setInterval(tick2, 700);
       const offSweep = ctx.onSweep(marks);
       return {
         stats: stats2,
@@ -11622,7 +12262,7 @@ ${data2.source}` : ""].join("\n").trim();
           marks();
         },
         dispose() {
-          clearInterval(timer2);
+          clearInterval(timer3);
           offSweep();
           for (const off of offs) off();
           for (const m of qsa(".ytx-m-mark")) m.remove();
@@ -11675,14 +12315,14 @@ ${data2.source}` : ""].join("\n").trim();
           if (next !== text) node.textContent = text = next;
         }
       });
-      const timer2 = setInterval(() => m.refresh(), 5e3);
+      const timer3 = setInterval(() => m.refresh(), 5e3);
       return {
         update(next) {
           s = next;
           m.refresh();
         },
         dispose() {
-          clearInterval(timer2);
+          clearInterval(timer3);
           m.destroy();
         },
         health: () => m.ok ? { status: text ? "ok" : "skip", detail: text || "Warteschlange leer" } : { status: "skip", detail: "Warteschlange nicht sichtbar (Player-Seite öffnen)" }
@@ -11751,7 +12391,7 @@ ${data2.source}` : ""].join("\n").trim();
         }
       });
       ctx.action("music.lyricsCopy", () => copy(s.format));
-      const timer2 = setInterval(() => m.refresh(), 1500);
+      const timer3 = setInterval(() => m.refresh(), 1500);
       return {
         update(next) {
           s = next;
@@ -11760,7 +12400,7 @@ ${data2.source}` : ""].join("\n").trim();
           m.refresh();
         },
         dispose() {
-          clearInterval(timer2);
+          clearInterval(timer3);
           m.destroy();
         },
         health() {
@@ -11856,7 +12496,7 @@ ${data2.source}` : ""].join("\n").trim();
       const resume = () => graph?.ac.state === "suspended" && graph.ac.resume().catch(() => {
       });
       const offs = [listen(document, "pointerdown", resume, true), listen(document, "keydown", resume, true)];
-      const timer2 = setInterval(() => {
+      const timer3 = setInterval(() => {
         switchAudio();
         if (s.eq || graph) ensureGraph();
       }, 1500);
@@ -11870,7 +12510,7 @@ ${data2.source}` : ""].join("\n").trim();
           setTimeout(switchAudio, 800);
         },
         dispose() {
-          clearInterval(timer2);
+          clearInterval(timer3);
           for (const off of offs) off();
           if (graph) {
             graph.filters.forEach((f) => f.gain.value = 0);
@@ -11945,7 +12585,7 @@ ${data2.source}` : ""].join("\n").trim();
   var mounts = /* @__PURE__ */ new Map();
   var anchorStatus = /* @__PURE__ */ new Map();
   function resolveAnchor(id, root = document) {
-    const a = site.anchors[id];
+    const a = site2.anchors[id];
     if (!a) {
       log.warn(`anker unbekannt ${id}`);
       return null;
@@ -12884,13 +13524,13 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       const w = pageWindow;
       let deadline = 0;
       let box2 = null;
-      let timer2 = 0;
+      let timer3 = 0;
       const style = document.createElement("style");
       style.textContent = CSS4;
       document.head.append(style);
       const hide = () => {
-        clearInterval(timer2);
-        timer2 = 0;
+        clearInterval(timer3);
+        timer3 = 0;
         box2?.remove();
         box2 = null;
       };
@@ -12919,8 +13559,8 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
           host2.append(box2);
         }
         draw();
-        clearInterval(timer2);
-        timer2 = setInterval(() => {
+        clearInterval(timer3);
+        timer3 = setInterval(() => {
           if (!box2?.isConnected || pageFromUrl(location.href) !== "watch") return hide();
           draw();
         }, 250);
@@ -13004,7 +13644,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
     default: "both",
     start(ctx, mode) {
       const auto = mode === "both";
-      let timer2 = 0;
+      let timer3 = 0;
       let press = null;
       let drag = null;
       let suppressUntil = 0;
@@ -13032,7 +13672,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         }
       };
       const stopLive = () => {
-        clearTimeout(timer2);
+        clearTimeout(timer3);
         if (live) {
           clearTimeout(live.hello);
           clearInterval(live.slideTimer);
@@ -13201,12 +13841,12 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
           }
           press = null;
           drag = null;
-          clearTimeout(timer2);
+          clearTimeout(timer3);
           if (!(live && live.how === "auto")) stopLive();
           const link = thumbLink(e.target);
           if (!link) return;
           press = { x: t.clientX, y: t.clientY, link, t0: Date.now() };
-          timer2 = setTimeout(() => {
+          timer3 = setTimeout(() => {
             if (press) begin(press.link, "press");
           }, TAP_MS);
         }, { passive: true, capture: true }),
@@ -13227,12 +13867,12 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
               seekTo(t.clientX);
             }
           } else if (press && (Math.abs(t.clientX - press.x) > 12 || Math.abs(t.clientY - press.y) > 12)) {
-            clearTimeout(timer2);
+            clearTimeout(timer3);
             press = null;
           }
         }, { passive: false, capture: true }),
         listen(document, "touchend", () => {
-          clearTimeout(timer2);
+          clearTimeout(timer3);
           if (live && live.how === "press") {
             const held = Date.now() - live.t0;
             settleSeek();
@@ -13685,7 +14325,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove, appCheck];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove, typeRadar, appCheck];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js
@@ -13702,7 +14342,7 @@ html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #m
   var native = (a) => window.__ytxNative?.({ a });
   function initMiniMode() {
     let ui = null;
-    let timer2 = null;
+    let timer3 = null;
     const isMini = () => innerWidth <= 480 && innerHeight <= 300;
     function build() {
       const box2 = h("div", { "data-ytx-own": "" });
@@ -13736,10 +14376,10 @@ html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #m
         ui = null;
       }
     }
-    timer2 = setInterval(tick2, 400);
+    timer3 = setInterval(tick2, 400);
     addEventListener("resize", tick2);
     tick2();
-    return () => clearInterval(timer2);
+    return () => clearInterval(timer3);
   }
 
   // src/features/youtube/downloads.js
@@ -13903,7 +14543,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
 
   // src/sites/index.js
   var sites = { youtube: youtubeSite, music: musicSite, mobile: mobileSite };
-  var site = sites[SITE_ID];
+  var site2 = sites[SITE_ID];
 
   // src/core/nav.js
   var handlers2 = { page: /* @__PURE__ */ new Set(), video: /* @__PURE__ */ new Set(), start: /* @__PURE__ */ new Set() };
@@ -13930,10 +14570,10 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   }
   function checkNav() {
     const href = location.href;
-    const page = site.pageFromUrl(href);
+    const page = site2.pageFromUrl(href);
     let videoId = null;
     try {
-      videoId = site.currentVideoId ? site.currentVideoId(page, href) : site.videoIdFromUrl(href);
+      videoId = site2.currentVideoId ? site2.currentVideoId(page, href) : site2.videoIdFromUrl(href);
     } catch {
     }
     let playlistId = null;
@@ -13955,18 +14595,18 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     if (videoChanged) emit3("video", videoId);
   }
   function initNav() {
-    nav.page = site.pageFromUrl(location.href);
+    nav.page = site2.pageFromUrl(location.href);
     document.documentElement.setAttribute("data-ytx-page", nav.page);
-    document.documentElement.setAttribute("data-ytx-site", site.id);
-    const seen2 = (e) => nav.eventsSeen.add(e.type);
+    document.documentElement.setAttribute("data-ytx-site", site2.id);
+    const seen3 = (e) => nav.eventsSeen.add(e.type);
     listen(document, "yt-navigate-start", (e) => {
-      seen2(e);
+      seen3(e);
       const url = e.detail?.url;
-      emit3("start", url ? site.pageFromUrl(url) : null, url);
+      emit3("start", url ? site2.pageFromUrl(url) : null, url);
     });
     for (const type of ["yt-navigate-finish", "yt-page-data-updated", "yt-player-updated"]) {
       listen(document, type, (e) => {
-        seen2(e);
+        seen3(e);
         checkNav();
       });
     }
@@ -14063,7 +14703,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   }
   function buildDisplayCss() {
     const out = [];
-    for (const t of site.targets) {
+    for (const t of site2.targets) {
       const good = t.sel.filter((s) => {
         const ok = validSelector(s);
         if (!ok) invalid.set(`${t.id} ${s}`, true);
@@ -14104,7 +14744,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     current2 = cfg.display;
     const root = document.documentElement;
     root.toggleAttribute("data-ytx-noshorts", !!(cfg.filters && cfg.filters.shorts));
-    for (const t of site.targets) {
+    for (const t of site2.targets) {
       const name = attrName(t.id);
       const mode = cfg.display[t.id];
       if (mode && mode !== "show") {
@@ -14120,7 +14760,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     return !t.pages || t.pages.includes(nav.page);
   }
   function syncCollapse() {
-    for (const t of site.targets) {
+    for (const t of site2.targets) {
       const active = current2[t.id] === "collapse" && onPage(t);
       if (!active) {
         for (const bar of qsa(`.ytx-collapse-bar[data-ytx-bar="${t.id}"]`)) bar.remove();
@@ -14174,12 +14814,12 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     onDispose(() => {
       for (const bar of qsa(".ytx-collapse-bar")) bar.remove();
       for (const el of qsa("[data-ytx-open]")) el.removeAttribute("data-ytx-open");
-      for (const t of site.targets) document.documentElement.removeAttribute(attrName(t.id));
+      for (const t of site2.targets) document.documentElement.removeAttribute(attrName(t.id));
     });
     registerCheck("display", "Anzeige", "Targets auf dieser Seite", () => {
       const results = [];
       if (invalid.size) results.push({ id: "display.invalid", label: "Ungültige Selektoren", status: "fail", detail: Array.from(invalid.keys()).join(" · ") });
-      for (const t of site.targets) {
+      for (const t of site2.targets) {
         if (t.pages && !t.pages.includes(nav.page)) continue;
         const n = t.sel.filter(validSelector).reduce((sum, s) => sum + qsa(s).length, 0);
         const mode = current2[t.id] || "show";
@@ -14188,20 +14828,20 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
           id: `display.${t.id}`,
           label: `${t.group} › ${t.label}`,
           status: n ? "ok" : t.core && ready ? "warn" : "skip",
-          detail: `${n} Treffer · Modus ${MODE_LABELS[mode]}${n ? "" : t.core ? ` · sollte immer vorhanden sein – Selektor in registry/${site.id}/targets.js prüfen` : " · auf dieser Seite nicht vorhanden"}`
+          detail: `${n} Treffer · Modus ${MODE_LABELS[mode]}${n ? "" : t.core ? ` · sollte immer vorhanden sein – Selektor in registry/${site2.id}/targets.js prüfen` : " · auf dieser Seite nicht vorhanden"}`
         });
       }
       return results;
     });
   }
   function countMatches(id) {
-    const t = site.targetById[id];
+    const t = site2.targetById[id];
     if (!t) return 0;
     return t.sel.filter(validSelector).reduce((sum, s) => sum + qsa(s).length, 0);
   }
 
   // src/appliers/layout.js
-  var P = () => site.presets;
+  var P = () => site2.presets;
   var presetAttr = (page) => `data-ytx-l-${page}`;
   function buildPresetCss() {
     const out = [];
@@ -14299,7 +14939,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
       "behavior",
       "Verhalten",
       "Verhalten",
-      () => site.behaviors.filter((b) => running2.has(b.id)).map((b) => {
+      () => site2.behaviors.filter((b) => running2.has(b.id)).map((b) => {
         const r = running2.get(b.id);
         const h2 = b.health ? b.health(ctxBase, r.value) : { status: "ok", detail: "aktiv" };
         return { id: `behavior.${b.id}`, label: b.label, ...h2 };
@@ -14314,7 +14954,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     }
   }
   function applyBehavior(cfg) {
-    for (const b of site.behaviors) {
+    for (const b of site2.behaviors) {
       const value = cfg.behavior[b.id] ?? b.default;
       const active = b.type === "toggle" ? !!value : !!value;
       const r = running2.get(b.id);
@@ -14336,7 +14976,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   // src/appliers/tagger.js
   var lastCount = /* @__PURE__ */ new Map();
   function run() {
-    for (const r of site.tagRules) {
+    for (const r of site2.tagRules) {
       if (r.pages && !r.pages.includes(nav.page)) continue;
       lastCount.set(r.id, r.run());
     }
@@ -14345,7 +14985,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     onSweep("tagger", run);
     run();
     onDispose(() => {
-      for (const attr of ["data-ytx-btn", "data-ytx-guide", "data-ytx-guide-section", "data-ytx-top", "data-ytx-tab", "data-ytx-live", ...site.tagAttrs || []]) {
+      for (const attr of ["data-ytx-btn", "data-ytx-guide", "data-ytx-guide-section", "data-ytx-top", "data-ytx-tab", "data-ytx-live", ...site2.tagAttrs || []]) {
         for (const el of qsa(`[${attr}]`)) el.removeAttribute(attr);
       }
     });
@@ -14353,7 +14993,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
       "tagger",
       "Grundlagen",
       "Tagging",
-      () => site.tagRules.filter((r) => !r.pages || r.pages.includes(nav.page)).map((r) => {
+      () => site2.tagRules.filter((r) => !r.pages || r.pages.includes(nav.page)).map((r) => {
         const n = lastCount.get(r.id) ?? 0;
         const extra = r.id === "watch.buttons" ? ` · ${qsa("ytd-watch-metadata [data-ytx-btn]").map((e) => e.getAttribute("data-ytx-btn")).join(", ")}` : "";
         return { id: `tag.${r.id}`, label: r.label, status: n ? "ok" : r.core ? "warn" : "skip", detail: `${n} Elemente getaggt${extra}` };
@@ -14422,9 +15062,9 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   }
 
   // src/appliers/filters.js
-  var F = () => site.filters;
+  var F = () => site2.filters;
   var ATTR4 = "data-ytx-f";
-  var seen = /* @__PURE__ */ new WeakMap();
+  var seen2 = /* @__PURE__ */ new WeakMap();
   var rules = null;
   var version = 0;
   var filterStats = { page: "", checked: 0, hits: 0, reasons: {}, unreadable: 0 };
@@ -14469,8 +15109,8 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     for (const el of outermostCards()) {
       const a = el.querySelector("a[href]");
       const sig = `${version}|${a?.getAttribute("href") || ""}|${el.querySelector("h3, #video-title")?.textContent || ""}`;
-      if (seen.get(el) === sig) continue;
-      seen.set(el, sig);
+      if (seen2.get(el) === sig) continue;
+      seen2.set(el, sig);
       let meta = null;
       try {
         meta = F().readCard(el);
@@ -14762,7 +15402,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
 
   // src/core/radarLogic.js
   var BASELINE_MS = 3 * 24 * 3600 * 1e3;
-  var MAX2 = 4e3;
+  var MAX3 = 4e3;
   var emptyState = () => ({ since: 0, tags: {}, flags: {}, fresh: [] });
   function isInteresting(tag) {
     return /^(ytm?d?-|ytmusic-|yt-)/.test(tag) || /-(view-model|renderer)$/.test(tag);
@@ -14771,18 +15411,18 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     if (!state2.since) state2.since = now;
     const settling = now - state2.since < BASELINE_MS;
     let changed = false;
-    const seen2 = (kind, names) => {
-      const known2 = state2[kind];
+    const seen3 = (kind, names) => {
+      const known3 = state2[kind];
       for (const n of names) {
-        if (n in known2) continue;
-        if (Object.keys(known2).length >= MAX2) break;
-        known2[n] = now;
+        if (n in known3) continue;
+        if (Object.keys(known3).length >= MAX3) break;
+        known3[n] = now;
         changed = true;
         if (!settling) state2.fresh.push({ kind, name: n, at: now, page });
       }
     };
-    seen2("tags", tags);
-    seen2("flags", flags);
+    seen3("tags", tags);
+    seen3("flags", flags);
     if (state2.fresh.length > 300) state2.fresh.splice(0, state2.fresh.length - 300);
     return changed;
   }
@@ -14796,20 +15436,20 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
   }
 
   // src/core/radar.js
-  var KEY4 = `ytx.radar.${location.host}`;
+  var KEY5 = `ytx.radar.${location.host}`;
   var EVERY = 45e3;
   var state = emptyState();
   var lastScan = 0;
-  var load3 = () => {
+  var load4 = () => {
     try {
-      return { ...emptyState(), ...JSON.parse(localStorage.getItem(KEY4) || "{}") };
+      return { ...emptyState(), ...JSON.parse(localStorage.getItem(KEY5) || "{}") };
     } catch {
       return emptyState();
     }
   };
   var save2 = () => {
     try {
-      localStorage.setItem(KEY4, JSON.stringify(state));
+      localStorage.setItem(KEY5, JSON.stringify(state));
     } catch {
     }
   };
@@ -14828,7 +15468,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     if (applyScan(state, { tags: [...tags], flags, page, now: Date.now() })) save2();
   }
   function initRadar(getPage) {
-    state = load3();
+    state = load4();
     return onSweep("radar", () => {
       const now = Date.now();
       if (now - lastScan < EVERY) return;
@@ -15022,7 +15662,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
   }
 
   // src/panel/tabs.js
-  var PAGE_LABEL = site.PAGE_LABELS;
+  var PAGE_LABEL = site2.PAGE_LABELS;
   function displayTab(app) {
     const cfg = app.store.config;
     const root = h("div");
@@ -15044,8 +15684,8 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     function render3() {
       list.replaceChildren();
       const q2 = search.value.trim().toLowerCase();
-      for (const group of site.GROUPS) {
-        const items = site.targets.filter((t) => t.group === group).filter((t) => !q2 || `${t.label} ${t.id} ${t.note || ""}`.toLowerCase().includes(q2)).filter((t) => !app.ui.displayOnlyPage || !t.pages || t.pages.includes(app.nav.page));
+      for (const group of site2.GROUPS) {
+        const items = site2.targets.filter((t) => t.group === group).filter((t) => !q2 || `${t.label} ${t.id} ${t.note || ""}`.toLowerCase().includes(q2)).filter((t) => !app.ui.displayOnlyPage || !t.pages || t.pages.includes(app.nav.page));
         if (!items.length) continue;
         const active = items.filter((t) => cfg.display[t.id]).length;
         const det = h("details", { open: q2 || app.ui.openGroups?.has(group) }, h("summary", null, group, h("span", { class: "count", text: active ? `${active} aktiv` : "" })));
@@ -15083,7 +15723,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const cfg = app.store.config;
     const root = h("div");
     const update = (fn) => app.store.update(fn, "panel");
-    const { themes: themes4, colorControls: colorControls4, controls: controls4, LOOK_GROUPS: LOOK_GROUPS4 } = site.look;
+    const { themes: themes4, colorControls: colorControls4, controls: controls4, LOOK_GROUPS: LOOK_GROUPS4 } = site2.look;
     const theme = themes4.find((t) => t.id === cfg.vars.theme) || themes4[0];
     const others = app.store.otherLooks();
     if (others.length) {
@@ -15110,7 +15750,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       row("Farbschema", select(themes4.map((t) => [t.id, t.label]), cfg.vars.theme, (v) => {
         update((c) => c.vars.theme = v);
         app.rerender();
-      }), { note: `Einzelne Farben unten überschreiben das Schema. Gedacht für den dunklen Modus von ${site.label}` })
+      }), { note: `Einzelne Farben unten überschreiben das Schema. Gedacht für den dunklen Modus von ${site2.label}` })
     );
     const colorsBody = h("div");
     for (const c of colorControls4) {
@@ -15139,7 +15779,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const cfg = app.store.config;
     const root = h("div");
     const update = (fn) => app.store.update(fn, "panel");
-    const { layoutPresets: layoutPresets3, LAYOUT_PAGES: LAYOUT_PAGES3, orderGroups: orderGroups3, topbarModes: topbarModes3 } = site.presets;
+    const { layoutPresets: layoutPresets3, LAYOUT_PAGES: LAYOUT_PAGES3, orderGroups: orderGroups3, topbarModes: topbarModes3 } = site2.presets;
     root.append(h("h3", { text: "Presets pro Seite" }));
     for (const [page, label] of LAYOUT_PAGES3) {
       const opts = [["", "Standard"], ...layoutPresets3.filter((p) => p.pages.includes(page)).map((p) => [p.id, p.label])];
@@ -15183,7 +15823,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
         enabled ? box2 : h("div")
       );
     }
-    if (site.id !== "youtube") return root;
+    if (site2.id !== "youtube") return root;
     root.append(h("h3", { text: "Freie Zonen" }));
     root.append(h("p", { class: "hint", text: "Nicht umgesetzt: Freies Umhängen von Bereichen per display: contents stört YouTubes JavaScript-Playergröße und das automatische Umsortieren bei schmalen Fenstern. Stattdessen gibt es die festen Presets „Kino“ und „Fokus“ für die Videoseite." }));
     return root;
@@ -15192,7 +15832,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const cfg = app.store.config;
     const root = h("div");
     const update = (fn) => app.store.update(fn, "panel");
-    for (const b of site.behaviors) {
+    for (const b of site2.behaviors) {
       const value = cfg.behavior[b.id] ?? b.default;
       const set = (v) => update((c) => c.behavior[b.id] = v);
       const badges = b.radical ? [badge("radikal", "radical")] : [];
@@ -15210,7 +15850,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     root.append(
       row("Filter aktiv", toggle(f.enabled, (v) => update((c) => c.filters.enabled = v))),
       row("Darstellung", segmented([["dim", "Dimmen"], ["collapse", "Einklappen"], ["hide", "Aus"]], f.mode, (v) => update((c) => c.filters.mode = v)), { note: "Tipp: neue Regeln erst dimmen, dann ausblenden" }),
-      row("Seiten", chips(site.filters.pages, f.pages, (v) => update((c) => c.filters.pages = v)), { stack: true })
+      row("Seiten", chips(site2.filters.pages, f.pages, (v) => update((c) => c.filters.pages = v)), { stack: true })
     );
     const onPage3 = f.enabled && f.pages.includes(app.nav.page);
     const reasons = Object.entries(filterStats.reasons).map(([k, v]) => `${k}: ${v}`).join(", ");
@@ -15307,7 +15947,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
           input.addEventListener("keydown", (e) => e.key === "Enter" && done2());
           input.addEventListener("blur", done2);
         }, "tiny"),
-        t && btn("Zurücksetzen", () => confirmInline(actions2, `${site.label}-Teil des Profils auf die Vorlage zurücksetzen?`, () => st.resetProfile(p.id)), "tiny"),
+        t && btn("Zurücksetzen", () => confirmInline(actions2, `${site2.label}-Teil des Profils auf die Vorlage zurücksetzen?`, () => st.resetProfile(p.id)), "tiny"),
         btn("Löschen", () => confirmInline(actions2, `„${p.name}“ löschen?`, () => {
           if (!st.deleteProfile(p.id)) app.flash("Das letzte Profil kann nicht gelöscht werden");
           app.rerender();
@@ -15449,7 +16089,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
         body.append(h("h3", { text: "Log" }), h("div", { class: "log", text: errs.slice(-25).map((e) => `${new Date(e.t).toLocaleTimeString("de-DE")} ${e.level} ${e.msg}${e.n > 1 ? ` ×${e.n}` : ""}`).join("\n") }));
       }
     };
-    const meta = () => ({ version: app.version, site: site.id, seite: app.nav.page, url: location.href, profil: app.store.activeId, ...capabilities(), sweeps: `${sweepStats.runs} (${sweepStats.lastMs} ms)`, css: JSON.stringify(cssStats()), events: Array.from(app.nav.eventsSeen).join(",") });
+    const meta = () => ({ version: app.version, site: site2.id, seite: app.nav.page, url: location.href, profil: app.store.activeId, ...capabilities(), sweeps: `${sweepStats.runs} (${sweepStats.lastMs} ms)`, css: JSON.stringify(cssStats()), events: Array.from(app.nav.eventsSeen).join(",") });
     root.append(
       h(
         "div",
@@ -15484,7 +16124,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     registerCheck2("core", "Grundlagen", "Grundlagen", () => {
       const c = capabilities();
       return [
-        { id: "core.polymer", label: `Polymer-Daten lesbar (${site.appHost})`, status: site.id === "mobile" ? "skip" : c.appFound ? c.polymerData ? "ok" : "fail" : "skip", detail: c.polymerData ? "ok" : "Script läuft vermutlich in isolierter Welt – @sandbox / @inject-into prüfen" },
+        { id: "core.polymer", label: `Polymer-Daten lesbar (${site2.appHost})`, status: site2.id === "mobile" ? "skip" : c.appFound ? c.polymerData ? "ok" : "fail" : "skip", detail: c.polymerData ? "ok" : "Script läuft vermutlich in isolierter Welt – @sandbox / @inject-into prüfen" },
         { id: "core.player", label: "Player-API", status: document.querySelector("#movie_player") ? c.playerApi ? "ok" : "fail" : "skip", detail: c.playerApi ? "getPlayerResponse verfügbar" : "Kein Player auf dieser Seite" },
         { id: "core.storage", label: "Speicher", status: c.gmStorage ? "ok" : "warn", detail: c.gmStorage ? `GM_setValue · Abgleich zwischen Tabs: ${app.store.syncMode === "gm" ? "live (YouTube und Music)" : "nur gleiche Seite"}` : "localStorage (Fallback): YouTube und Music speichern getrennt, Profile werden nicht geteilt" },
         { id: "core.nav", label: "Navigations-Events", status: app.nav.eventsSeen.size ? "ok" : "skip", detail: app.nav.eventsSeen.size ? Array.from(app.nav.eventsSeen).join(", ") : "Noch keine yt-navigate Events gesehen (normal direkt nach dem Laden)" },
@@ -15529,10 +16169,10 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const byHour = Array.from({ length: 24 }, () => ({ plays: 0, listenedSec: 0 }));
     const byWeekday = Array.from({ length: 7 }, () => ({ plays: 0, listenedSec: 0 }));
     const totals = { plays: 0, listenedSec: 0, completes: 0, skips: 0, quickSkips: 0, liked: 0, songs: 0, artists: 0 };
-    const add2 = (map, key, init, p) => {
+    const add2 = (map, key, init2, p) => {
       let v = map.get(key);
       if (!v) {
-        v = { ...init, plays: 0, listenedSec: 0, skips: 0, completes: 0 };
+        v = { ...init2, plays: 0, listenedSec: 0, skips: 0, completes: 0 };
         map.set(key, v);
       }
       v.plays++;
@@ -16181,14 +16821,14 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const top2 = Math.min(64, Math.max(GAP, vh - MIN_H - GAP));
     return { left: vw - width - 12, top: top2, width, height: vh - top2 - 12 };
   }
-  function makeMovable(panel, handle, { load: load4, save: save3 }) {
+  function makeMovable(panel, handle, { load: load5, save: save3 }) {
     const vp = () => [document.documentElement.clientWidth || innerWidth, innerHeight];
     let rect = null;
     const apply = (r) => {
       rect = clampRect(r, ...vp());
       Object.assign(panel.style, { left: `${rect.left}px`, top: `${rect.top}px`, width: `${rect.width}px`, height: `${rect.height}px`, right: "auto", bottom: "auto" });
     };
-    const place2 = () => apply(load4() || defaultRect(...vp()));
+    const place2 = () => apply(load5() || defaultRect(...vp()));
     const persist2 = debounce(() => rect && save3(rect), 300);
     let drag = null;
     listen(handle, "pointerdown", (e) => {
@@ -16245,7 +16885,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     profiles: ["Profile", profilesTab],
     diagnose: ["Diagnose", diagnoseTab]
   };
-  var TABS2 = site.panelTabs.map((id) => [id, ...ALL_TABS[id]]);
+  var TABS2 = site2.panelTabs.map((id) => [id, ...ALL_TABS[id]]);
   function createPanel(app) {
     const host2 = h("ytx-panel", { "data-ytx-own": "" });
     const shadow = host2.attachShadow({ mode: "closed" });
@@ -16258,15 +16898,15 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const main = h("main");
     const status = h("span");
     const footInfo = h("span");
-    const head = h("header", { title: "Ziehen zum Verschieben · Doppelklick setzt Position zurück" }, h("span", { class: "logo", text: site.id === "music" ? "ytx ♫" : "ytx" }), profileSelect, closeBtn);
+    const head = h("header", { title: "Ziehen zum Verschieben · Doppelklick setzt Position zurück" }, h("span", { class: "logo", text: site2.id === "music" ? "ytx ♫" : "ytx" }), profileSelect, closeBtn);
     const panel = h("div", { class: "panel", hidden: true }, head, nav2, main, h("footer", null, status, footInfo));
     shadow.append(panel);
-    const rectKey = `panelRect.${site.id}`;
+    const rectKey = `panelRect.${site2.id}`;
     const geo = makeMovable(panel, head, {
       load: () => app.store.settings[rectKey] || null,
       save: (r) => app.store.updateSettings((s) => r ? s[rectKey] = r : delete s[rectKey])
     });
-    let tab = app.store.settings[`panelTab.${site.id}`] || app.store.settings.panelTab || "display";
+    let tab = app.store.settings[`panelTab.${site2.id}`] || app.store.settings.panelTab || "display";
     if (!TABS2.some(([id]) => id === tab)) tab = "display";
     let content = null;
     let flashTimer = null;
@@ -16304,7 +16944,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     function select2(id) {
       tab = id;
       for (const [k, b] of tabButtons) b.setAttribute("aria-selected", String(k === id));
-      app.store.updateSettings((s) => s[`panelTab.${site.id}`] = id);
+      app.store.updateSettings((s) => s[`panelTab.${site2.id}`] = id);
       render3();
     }
     function render3() {
@@ -16397,8 +17037,8 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     if (pageWindow.__ytx?.destroy) pageWindow.__ytx.destroy();
     const api = {
       version: VERSION,
-      site: site.id,
-      debug: site.debug,
+      site: site2.id,
+      debug: site2.debug,
       store,
       nav,
       panel: null,
@@ -16413,7 +17053,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     };
     pageWindow.__ytx = api;
     initNav();
-    site.boot?.();
+    site2.boot?.();
     store.init();
     const cfg = store.config;
     initDisplay();
@@ -16427,11 +17067,11 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     initBehavior({ nav, state: store.state, onSweep: sweepHook });
     applyBehavior(cfg);
     initTagger();
-    if (site.filters) {
+    if (site2.filters) {
       initFilters();
       applyFilters(cfg);
     }
-    initFeatures(site.features, (m, settings) => {
+    initFeatures(site2.features, (m, settings) => {
       const cleanups = [];
       return {
         settings,
@@ -16468,7 +17108,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       applyVars(c);
       applyLayout(c);
       applyBehavior(c);
-      if (site.filters) applyFilters(c);
+      if (site2.filters) applyFilters(c);
       applyFeatures(c);
       requestSweep();
     });
@@ -16481,8 +17121,8 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       version: VERSION,
       store,
       nav,
-      site,
-      features: site.features,
+      site: site2,
+      features: site2.features,
       ui: {},
       log,
       mount,
@@ -16504,7 +17144,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       registerAction("profile.cycle", "Nächstes Profil", () => toast(`Profil: ${store.cycleProfile()}`), "Alt+P");
       sweepNow();
     });
-    log.info(`ytx ${VERSION} gestartet auf ${site.label} · ${nav.page}`);
+    log.info(`ytx ${VERSION} gestartet auf ${site2.label} · ${nav.page}`);
   }
   try {
     if (window.top === window.self) boot();

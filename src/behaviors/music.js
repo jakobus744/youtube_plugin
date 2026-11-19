@@ -6,6 +6,7 @@ import { setCss } from '../core/css.js'
 import { listen } from '../core/lifecycle.js'
 import { audioFocus } from './appAudio.js'
 import { appCheck } from './appCheck.js'
+import { typeRadar } from './typeRadar.js'
 
 // verhalten fuer music
 // start(ctx, value) liefert eine stop funktion
@@ -233,6 +234,7 @@ export const behaviors = [
   musicBack,
   musicByline,
   musicRows,
+  typeRadar,
   appCheck
 ]
 

@@ -3,20 +3,25 @@
 // 1. ytx laeuft, diagnose ohne neue fehler, pruefmodus (appCheck) meldet erwartete zustaende
 // 2. selektoren aus den registries, die mehrere naechte trafen und jetzt nicht mehr (wie tools/canary.mjs)
 // 3. grosse umbauten der originalseite: welche eigenen elemente (ytm-*, ytmusic-* ...) es gibt, im vergleich zur letzten nacht
+// 4. neue bausteine in den youtube daten (src/registry/knownTypes.js), mit bild, und wechsel der youtube version
 // meldet per ntfy nur, wenn etwas neu kaputt ist oder sich stark geaendert hat
-// aufruf: node tools/nightly.mjs --state <datei> --out <ordner> [--no-notify]
+// aufruf: node tools/nightly.mjs --state <datei> --out <ordner> [--no-notify] [--dump-types <datei>]
 // ntfy: umgebungsvariablen NTFY_URL, NTFY_TOPIC, NTFY_TOKEN (fehlen sie, wird nur der bericht geschrieben)
 // voraussetzung: npm i --no-save playwright-core und ein chromium (CHROME_PATH, sonst /usr/bin/chromium)
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
+import { collectTypes, typeTags } from '../src/core/ytTypes.js'
+import { KNOWN_TYPES } from '../src/registry/knownTypes.js'
+import { extractInitialData } from '../src/registry/music/initialData.js'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const arg = (name, def) => (process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : def)
 const STATE = resolve(arg('--state', join(root, 'check-out/nightly-state.json')))
 const OUT_ROOT = resolve(arg('--out', join(root, 'check-out/nightly')))
 const notify = !process.argv.includes('--no-notify')
+const DUMP = arg('--dump-types', null)
 const day = new Date().toISOString().slice(0, 10)
 const OUT = join(OUT_ROOT, day)
 mkdirSync(OUT, { recursive: true })
@@ -107,20 +112,68 @@ async function probe(page, checks) {
     } catch (e) {
       diag = [{ id: 'diagnose', status: 'fail', detail: e.message }]
     }
-    return { hits, tags, player: (playerUrl.match(/\/player\/([^/]+)\//) || [])[1] || null, version: window.__ytx?.version || null, report, diag }
+    const client = window.ytcfg?.get?.('INNERTUBE_CLIENT_VERSION') || null
+    return { hits, tags, player: (playerUrl.match(/\/player\/([^/]+)\//) || [])[1] || null, client, version: window.__ytx?.version || null, report, diag }
   }, checks)
 }
 
-async function notifyNtfy(title, body, priority = 'default') {
+// startdaten der seite, music schreibt sie als initialData.push ins html
+async function initialTypes(page, out) {
+  const data = await page.evaluate(() => ({ d: window.ytInitialData || null, p: window.ytInitialPlayerResponse || null, m: [...document.scripts].filter((s) => !s.src && s.textContent.includes('initialData.push')).map((s) => s.textContent) }))
+  collectTypes(data.d, out)
+  collectTypes(data.p, out)
+  for (const t of data.m) for (const b of extractInitialData(t)) collectTypes(b.data, out)
+}
+
+async function notifyNtfy(title, body, priority = 'default', tags = 'warning') {
   const { NTFY_URL, NTFY_TOPIC, NTFY_TOKEN } = process.env
   if (!notify || !NTFY_URL || !NTFY_TOPIC) return false
   const res = await fetch(`${NTFY_URL.replace(/\/$/, '')}/${NTFY_TOPIC}`, {
     method: 'POST',
-    headers: { Title: title, Priority: priority, Tags: 'warning', ...(NTFY_TOKEN ? { Authorization: `Bearer ${NTFY_TOKEN}` } : {}) },
+    headers: { Title: title, Priority: priority, Tags: tags, ...(NTFY_TOKEN ? { Authorization: `Bearer ${NTFY_TOKEN}` } : {}) },
     body
   })
   if (!res.ok) throw new Error(`ntfy ${res.status}`)
   return true
+}
+
+// bausteine, die ytx nicht kennt: im bericht, beim ersten auftauchen als neuigkeit mit bild
+async function typeCheck(page, p, site, types) {
+  const reg = site.registry
+  const known = new Set(KNOWN_TYPES[reg] || [])
+  dump[reg] ||= new Set()
+  for (const n of types.keys()) dump[reg].add(n)
+  // die ersten naechte nur lernen, youtube liefert je nach lauf andere teile (werbung, endbildschirm, infokarten)
+  const baseline = (prev.typeNights?.[reg] || 0) < STABLE
+  const had = (next.types[reg] ||= {})
+  const unknown = [...types].filter(([n]) => !known.has(n))
+  if (!unknown.length) return
+  lines.push(`- Noch nicht eingeordnete Bausteine: ${unknown.map(([n, par]) => `${n} (in ${par || '?'})`).join(', ')}`)
+  for (const [n, par] of unknown) {
+    if (had[n]) continue
+    had[n] = day
+    if (baseline) continue
+    news.push(`${site.id}: ${n} (in ${par || '?'}, Seite ${p.id})`)
+    const file = `${p.id}-${n}.png`
+    try {
+      // das erste sichtbare passende element, die ersten sind oft versteckte vorlagen
+      const found = await page.evaluate((sel) => {
+        document.querySelector('[data-ytx-shot]')?.removeAttribute('data-ytx-shot')
+        const el = [...document.querySelectorAll(sel)].find((e) => {
+          const r = e.getBoundingClientRect()
+          return r.width > 4 && r.height > 4 && getComputedStyle(e).visibility !== 'hidden'
+        })
+        el?.setAttribute('data-ytx-shot', '')
+        return !!el
+      }, typeTags(n).join(', '))
+      if (found) {
+        await page.locator('[data-ytx-shot]').screenshot({ path: join(OUT, file), timeout: 4000 })
+        lines.push('', `Neu: ${n}`, '', `![${n}](${file})`, '')
+      } else lines.push(`- Neu: ${n}, auf der Seite nicht sichtbar`)
+    } catch {
+      lines.push(`- Neu: ${n}, kein Bild möglich`)
+    }
+  }
 }
 
 // chromium fuehrt init-skripte aus, bevor es documentElement gibt, tampermonkey erst danach, deshalb so lange warten
@@ -137,8 +190,11 @@ ${readFileSync(join(root, 'dist/ytx.min.js'), 'utf8')}
   mo.observe(document, { childList: true })
 })()`
 const prev = existsSync(STATE) ? JSON.parse(readFileSync(STATE, 'utf8')) : {}
-const next = { at: new Date().toISOString(), selStreak: {}, fails: {}, tagStreak: {}, player: {} }
+const next = { at: new Date().toISOString(), selStreak: {}, fails: {}, tagStreak: {}, player: {}, types: structuredClone(prev.types || {}), typeNights: { ...(prev.typeNights || {}) }, client: { ...(prev.client || {}) } }
 const problems = []
+// neue bausteine sind kein fehler, sie kommen als eigene meldung
+const news = []
+const dump = {}
 const notes = []
 const lines = [`# ytx nächtliche Prüfung ${next.at}`, '']
 
@@ -147,6 +203,8 @@ try {
   for (const site of SITES) {
     const checks = await selectorChecks(site.registry)
     const ctx = await browser.newContext({ ...site.ctx, locale: 'de-DE' })
+    // cookie hinweis vorab abgelehnt, sonst liegt er auf der handy seite ueber allem
+    await ctx.addCookies([{ name: 'SOCS', value: 'CAI', domain: '.youtube.com', path: '/', secure: true }])
     if (site.app) await ctx.addInitScript(() => {
       window.__ytxNative = () => {}
       window.__ytxAppLog = () => {}
@@ -157,6 +215,13 @@ try {
     for (const p of site.pages) {
       const page = await ctx.newPage()
       const errors = []
+      const types = new Map()
+      page.on('response', async (res) => {
+        if (!res.url().includes('/youtubei/v1/')) return
+        try {
+          collectTypes(await res.json(), types)
+        } catch {}
+      })
       page.on('pageerror', (e) => {
         if (/ytx/i.test(String(e.stack || e.message))) errors.push(e.message.slice(0, 160))
       })
@@ -203,6 +268,17 @@ try {
         if (gone.length >= BIG_CHANGE) problems.push(`${p.id}: großer Umbau, ${gone.length} feste Elemente weg (${gone.slice(0, 5).join(', ')} …)`)
         else if (gone.length) notes.push(`${p.id}: ${gone.length} feste Elemente weg (${gone.join(', ')})`)
         next.player[p.id] = r.player
+        if (r.client && next.client[site.registry] !== r.client) {
+          if (next.client[site.registry]) notes.push(`${site.id}: YouTube-Version ${next.client[site.registry]} → ${r.client}`)
+          next.client[site.registry] = r.client
+        }
+        // weiterscrollen, damit nachgeladene regale mitzaehlen
+        for (let i = 0; i < 3; i++) {
+          await page.mouse.wheel(0, 2500)
+          await page.waitForTimeout(1500)
+        }
+        await initialTypes(page, types)
+        await typeCheck(page, p, site, types)
       } catch (e) {
         lines.push(`### ${p.id}`, '', `- Laden fehlgeschlagen: ${e.message.split('\n')[0]}`)
         problems.push(`${p.id}: Laden fehlgeschlagen`)
@@ -225,7 +301,9 @@ try {
   await browser.close()
 }
 
-lines.splice(2, 0, problems.length ? `**${problems.length} Probleme**` : '**Alles ok**', '', ...problems.map((p) => `- ${p}`), ...(notes.length ? ['', 'Hinweise:', ...notes.map((n) => `- ${n}`)] : []), '')
+for (const reg of Object.keys(dump)) next.typeNights[reg] = (prev.typeNights?.[reg] || 0) + 1
+
+lines.splice(2, 0, problems.length ? `**${problems.length} Probleme**` : '**Alles ok**', '', ...problems.map((p) => `- ${p}`), ...(news.length ? ['', 'Neu bei YouTube (in src/registry/knownTypes.js eintragen, wenn eingeordnet):', ...news.map((n) => `- ${n}`)] : []), ...(notes.length ? ['', 'Hinweise:', ...notes.map((n) => `- ${n}`)] : []), '')
 writeFileSync(join(OUT, 'report.md'), lines.join('\n'))
 mkdirSync(dirname(STATE), { recursive: true })
 writeFileSync(STATE, JSON.stringify(next, null, 2))
@@ -233,8 +311,18 @@ writeFileSync(STATE, JSON.stringify(next, null, 2))
 // alte berichte nach 30 tagen loeschen
 for (const d of readdirSync(OUT_ROOT)) if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d < new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10)) rmSync(join(OUT_ROOT, d), { recursive: true, force: true })
 
-console.log(lines.slice(0, 4 + problems.length + notes.length + 3).join('\n'))
+if (DUMP) writeFileSync(resolve(DUMP), JSON.stringify(Object.fromEntries(Object.entries(dump).map(([k, v]) => [k, [...v].sort()])), null, 1))
+
+console.log(lines.slice(0, 4 + problems.length + news.length + notes.length + 5).join('\n'))
 console.log(`Bericht: ${join(OUT, 'report.md')}`)
+if (news.length) {
+  const body = [...news.slice(0, 12), news.length > 12 ? `… und ${news.length - 12} weitere` : '', `Bericht mit Bildern: ${join(OUT, 'report.md')}`].filter(Boolean).join('\n')
+  try {
+    if (await notifyNtfy(`ytx: ${news.length} neue Bausteine bei YouTube`, body, 'low', 'mag')) console.log('ntfy neuigkeiten gesendet')
+  } catch (e) {
+    console.error(`ntfy fehlgeschlagen: ${e.message}`)
+  }
+}
 if (problems.length) {
   const body = [...problems.slice(0, 12), problems.length > 12 ? `… und ${problems.length - 12} weitere` : '', `Bericht: ${join(OUT, 'report.md')}`].filter(Boolean).join('\n')
   try {

@@ -6,6 +6,7 @@ import { sleep, waitFor } from '../core/scheduler.js'
 import { shareClean } from './shareClean.js'
 import { dislikeCount } from './dislikeCount.js'
 import { likeCount } from './likeCount.js'
+import { typeRadar } from './typeRadar.js'
 
 // verhalten sind aktionen statt css
 // start(ctx, value) liefert eine stop funktion
@@ -294,7 +295,8 @@ export const behaviors = [
   },
   shareClean,
   dislikeCount,
-  likeCount
+  likeCount,
+  typeRadar
 ]
 
 function parseFlags(text) {

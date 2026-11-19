@@ -5,7 +5,8 @@
 // 3. grosse umbauten der originalseite: welche eigenen elemente (ytm-*, ytmusic-* ...) es gibt, im vergleich zur letzten nacht
 // 4. neue bausteine in den youtube daten (src/registry/knownTypes.js), mit bild, und wechsel der youtube version
 // meldet per ntfy nur, wenn etwas neu kaputt ist oder sich stark geaendert hat
-// aufruf: node tools/nightly.mjs --state <datei> --out <ordner> [--no-notify] [--dump-types <datei>]
+// aufruf: node tools/nightly.mjs --state <datei> --out <ordner> [--no-notify] [--dump-types <datei>] [--tasks <datei>]
+// aufgabenliste neuer bausteine: standard tasks.json neben der state datei, ablauf in docs/TRIAGE.md
 // ntfy: umgebungsvariablen NTFY_URL, NTFY_TOPIC, NTFY_TOKEN (fehlen sie, wird nur der bericht geschrieben)
 // voraussetzung: npm i --no-save playwright-core und ein chromium (CHROME_PATH, sonst /usr/bin/chromium)
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
@@ -15,6 +16,7 @@ import { chromium } from 'playwright-core'
 import { collectTypes, typeTags } from '../src/core/ytTypes.js'
 import { KNOWN_TYPES } from '../src/registry/knownTypes.js'
 import { extractInitialData } from '../src/registry/music/initialData.js'
+import { loadTasks, saveTasks, upsertTask, closeKnown } from './lib/tasks.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const arg = (name, def) => (process.argv.includes(name) ? process.argv[process.argv.indexOf(name) + 1] : def)
@@ -22,6 +24,7 @@ const STATE = resolve(arg('--state', join(root, 'check-out/nightly-state.json'))
 const OUT_ROOT = resolve(arg('--out', join(root, 'check-out/nightly')))
 const notify = !process.argv.includes('--no-notify')
 const DUMP = arg('--dump-types', null)
+const TASKS = resolve(arg('--tasks', join(dirname(STATE), 'tasks.json')))
 const day = new Date().toISOString().slice(0, 10)
 const OUT = join(OUT_ROOT, day)
 mkdirSync(OUT, { recursive: true })
@@ -150,11 +153,14 @@ async function typeCheck(page, p, site, types) {
   if (!unknown.length) return
   lines.push(`- Noch nicht eingeordnete Bausteine: ${unknown.map(([n, par]) => `${n} (in ${par || '?'})`).join(', ')}`)
   for (const [n, par] of unknown) {
+    // schon offene aufgaben als wieder gesehen vermerken
+    if (tasks.some((t) => t.id === `${reg}:${n}`)) upsertTask(tasks, { site: reg, type: n, parent: par, page: p.id, day })
     if (had[n]) continue
     had[n] = day
     if (baseline) continue
     news.push(`${site.id}: ${n} (in ${par || '?'}, Seite ${p.id})`)
     const file = `${p.id}-${n}.png`
+    let shot = null
     try {
       // das erste sichtbare passende element, die ersten sind oft versteckte vorlagen
       const found = await page.evaluate((sel) => {
@@ -169,10 +175,12 @@ async function typeCheck(page, p, site, types) {
       if (found) {
         await page.locator('[data-ytx-shot]').screenshot({ path: join(OUT, file), timeout: 4000 })
         lines.push('', `Neu: ${n}`, '', `![${n}](${file})`, '')
+        shot = `${day}/${file}`
       } else lines.push(`- Neu: ${n}, auf der Seite nicht sichtbar`)
     } catch {
       lines.push(`- Neu: ${n}, kein Bild möglich`)
     }
+    upsertTask(tasks, { site: reg, type: n, parent: par, page: p.id, url: p.url, shot, day })
   }
 }
 
@@ -195,6 +203,7 @@ const problems = []
 // neue bausteine sind kein fehler, sie kommen als eigene meldung
 const news = []
 const dump = {}
+const tasks = loadTasks(TASKS)
 const notes = []
 const lines = [`# ytx nächtliche Prüfung ${next.at}`, '']
 
@@ -302,6 +311,12 @@ try {
 }
 
 for (const reg of Object.keys(dump)) next.typeNights[reg] = (prev.typeNights?.[reg] || 0) + 1
+// eingetragene bausteine schliessen ihre aufgabe
+closeKnown(tasks, KNOWN_TYPES, day)
+mkdirSync(dirname(TASKS), { recursive: true })
+saveTasks(TASKS, tasks)
+const open = tasks.filter((t) => t.status === 'offen' || t.status === 'unklar').length
+if (open) notes.push(`${open} offene Aufgaben zu neuen Bausteinen, siehe ${join(dirname(TASKS), 'tasks.md')}`)
 
 lines.splice(2, 0, problems.length ? `**${problems.length} Probleme**` : '**Alles ok**', '', ...problems.map((p) => `- ${p}`), ...(news.length ? ['', 'Neu bei YouTube (in src/registry/knownTypes.js eintragen, wenn eingeordnet):', ...news.map((n) => `- ${n}`)] : []), ...(notes.length ? ['', 'Hinweise:', ...notes.map((n) => `- ${n}`)] : []), '')
 writeFileSync(join(OUT, 'report.md'), lines.join('\n'))
@@ -316,7 +331,7 @@ if (DUMP) writeFileSync(resolve(DUMP), JSON.stringify(Object.fromEntries(Object.
 console.log(lines.slice(0, 4 + problems.length + news.length + notes.length + 5).join('\n'))
 console.log(`Bericht: ${join(OUT, 'report.md')}`)
 if (news.length) {
-  const body = [...news.slice(0, 12), news.length > 12 ? `… und ${news.length - 12} weitere` : '', `Bericht mit Bildern: ${join(OUT, 'report.md')}`].filter(Boolean).join('\n')
+  const body = [...news.slice(0, 12), news.length > 12 ? `… und ${news.length - 12} weitere` : '', `Bericht mit Bildern: ${join(OUT, 'report.md')}`, `Aufgaben: ${join(dirname(TASKS), 'tasks.md')}`].filter(Boolean).join('\n')
   try {
     if (await notifyNtfy(`ytx: ${news.length} neue Bausteine bei YouTube`, body, 'low', 'mag')) console.log('ntfy neuigkeiten gesendet')
   } catch (e) {

@@ -34,7 +34,8 @@ YouTube beschreibt jede Seite als Baum aus benannten Bausteinen (`richShelfRende
 - **In ytx selbst** (Verhalten `typeRadar`, PC und App, angemeldet): ytx liest die Seitendaten und alles, was YouTube nachlädt. Unbekannte Bausteine merkt es sich im Browser (`localStorage` `ytx.newTypes`, höchstens 200). Zu sehen sind sie im ytx-Panel unter Diagnose → Verhalten → „Neue YouTube-Bausteine erkennen“. Der Prüfmodus meldet sie als `newTypes`.
 - **Handy-Prüfung**: Neue Bausteine stehen im Bericht. Dazu schreibt das Skript `check-out/<zeit>/types.json`.
 - **Nachtlauf**: Er scrollt jede Seite weiter, damit nachgeladene Regale mitzählen. Unbekannte Bausteine stehen im Bericht. Taucht einer zum ersten Mal auf, kommt eine eigene ntfy-Meldung „neue Bausteine bei YouTube“ (niedrige Priorität) mit Bild des Elements, sofern es sichtbar ist. Die ersten drei Nächte lernt der Lauf nur, weil YouTube je Lauf andere Teile ausliefert (Werbung, Endbildschirme, Infokarten). Wechselt die YouTube-Version (`INNERTUBE_CLIENT_VERSION`), steht das als Hinweis im Bericht.
-- **Einordnen**: Ist ein neuer Baustein harmlos, trägst du ihn ein:
+- **Aufgabenliste**: Jeder neue Baustein wird eine Aufgabe in `~/ytx-nightly/tasks.json` und `tasks.md`. Einordnen, Ablauf heute und der Plan mit KI stehen in `docs/TRIAGE.md`.
+- **Einordnen** (kurz): Ist ein neuer Baustein harmlos, trägst du ihn ein:
 
 ```bash
 node tools/known-types.mjs check-out/<zeit>/types.json

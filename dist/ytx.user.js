@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261122.1507
+// @version      0.4.1.20261122.1641
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -14756,11 +14756,21 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     const row2 = h("div", { class: "ytx-watch-row", "data-ytx-own": "" }, h("span", { class: "ytx-row-end" }));
     bar.after(row2);
   }
-  function pageIsDark() {
-    const m = getComputedStyle(document.documentElement).color.match(/\d+/g);
-    if (!m) return true;
-    const [r, g, b] = m.map(Number);
-    return 0.299 * r + 0.587 * g + 0.114 * b > 128;
+  function luma(c) {
+    const m = String(c).match(/[\d.]+/g);
+    if (!m || m.length < 3) return null;
+    const [r, g, b, a = 1] = m.map(Number);
+    if (a === 0) return null;
+    return 0.299 * r + 0.587 * g + 0.114 * b;
+  }
+  function pageIsDark(doc = document) {
+    for (const el of [doc.body, doc.documentElement]) {
+      if (!el) continue;
+      const l2 = luma(getComputedStyle(el).backgroundColor);
+      if (l2 != null) return l2 < 128;
+    }
+    const l = luma(getComputedStyle(doc.documentElement).color);
+    return l == null ? true : l > 128;
   }
   var mobileSite = {
     id: "mobile",

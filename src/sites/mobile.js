@@ -129,11 +129,25 @@ function ensureWatchRow() {
   bar.after(row)
 }
 
-function pageIsDark() {
-  const m = getComputedStyle(document.documentElement).color.match(/\d+/g)
-  if (!m) return true
-  const [r, g, b] = m.map(Number)
-  return 0.299 * r + 0.587 * g + 0.114 * b > 128
+// helligkeit einer css farbe, null wenn durchsichtig oder unlesbar
+function luma(c) {
+  const m = String(c).match(/[\d.]+/g)
+  if (!m || m.length < 3) return null
+  const [r, g, b, a = 1] = m.map(Number)
+  if (a === 0) return null
+  return 0.299 * r + 0.587 * g + 0.114 * b
+}
+
+// youtube setzt die textfarbe am html nicht, sie folgt dem system und nicht der seite
+// deshalb zaehlt zuerst der hintergrund der seite
+function pageIsDark(doc = document) {
+  for (const el of [doc.body, doc.documentElement]) {
+    if (!el) continue
+    const l = luma(getComputedStyle(el).backgroundColor)
+    if (l != null) return l < 128
+  }
+  const l = luma(getComputedStyle(doc.documentElement).color)
+  return l == null ? true : l > 128
 }
 
 export const mobileSite = {

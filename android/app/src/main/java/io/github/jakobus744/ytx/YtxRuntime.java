@@ -56,6 +56,10 @@ final class YtxRuntime {
         // zurueck soll auch eintraege nehmen, die die seite ohne tippen angelegt hat (music: player zuklappen)
         GeckoPreferenceController.setGeckoPref("browser.navigation.requireUserInteraction", false, GeckoPreferenceController.PREF_BRANCH_USER)
                 .accept(v -> Log.i(TAG, "zurueck ohne tippen erlaubt"), e -> Log.e(TAG, "requireUserInteraction", e));
+        // youtube liefert die seite dunkel aus, bei hellem system kaemen helle farbwerte dazu und die schrift waere unsichtbar (honor 7x)
+        // die app ist ueberall dunkel, deshalb melden die seiten immer dunkel
+        GeckoPreferenceController.setGeckoPref("layout.css.prefers-color-scheme.content-override", 0, GeckoPreferenceController.PREF_BRANCH_USER)
+                .accept(v -> Log.i(TAG, "seiten dunkel"), e -> Log.e(TAG, "prefers-color-scheme", e));
         runtime.getWebExtensionController()
                 .ensureBuiltIn(EXT_URI, EXT_ID)
                 .accept(YtxRuntime::onExtension, e -> Log.e(TAG, "erweiterung nicht installiert", e));

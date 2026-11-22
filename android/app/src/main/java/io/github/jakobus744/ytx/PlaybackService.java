@@ -120,7 +120,9 @@ public class PlaybackService extends Service {
                 .addAction(new Notification.Action.Builder(android.R.drawable.ic_media_next, getString(R.string.playing_next), action(ACT_NEXT)).build())
                 .setStyle(new Notification.MediaStyle().setMediaSession(session.getSessionToken()).setShowActionsInCompactView(0, 1, 2));
         if (art != null) b.setLargeIcon(art);
-        startForeground(41, b.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        // die variante mit typ gibt es erst ab android 10, android 8 und 9 stuerzen sonst ab
+        if (android.os.Build.VERSION.SDK_INT >= 29) startForeground(41, b.build(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK);
+        else startForeground(41, b.build());
     }
 
     // ohne diese sperren schlaeft das handy bei ausgeschaltetem bildschirm ein und der ton reisst ab

@@ -29,7 +29,8 @@ function request(method, url, c, body, extra = {}) {
       url,
       method,
       headers,
-      data: body ?? null,
+      // ohne inhalt gar kein data, sonst schickt der manager "null" und nextcloud meldet 415
+      ...(body != null ? { data: body } : {}),
       timeout: 20000,
       // ohne browser cookies, sonst lehnt nextcloud bei angemeldeter websitzung mit 401 ab
       anonymous: true,

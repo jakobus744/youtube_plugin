@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261123.0001
+// @version      0.4.1.20261123.0004
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -3878,7 +3878,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
         url,
         method,
         headers,
-        data: body ?? null,
+        // ohne inhalt gar kein data, sonst schickt der manager "null" und nextcloud meldet 415
+        ...body != null ? { data: body } : {},
         timeout: 2e4,
         // ohne browser cookies, sonst lehnt nextcloud bei angemeldeter websitzung mit 401 ab
         anonymous: true,

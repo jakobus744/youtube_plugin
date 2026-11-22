@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261122.2311
+// @version      0.4.1.20261123.0001
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -3880,6 +3880,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
         headers,
         data: body ?? null,
         timeout: 2e4,
+        // ohne browser cookies, sonst lehnt nextcloud bei angemeldeter websitzung mit 401 ab
+        anonymous: true,
         onload: (r) => resolve({ status: r.status, text: r.responseText }),
         onerror: () => reject(new Error("Server nicht erreichbar (VPN/Tailscale an?)")),
         ontimeout: () => reject(new Error("Zeitüberschreitung"))

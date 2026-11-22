@@ -31,6 +31,8 @@ function request(method, url, c, body, extra = {}) {
       headers,
       data: body ?? null,
       timeout: 20000,
+      // ohne browser cookies, sonst lehnt nextcloud bei angemeldeter websitzung mit 401 ab
+      anonymous: true,
       onload: (r) => resolve({ status: r.status, text: r.responseText }),
       onerror: () => reject(new Error('Server nicht erreichbar (VPN/Tailscale an?)')),
       ontimeout: () => reject(new Error('Zeitüberschreitung'))

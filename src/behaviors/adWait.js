@@ -8,9 +8,10 @@ import { pageFromUrl } from '../registry/youtube/pages.js'
 
 const has = (o, k) => Object.prototype.hasOwnProperty.call(o, k)
 
-// der lader ist am feldsatz erkennbar, die namen sind die aus base.js
+// der lader ist am feldsatz erkennbar, nur lesbare namen aus base.js
+// kurznamen wie Ka oder Mb wechseln mit jeder player version
 export function isLoader(o) {
-  return !!o && typeof o === 'object' && has(o, 'loader') && has(o, 'policy') && has(o, 'Ka') && has(o, 'Mb') && !!o.Ka && typeof o.Ka === 'object' && 'NI' in o.Ka
+  return !!o && typeof o === 'object' && has(o, 'loader') && has(o, 'policy') && has(o, 'audioTrack') && has(o, 'videoTrack')
 }
 
 // meldet jede neue frist des laders an onDeadline, der wert selbst bleibt unveraendert
@@ -59,6 +60,9 @@ export function watchDeadline(proto, onDeadline) {
 export function secondsLeft(deadline, now) {
   return Math.max(0, Math.ceil((deadline - now) / 1000))
 }
+
+// fuer den pruefmodus: wie oft der lader erkannt wurde und die letzte wartezeit
+export const adWaitSeen = { count: 0, lastMs: null }
 
 // kuerzere wartezeiten kommen auch ohne werbung vor, darunter keine anzeige
 const MIN_WAIT_MS = 1500
@@ -128,6 +132,8 @@ export const adWait = {
     try {
       off = watchDeadline(w.Object.prototype, (d) => {
         // die frist entsteht beim tippen auf abspielen, gemessen wird gegen die echte uhr
+        adWaitSeen.count++
+        adWaitSeen.lastMs = d - Date.now()
         if (d - Date.now() < MIN_WAIT_MS) return
         deadline = d
         setTimeout(show, 0)

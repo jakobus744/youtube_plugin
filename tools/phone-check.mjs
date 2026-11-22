@@ -114,6 +114,8 @@ async function youtube() {
   expect('Video läuft', t1 != null && t2 != null && t2 > t1, `${t1} s → ${t2} s`)
   expect('Keine Werbe-Kacheln sichtbar', !r2?.promo?.shown?.length, r2?.promo?.shown?.join(', ') || '')
   expect('Graph-Daten vorhanden', !!r2?.heatmap, r2?.heatmap ? '' : 'keine heatmap in den Seitendaten', 'info')
+  const seen = r2?.adWaitSeen
+  expect('Werbe-Countdown erkennt den Videolader', seen?.count > 0, seen ? `${seen.count} Fristen, zuletzt ${seen.lastMs} ms` : 'kein Wert')
   if (r?.adWait || r2?.adWait) note('Countdown nach geblockter Werbung wurde angezeigt')
   sh('input keyevent 127')
 }

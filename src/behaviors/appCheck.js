@@ -2,6 +2,7 @@ import { pageWindow } from '../core/bridge.js'
 import { runChecks, summarize } from '../core/diagnose.js'
 import { heatmapFor } from './heatmap.js'
 import { newTypes } from './typeRadar.js'
+import { adWaitSeen } from './adWait.js'
 
 // pruefmodus fuer tools/phone-check.mjs, nur in der app und nur wenn die seite mit #ytxcheck geoeffnet wurde
 // meldet dann alle 1,5 s den zustand der seite ins android log, das skript liest ihn per adb aus
@@ -83,6 +84,7 @@ export function report() {
     r.player = box(document.getElementById('movie_player'))
     r.heatmap = id ? !!heatmapFor(id) : null
     r.adWait = !!document.querySelector('.ytx-adwait')
+    r.adWaitSeen = { ...adWaitSeen }
     r.promo = promo()
   }
   return r

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261122.1316
+// @version      0.4.1.20261122.1451
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -8512,6 +8512,151 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     }
   };
 
+  // src/behaviors/adWait.js
+  var has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+  function isLoader(o) {
+    return !!o && typeof o === "object" && has(o, "loader") && has(o, "policy") && has(o, "audioTrack") && has(o, "videoTrack");
+  }
+  function watchDeadline(proto, onDeadline) {
+    if (has(proto, "D")) return () => {
+    };
+    let on = true;
+    const plain = (o, v) => {
+      try {
+        Object.defineProperty(o, "D", { value: v, writable: true, configurable: true, enumerable: true });
+      } catch {
+      }
+    };
+    Object.defineProperty(proto, "D", {
+      configurable: true,
+      get() {
+        return void 0;
+      },
+      set(v) {
+        if (!on || !isLoader(this)) return plain(this, v);
+        let val = v;
+        const report2 = (x) => {
+          if (on && typeof x === "number") {
+            try {
+              onDeadline(x);
+            } catch {
+            }
+          }
+        };
+        try {
+          Object.defineProperty(this, "D", {
+            configurable: true,
+            enumerable: true,
+            get: () => val,
+            set: (x) => {
+              val = x;
+              report2(x);
+            }
+          });
+        } catch {
+        }
+        report2(v);
+      }
+    });
+    return () => {
+      on = false;
+      delete proto.D;
+    };
+  }
+  function secondsLeft(deadline, now) {
+    return Math.max(0, Math.ceil((deadline - now) / 1e3));
+  }
+  var adWaitSeen = { count: 0, lastMs: null };
+  var MIN_WAIT_MS = 1500;
+  var CSS2 = `
+.ytx-adwait{position:absolute;inset:0;z-index:60;display:grid;grid-template-rows:1fr 70px 1fr;justify-items:center;pointer-events:none;color:#fff;font:500 15px/1.3 Roboto,Arial,sans-serif;text-align:center;background:rgba(0,0,0,.55)}
+.ytx-adwait>div{display:flex;flex-direction:column;align-items:center;gap:4px}
+.ytx-adwait>div:first-child{grid-row:1;align-self:end}
+.ytx-adwait>div:last-child{grid-row:3;align-self:start}
+.ytx-adwait b{font-size:30px;font-weight:600;font-variant-numeric:tabular-nums}
+.ytx-adwait small{opacity:.8;font-size:12px}
+`;
+  var adWait = {
+    id: "adWait",
+    label: "Countdown statt Schwarzbild bei geblockter Werbung",
+    description: "Ohne Premium hält YouTube das Video nach geblockter Werbung einige Sekunden zurück. ytx zeigt in dieser Zeit an, wie lange es noch dauert",
+    type: "toggle",
+    default: true,
+    start() {
+      const w = pageWindow;
+      let deadline = 0;
+      let box2 = null;
+      let timer3 = 0;
+      const style = document.createElement("style");
+      style.textContent = CSS2;
+      document.head.append(style);
+      const hide = () => {
+        clearInterval(timer3);
+        timer3 = 0;
+        box2?.remove();
+        box2 = null;
+      };
+      const draw = () => {
+        if (!box2) return;
+        const s = secondsLeft(deadline, Date.now());
+        box2.querySelector("b").textContent = s > 0 ? `${s} s` : "gleich";
+      };
+      const show = () => {
+        if (pageFromUrl(location.href) !== "watch") return;
+        const v = document.querySelector("#movie_player video, .html5-video-player video");
+        const host2 = document.querySelector("#movie_player") || v?.closest(".html5-video-player");
+        if (!host2 || v && v.readyState >= 2) return;
+        if (!box2) {
+          box2 = document.createElement("div");
+          box2.className = "ytx-adwait";
+          box2.setAttribute("data-ytx-own", "");
+          const top2 = document.createElement("div");
+          const bottom = document.createElement("div");
+          for (const [parent, tag, text] of [[top2, "span", "Werbung geblockt"], [top2, "small", "YouTube hält das Video so lange zurück"], [bottom, "b", ""]]) {
+            const el = document.createElement(tag);
+            el.textContent = text;
+            parent.append(el);
+          }
+          box2.append(top2, bottom);
+          host2.append(box2);
+        }
+        draw();
+        clearInterval(timer3);
+        timer3 = setInterval(() => {
+          if (!box2?.isConnected || pageFromUrl(location.href) !== "watch") return hide();
+          draw();
+        }, 250);
+      };
+      let off = () => {
+      };
+      try {
+        off = watchDeadline(w.Object.prototype, (d) => {
+          adWaitSeen.count++;
+          adWaitSeen.lastMs = d - Date.now();
+          if (d - Date.now() < MIN_WAIT_MS) return;
+          deadline = d;
+          setTimeout(show, 0);
+        });
+      } catch {
+      }
+      const done2 = (e) => {
+        if (e.target?.tagName === "VIDEO" && box2) hide();
+      };
+      const offs = [
+        listen(document, "playing", done2, true),
+        listen(document, "loadeddata", done2, true),
+        listen(document, "emptied", done2, true),
+        listen(window, "yt-navigate-start", hide, true)
+      ];
+      return () => {
+        hide();
+        off();
+        style.remove();
+        offs.forEach((o) => o());
+      };
+    }
+  };
+
   // src/behaviors/appCheck.js
   var KEY3 = "ytx.appCheck";
   try {
@@ -8582,6 +8727,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       r.player = box(document.getElementById("movie_player"));
       r.heatmap = id ? !!heatmapFor(id) : null;
       r.adWait = !!document.querySelector(".ytx-adwait");
+      r.adWaitSeen = { ...adWaitSeen };
       r.promo = promo();
     }
     return r;
@@ -11905,7 +12051,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
   // src/features/music/weekly.js
   var SEEN = "weeklySeen";
   var card = null;
-  var CSS2 = `
+  var CSS3 = `
 .ytx-m-recap { position: fixed; z-index: 2300; left: 16px; bottom: 88px; width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 170px); overflow: auto; box-sizing: border-box; padding: 16px 18px; border-radius: 12px;
   font: 400 13px/1.45 Roboto, Arial, sans-serif; color: var(--ytmusic-text-primary, #fff); background: var(--ytmusic-brand-background-solid, #212121); box-shadow: 0 8px 32px rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.1); }
 .ytx-m-recap h3 { margin: 0 0 2px; font-size: 17px; font-weight: 700; }
@@ -11926,7 +12072,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
   }
   function render2(r) {
     closeRecap();
-    const style = h("style", { text: CSS2 });
+    const style = h("style", { text: CSS3 });
     const who = (s) => s.artists.map((a) => a.name).join(", ");
     const newBox = h("div", { class: "new" });
     for (const a of r.newArtists) {
@@ -13403,7 +13549,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
       document.addEventListener("touchmove", gone, { capture: true, passive: true });
     }, 0);
   }
-  var CSS3 = `
+  var CSS4 = `
 ${PANEL_ITEM} { position: relative; }
 ${PANEL_ITEM} .ytx-plmore { position: absolute; right: 2px; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: none; color: inherit; font-size: 22px; line-height: 1; z-index: 2; }
 ${PANEL_ITEM} .YtmCompactMediaItemMetadata { padding-right: 36px; box-sizing: border-box; }
@@ -13420,7 +13566,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
     start() {
       const style = document.createElement("style");
       style.setAttribute("data-ytx-own", "");
-      style.textContent = CSS3;
+      style.textContent = CSS4;
       document.head.append(style);
       const off = onSweep("playlistRemove", () => {
         if (!listId()) return;
@@ -13483,148 +13629,6 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         document.removeEventListener("touchend", onEnd, true);
         document.removeEventListener("touchcancel", onEnd, true);
         document.querySelectorAll(".ytx-plmore, .ytx-plmenu").forEach((e) => e.remove());
-      };
-    }
-  };
-
-  // src/behaviors/adWait.js
-  var has = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
-  function isLoader(o) {
-    return !!o && typeof o === "object" && has(o, "loader") && has(o, "policy") && has(o, "Ka") && has(o, "Mb") && !!o.Ka && typeof o.Ka === "object" && "NI" in o.Ka;
-  }
-  function watchDeadline(proto, onDeadline) {
-    if (has(proto, "D")) return () => {
-    };
-    let on = true;
-    const plain = (o, v) => {
-      try {
-        Object.defineProperty(o, "D", { value: v, writable: true, configurable: true, enumerable: true });
-      } catch {
-      }
-    };
-    Object.defineProperty(proto, "D", {
-      configurable: true,
-      get() {
-        return void 0;
-      },
-      set(v) {
-        if (!on || !isLoader(this)) return plain(this, v);
-        let val = v;
-        const report2 = (x) => {
-          if (on && typeof x === "number") {
-            try {
-              onDeadline(x);
-            } catch {
-            }
-          }
-        };
-        try {
-          Object.defineProperty(this, "D", {
-            configurable: true,
-            enumerable: true,
-            get: () => val,
-            set: (x) => {
-              val = x;
-              report2(x);
-            }
-          });
-        } catch {
-        }
-        report2(v);
-      }
-    });
-    return () => {
-      on = false;
-      delete proto.D;
-    };
-  }
-  function secondsLeft(deadline, now) {
-    return Math.max(0, Math.ceil((deadline - now) / 1e3));
-  }
-  var MIN_WAIT_MS = 1500;
-  var CSS4 = `
-.ytx-adwait{position:absolute;inset:0;z-index:60;display:grid;grid-template-rows:1fr 70px 1fr;justify-items:center;pointer-events:none;color:#fff;font:500 15px/1.3 Roboto,Arial,sans-serif;text-align:center;background:rgba(0,0,0,.55)}
-.ytx-adwait>div{display:flex;flex-direction:column;align-items:center;gap:4px}
-.ytx-adwait>div:first-child{grid-row:1;align-self:end}
-.ytx-adwait>div:last-child{grid-row:3;align-self:start}
-.ytx-adwait b{font-size:30px;font-weight:600;font-variant-numeric:tabular-nums}
-.ytx-adwait small{opacity:.8;font-size:12px}
-`;
-  var adWait = {
-    id: "adWait",
-    label: "Countdown statt Schwarzbild bei geblockter Werbung",
-    description: "Ohne Premium hält YouTube das Video nach geblockter Werbung einige Sekunden zurück. ytx zeigt in dieser Zeit an, wie lange es noch dauert",
-    type: "toggle",
-    default: true,
-    start() {
-      const w = pageWindow;
-      let deadline = 0;
-      let box2 = null;
-      let timer3 = 0;
-      const style = document.createElement("style");
-      style.textContent = CSS4;
-      document.head.append(style);
-      const hide = () => {
-        clearInterval(timer3);
-        timer3 = 0;
-        box2?.remove();
-        box2 = null;
-      };
-      const draw = () => {
-        if (!box2) return;
-        const s = secondsLeft(deadline, Date.now());
-        box2.querySelector("b").textContent = s > 0 ? `${s} s` : "gleich";
-      };
-      const show = () => {
-        if (pageFromUrl(location.href) !== "watch") return;
-        const v = document.querySelector("#movie_player video, .html5-video-player video");
-        const host2 = document.querySelector("#movie_player") || v?.closest(".html5-video-player");
-        if (!host2 || v && v.readyState >= 2) return;
-        if (!box2) {
-          box2 = document.createElement("div");
-          box2.className = "ytx-adwait";
-          box2.setAttribute("data-ytx-own", "");
-          const top2 = document.createElement("div");
-          const bottom = document.createElement("div");
-          for (const [parent, tag, text] of [[top2, "span", "Werbung geblockt"], [top2, "small", "YouTube hält das Video so lange zurück"], [bottom, "b", ""]]) {
-            const el = document.createElement(tag);
-            el.textContent = text;
-            parent.append(el);
-          }
-          box2.append(top2, bottom);
-          host2.append(box2);
-        }
-        draw();
-        clearInterval(timer3);
-        timer3 = setInterval(() => {
-          if (!box2?.isConnected || pageFromUrl(location.href) !== "watch") return hide();
-          draw();
-        }, 250);
-      };
-      let off = () => {
-      };
-      try {
-        off = watchDeadline(w.Object.prototype, (d) => {
-          if (d - Date.now() < MIN_WAIT_MS) return;
-          deadline = d;
-          setTimeout(show, 0);
-        });
-      } catch {
-      }
-      const done2 = (e) => {
-        if (e.target?.tagName === "VIDEO" && box2) hide();
-      };
-      const offs = [
-        listen(document, "playing", done2, true),
-        listen(document, "loadeddata", done2, true),
-        listen(document, "emptied", done2, true),
-        listen(window, "yt-navigate-start", hide, true)
-      ];
-      return () => {
-        hide();
-        off();
-        style.remove();
-        offs.forEach((o) => o());
       };
     }
   };

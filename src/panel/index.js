@@ -6,6 +6,7 @@ import { button } from '../features/ui.js'
 import { summarize, runChecks } from '../core/diagnose.js'
 import { musicTab, musicDataTab, musicStatsTab } from './musicTabs.js'
 import { subGroupsTab, watchStatsTab, downloadsTab } from './youtubeTabs.js'
+import { statsTab } from './statsTab.js'
 import { site } from '../sites/index.js'
 import { makeMovable } from './geometry.js'
 
@@ -21,7 +22,8 @@ const ALL_TABS = {
   downloads: ['Downloads', downloadsTab],
   music: ['Musik', musicTab],
   musicData: ['Verlauf & Daten', musicDataTab],
-  musicStats: ['Statistik', musicStatsTab],
+  musicStats: ['Hörstatistik', musicStatsTab],
+  stats: ['Medienzeit', statsTab],
   profiles: ['Profile', profilesTab],
   diagnose: ['Diagnose', diagnoseTab]
 }

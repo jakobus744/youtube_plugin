@@ -33,7 +33,7 @@ export const youtubeSite = {
   filters: { pages: FILTER_PAGES, CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots },
   channels: { channelRefOf, channelPageInfo, subscribedChannels },
   playback: { activePlayback, pauseActive },
-  panelTabs: ['display', 'look', 'layout', 'behavior', 'filters', 'features', 'subGroups', 'watchStats', 'profiles', 'diagnose'],
+  panelTabs: ['display', 'look', 'layout', 'behavior', 'filters', 'features', 'subGroups', 'watchStats', 'stats', 'profiles', 'diagnose'],
   boot() {
     initTimedtextCapture()
     bootHashTokens(() => document.documentElement.hasAttribute('dark'), 'youtube')

@@ -7,6 +7,7 @@ import { listen } from '../core/lifecycle.js'
 import { audioFocus } from './appAudio.js'
 import { appCheck } from './appCheck.js'
 import { typeRadar } from './typeRadar.js'
+import { statsSync } from './statsSync.js'
 
 // verhalten fuer music
 // start(ctx, value) liefert eine stop funktion
@@ -235,6 +236,7 @@ export const behaviors = [
   musicByline,
   musicRows,
   typeRadar,
+  statsSync,
   appCheck
 ]
 

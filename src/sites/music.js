@@ -52,7 +52,7 @@ export const musicSite = {
   get debug() {
     return { music, catalog, buildMix, checkReleases, ytxQueue }
   },
-  panelTabs: ['display', 'look', 'layout', 'behavior', 'features', 'music', 'musicData', 'musicStats', 'profiles', 'diagnose'],
+  panelTabs: ['display', 'look', 'layout', 'behavior', 'features', 'music', 'musicData', 'musicStats', 'stats', 'profiles', 'diagnose'],
   boot() {
     initMusicUiCss()
     registerMusicChecks()

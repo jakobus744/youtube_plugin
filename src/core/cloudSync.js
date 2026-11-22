@@ -19,11 +19,12 @@ function davBase(c) {
   return `${c.url.replace(/\/+$/, '')}/remote.php/dav/files/${encodeURIComponent(c.user)}/ytx`
 }
 
-function request(method, url, c, body) {
+function request(method, url, c, body, extra = {}) {
   return new Promise((resolve, reject) => {
     if (typeof GM_xmlhttpRequest !== 'function') return reject(new Error('GM_xmlhttpRequest nicht verfügbar'))
     const headers = { Authorization: `Basic ${btoa(unescape(encodeURIComponent(`${c.user}:${c.pass}`)))}` }
     if (body != null) headers['Content-Type'] = 'application/json'
+    Object.assign(headers, extra)
     GM_xmlhttpRequest({
       url,
       method,
@@ -38,6 +39,12 @@ function request(method, url, c, body) {
 }
 
 const fail = (r) => new Error(r.status === 401 ? 'Anmeldung abgelehnt, App-Passwort prüfen' : `HTTP ${r.status}`)
+
+// webdav aufruf relativ zum ytx ordner im nextcloud konto, fuer den verlaufsabgleich
+export function cloudRequest(method, path, body = null, headers = {}) {
+  const c = cloudConfig()
+  return request(method, `${davBase(c)}/${path}`.replace(/\/+$/, ''), c, body, headers)
+}
 
 export async function cloudPush() {
   const c = cloudConfig()

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261122.1641
+// @version      0.4.1.20261122.2311
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -75,9 +75,9 @@
     const p = document.getElementById("movie_player");
     return p && typeof p.getPlayerResponse === "function" ? p : null;
   }
-  function ytcfg(key) {
+  function ytcfg(key2) {
     try {
-      return pageWindow.ytcfg?.get?.(key);
+      return pageWindow.ytcfg?.get?.(key2);
     } catch {
       return void 0;
     }
@@ -167,10 +167,10 @@
   }
   function push(level, args) {
     const msg = args.map(stringify).join(" ");
-    const last2 = entries[entries.length - 1];
-    if (last2 && last2.msg === msg && last2.level === level) {
-      last2.n++;
-      last2.t = Date.now();
+    const last3 = entries[entries.length - 1];
+    if (last3 && last3.msg === msg && last3.level === level) {
+      last3.n++;
+      last3.t = Date.now();
     } else {
       entries.push({ t: Date.now(), level, msg, n: 1 });
       if (entries.length > MAX) entries.shift();
@@ -743,8 +743,8 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
     }
   }
   function qsFirst(list, root = document) {
-    for (const s of list) {
-      const el = qs(s, root);
+    for (const s2 of list) {
+      const el = qs(s2, root);
       if (el) return el;
     }
     return null;
@@ -784,11 +784,11 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
   ];
   function iconOf(item) {
     if (!item) return "";
-    const key = Object.keys(item)[0] || "";
-    const v = item[key] || {};
-    if (key === "segmentedLikeDislikeButtonViewModel" || key === "segmentedLikeDislikeButtonRenderer") return "LIKE";
-    if (key === "downloadButtonRenderer") return "DOWNLOAD";
-    return v.iconName || v.icon?.iconType || v.buttonViewModel?.iconName || v.defaultIcon?.iconType || key;
+    const key2 = Object.keys(item)[0] || "";
+    const v = item[key2] || {};
+    if (key2 === "segmentedLikeDislikeButtonViewModel" || key2 === "segmentedLikeDislikeButtonRenderer") return "LIKE";
+    if (key2 === "downloadButtonRenderer") return "DOWNLOAD";
+    return v.iconName || v.icon?.iconType || v.buttonViewModel?.iconName || v.defaultIcon?.iconType || key2;
   }
   function buttonName(item) {
     const icon = String(iconOf(item));
@@ -952,11 +952,11 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
 
   // src/appliers/hashTokens.js
   function normColor(v) {
-    const s = String(v || "").trim().toLowerCase().replace(/\s+/g, "");
-    let m = s.match(/^#([0-9a-f]{3})$/);
+    const s2 = String(v || "").trim().toLowerCase().replace(/\s+/g, "");
+    let m = s2.match(/^#([0-9a-f]{3})$/);
     if (m) return `#${[...m[1]].map((c) => c + c).join("")}`;
-    if (/^#[0-9a-f]{6}$/.test(s)) return s;
-    m = s.match(/^rgba?\((\d+),(\d+),(\d+)(?:,([\d.]+))?\)$/);
+    if (/^#[0-9a-f]{6}$/.test(s2)) return s2;
+    m = s2.match(/^rgba?\((\d+),(\d+),(\d+)(?:,([\d.]+))?\)$/);
     if (!m) return null;
     const hex2 = `#${[m[1], m[2], m[3]].map((x) => Number(x).toString(16).padStart(2, "0")).join("")}`;
     const a = m[4] == null ? 1 : Number(m[4]);
@@ -1288,84 +1288,84 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
       id: "compact",
       label: "Kompakt",
       pages: [...GRID_PAGES, "search"],
-      css: (s) => `
-${s} ytd-rich-grid-renderer { --ytd-rich-grid-items-per-row: 6 !important; --ytd-rich-grid-posts-per-row: 6 !important; --ytd-rich-grid-item-margin: 8px !important; }
-${s} ytd-rich-item-renderer[rendered-from-rich-grid] { margin-bottom: 16px !important; }
-${s} #video-title, ${s} yt-lockup-metadata-view-model h3 { font-size: 13px !important; line-height: 1.3 !important; }
-${s} yt-content-metadata-view-model, ${s} #metadata-line { font-size: 12px !important; }
-${s} ytd-search ytd-video-renderer ytd-thumbnail, ${s} ytd-search yt-lockup-view-model a[class*="ContentImage"] { max-width: 240px !important; min-width: 240px !important; }
-${s} ytd-search #description-text, ${s} ytd-search .metadata-snippet-container { display: none !important; }`
+      css: (s2) => `
+${s2} ytd-rich-grid-renderer { --ytd-rich-grid-items-per-row: 6 !important; --ytd-rich-grid-posts-per-row: 6 !important; --ytd-rich-grid-item-margin: 8px !important; }
+${s2} ytd-rich-item-renderer[rendered-from-rich-grid] { margin-bottom: 16px !important; }
+${s2} #video-title, ${s2} yt-lockup-metadata-view-model h3 { font-size: 13px !important; line-height: 1.3 !important; }
+${s2} yt-content-metadata-view-model, ${s2} #metadata-line { font-size: 12px !important; }
+${s2} ytd-search ytd-video-renderer ytd-thumbnail, ${s2} ytd-search yt-lockup-view-model a[class*="ContentImage"] { max-width: 240px !important; min-width: 240px !important; }
+${s2} ytd-search #description-text, ${s2} ytd-search .metadata-snippet-container { display: none !important; }`
     },
     {
       id: "list",
       label: "Liste",
       pages: GRID_PAGES,
-      css: (s) => `
-${s} ytd-rich-grid-renderer { --ytd-rich-grid-items-per-row: 1 !important; --ytd-rich-grid-posts-per-row: 1 !important; }
-${s} ytd-rich-grid-renderer > #contents { max-width: 1100px !important; margin: 0 auto !important; }
-${s} ytd-rich-item-renderer[rendered-from-rich-grid] { width: 100% !important; margin: 0 0 12px !important; }
-${s} ytd-rich-item-renderer yt-lockup-view-model > div { flex-direction: row !important; align-items: flex-start !important; }
-${s} ytd-rich-item-renderer yt-lockup-view-model a[class*="ContentImage"] { width: 320px !important; min-width: 320px !important; flex: none !important; margin-right: 16px !important; }
-${s} ytd-rich-item-renderer yt-lockup-view-model [class*="MetadataViewModel"] { flex: 1 !important; }
-${s} ytd-rich-item-renderer ytd-rich-grid-media #dismissible { display: flex !important; flex-direction: row !important; }
-${s} ytd-rich-item-renderer ytd-rich-grid-media ytd-thumbnail { width: 320px !important; min-width: 320px !important; margin-right: 16px !important; }
-${s} ytd-rich-section-renderer { width: 100% !important; max-width: 1100px !important; margin-inline: auto !important; }`
+      css: (s2) => `
+${s2} ytd-rich-grid-renderer { --ytd-rich-grid-items-per-row: 1 !important; --ytd-rich-grid-posts-per-row: 1 !important; }
+${s2} ytd-rich-grid-renderer > #contents { max-width: 1100px !important; margin: 0 auto !important; }
+${s2} ytd-rich-item-renderer[rendered-from-rich-grid] { width: 100% !important; margin: 0 0 12px !important; }
+${s2} ytd-rich-item-renderer yt-lockup-view-model > div { flex-direction: row !important; align-items: flex-start !important; }
+${s2} ytd-rich-item-renderer yt-lockup-view-model a[class*="ContentImage"] { width: 320px !important; min-width: 320px !important; flex: none !important; margin-right: 16px !important; }
+${s2} ytd-rich-item-renderer yt-lockup-view-model [class*="MetadataViewModel"] { flex: 1 !important; }
+${s2} ytd-rich-item-renderer ytd-rich-grid-media #dismissible { display: flex !important; flex-direction: row !important; }
+${s2} ytd-rich-item-renderer ytd-rich-grid-media ytd-thumbnail { width: 320px !important; min-width: 320px !important; margin-right: 16px !important; }
+${s2} ytd-rich-section-renderer { width: 100% !important; max-width: 1100px !important; margin-inline: auto !important; }`
     },
     {
       id: "text",
       label: "Nur Text",
       pages: [...GRID_PAGES, "search"],
-      css: (s) => `
-${s} ytd-rich-grid-renderer { --ytd-rich-grid-items-per-row: 1 !important; }
-${s} ytd-rich-grid-renderer > #contents { max-width: 900px !important; margin: 0 auto !important; }
-${s} ytd-rich-item-renderer[rendered-from-rich-grid] { width: 100% !important; margin: 0 0 4px !important; }
-${s} ytd-thumbnail, ${s} yt-thumbnail-view-model, ${s} a[class*="ContentImage"], ${s} #avatar-link, ${s} yt-decorated-avatar-view-model { display: none !important; }
-${s} ytd-rich-item-renderer yt-lockup-view-model > div, ${s} ytd-video-renderer #dismissible { flex-direction: row !important; }
-${s} ytd-rich-item-renderer, ${s} ytd-video-renderer, ${s} ytd-search yt-lockup-view-model { border-bottom: 1px solid var(--yt-sys-color-baseline--outline, #333) !important; padding: 8px 0 !important; }
-${s} ytd-search #description-text, ${s} ytd-search .metadata-snippet-container { display: none !important; }`
+      css: (s2) => `
+${s2} ytd-rich-grid-renderer { --ytd-rich-grid-items-per-row: 1 !important; }
+${s2} ytd-rich-grid-renderer > #contents { max-width: 900px !important; margin: 0 auto !important; }
+${s2} ytd-rich-item-renderer[rendered-from-rich-grid] { width: 100% !important; margin: 0 0 4px !important; }
+${s2} ytd-thumbnail, ${s2} yt-thumbnail-view-model, ${s2} a[class*="ContentImage"], ${s2} #avatar-link, ${s2} yt-decorated-avatar-view-model { display: none !important; }
+${s2} ytd-rich-item-renderer yt-lockup-view-model > div, ${s2} ytd-video-renderer #dismissible { flex-direction: row !important; }
+${s2} ytd-rich-item-renderer, ${s2} ytd-video-renderer, ${s2} ytd-search yt-lockup-view-model { border-bottom: 1px solid var(--yt-sys-color-baseline--outline, #333) !important; padding: 8px 0 !important; }
+${s2} ytd-search #description-text, ${s2} ytd-search .metadata-snippet-container { display: none !important; }`
     },
     {
       id: "classic",
       label: "Classic",
       pages: [...GRID_PAGES, "search", "watch", "playlist"],
-      css: (s) => `
-${s} ytd-rich-grid-renderer { --ytd-rich-grid-items-per-row: 5 !important; --ytd-rich-grid-posts-per-row: 5 !important; }
-${s} ytd-thumbnail a#thumbnail, ${s} ytd-thumbnail yt-image img, ${s} yt-thumbnail-view-model, ${s} yt-thumbnail-view-model img, ${s} [class*="ThumbnailViewModelImage"], ${s} #ytd-player, ${s} ytd-playlist-thumbnail { border-radius: 0 !important; }
-${s} #video-title, ${s} yt-lockup-metadata-view-model h3 { font-size: 14px !important; font-weight: 500 !important; }
-${s} #cinematics, ${s} #cinematics-container { display: none !important; }
-${s} yt-button-shape button, ${s} button[class*="ButtonShape"] { border-radius: 2px !important; }
-${s} #avatar img, ${s} yt-avatar-shape img { border-radius: 0 !important; }`
+      css: (s2) => `
+${s2} ytd-rich-grid-renderer { --ytd-rich-grid-items-per-row: 5 !important; --ytd-rich-grid-posts-per-row: 5 !important; }
+${s2} ytd-thumbnail a#thumbnail, ${s2} ytd-thumbnail yt-image img, ${s2} yt-thumbnail-view-model, ${s2} yt-thumbnail-view-model img, ${s2} [class*="ThumbnailViewModelImage"], ${s2} #ytd-player, ${s2} ytd-playlist-thumbnail { border-radius: 0 !important; }
+${s2} #video-title, ${s2} yt-lockup-metadata-view-model h3 { font-size: 14px !important; font-weight: 500 !important; }
+${s2} #cinematics, ${s2} #cinematics-container { display: none !important; }
+${s2} yt-button-shape button, ${s2} button[class*="ButtonShape"] { border-radius: 2px !important; }
+${s2} #avatar img, ${s2} yt-avatar-shape img { border-radius: 0 !important; }`
     },
     {
       id: "theater",
       label: "Kino (breit, Empfehlungen unten)",
       pages: ["watch"],
       resize: true,
-      css: (s) => `
-${s} ytd-watch-flexy:not([fullscreen]) #columns { flex-direction: column !important; align-items: center !important; }
-${s} ytd-watch-flexy:not([fullscreen]) #primary { width: min(100%, var(--ytx-player-max-w, 1400px)) !important; max-width: none !important; min-width: 0 !important; margin: 0 auto !important; padding-right: 0 !important; }
-${s} ytd-watch-flexy:not([fullscreen]) #secondary { width: min(100%, var(--ytx-player-max-w, 1400px)) !important; max-width: none !important; padding: 0 !important; margin: 0 auto !important; }
-${s} ytd-watch-flexy:not([fullscreen]) #secondary #related { display: block !important; }`
+      css: (s2) => `
+${s2} ytd-watch-flexy:not([fullscreen]) #columns { flex-direction: column !important; align-items: center !important; }
+${s2} ytd-watch-flexy:not([fullscreen]) #primary { width: min(100%, var(--ytx-player-max-w, 1400px)) !important; max-width: none !important; min-width: 0 !important; margin: 0 auto !important; padding-right: 0 !important; }
+${s2} ytd-watch-flexy:not([fullscreen]) #secondary { width: min(100%, var(--ytx-player-max-w, 1400px)) !important; max-width: none !important; padding: 0 !important; margin: 0 auto !important; }
+${s2} ytd-watch-flexy:not([fullscreen]) #secondary #related { display: block !important; }`
     },
     {
       id: "focus",
       label: "Fokus (nur Player & Beschreibung)",
       pages: ["watch"],
       resize: true,
-      css: (s) => `
-${s} ytd-watch-flexy:not([fullscreen]) #columns { justify-content: center !important; }
-${s} ytd-watch-flexy:not([fullscreen]) #primary { width: min(100%, var(--ytx-player-max-w, 1280px)) !important; max-width: none !important; min-width: 0 !important; padding-right: 0 !important; margin: 0 auto !important; }
-${s} ytd-watch-flexy:not([fullscreen]) #secondary #related, ${s} ytd-watch-flexy ytd-comments#comments { display: none !important; }
-${s} ytd-watch-flexy:not([fullscreen]) #secondary:not(:has(ytd-playlist-panel-renderer:not([hidden]))):not(:has(ytd-live-chat-frame)) { display: none !important; }`
+      css: (s2) => `
+${s2} ytd-watch-flexy:not([fullscreen]) #columns { justify-content: center !important; }
+${s2} ytd-watch-flexy:not([fullscreen]) #primary { width: min(100%, var(--ytx-player-max-w, 1280px)) !important; max-width: none !important; min-width: 0 !important; padding-right: 0 !important; margin: 0 auto !important; }
+${s2} ytd-watch-flexy:not([fullscreen]) #secondary #related, ${s2} ytd-watch-flexy ytd-comments#comments { display: none !important; }
+${s2} ytd-watch-flexy:not([fullscreen]) #secondary:not(:has(ytd-playlist-panel-renderer:not([hidden]))):not(:has(ytd-live-chat-frame)) { display: none !important; }`
     },
     {
       id: "wideList",
       label: "Breite Liste",
       pages: ["playlist", "search"],
-      css: (s) => `
-${s} ytd-search ytd-two-column-search-results-renderer, ${s} ytd-search #container.ytd-search { max-width: 1400px !important; }
-${s} ytd-browse[page-subtype="playlist"] ytd-two-column-browse-results-renderer { max-width: 1600px !important; }
-${s} ytd-browse[page-subtype="playlist"] ytd-two-column-browse-results-renderer #primary { max-width: none !important; }`
+      css: (s2) => `
+${s2} ytd-search ytd-two-column-search-results-renderer, ${s2} ytd-search #container.ytd-search { max-width: 1400px !important; }
+${s2} ytd-browse[page-subtype="playlist"] ytd-two-column-browse-results-renderer { max-width: 1600px !important; }
+${s2} ytd-browse[page-subtype="playlist"] ytd-two-column-browse-results-renderer #primary { max-width: none !important; }`
     }
   ];
   var presetById = Object.fromEntries(layoutPresets.map((p) => [p.id, p]));
@@ -1485,9 +1485,9 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     if (typeof text === "number") return text;
     const m = String(text).trim().match(/(\d+(?::\d{1,2}){1,2})/);
     if (!m) return null;
-    let s = 0;
-    for (const p of m[1].split(":").map(Number)) s = s * 60 + p;
-    return s;
+    let s2 = 0;
+    for (const p of m[1].split(":").map(Number)) s2 = s2 * 60 + p;
+    return s2;
   }
   function formatDuration(sec, { long = "hours" } = {}) {
     if (sec == null || !isFinite(sec)) return "–";
@@ -1509,17 +1509,17 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     sec = Math.max(0, Math.floor(sec));
     const h2 = Math.floor(sec / 3600);
     const m = Math.floor(sec % 3600 / 60);
-    const s = sec % 60;
-    const pad2 = (n) => String(n).padStart(2, "0");
-    return h2 ? `${h2}:${pad2(m)}:${pad2(s)}` : `${pad2(m)}:${pad2(s)}`;
+    const s2 = sec % 60;
+    const pad3 = (n) => String(n).padStart(2, "0");
+    return h2 ? `${h2}:${pad3(m)}:${pad3(s2)}` : `${pad3(m)}:${pad3(s2)}`;
   }
   function subtitleTime(ms, sep) {
     ms = Math.max(0, Math.round(ms));
-    const pad2 = (n, l = 2) => String(n).padStart(l, "0");
+    const pad3 = (n, l = 2) => String(n).padStart(l, "0");
     const h2 = Math.floor(ms / 36e5);
     const m = Math.floor(ms % 36e5 / 6e4);
-    const s = Math.floor(ms % 6e4 / 1e3);
-    return `${pad2(h2)}:${pad2(m)}:${pad2(s)}${sep}${pad2(ms % 1e3, 3)}`;
+    const s2 = Math.floor(ms % 6e4 / 1e3);
+    return `${pad3(h2)}:${pad3(m)}:${pad3(s2)}${sep}${pad3(ms % 1e3, 3)}`;
   }
   function firstInt(text) {
     const m = String(text ?? "").match(/\d[\d.,\s]*/);
@@ -1538,10 +1538,10 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
   ];
   function parseAgeDays(text) {
     if (!text) return null;
-    const s = String(text);
-    if (!/(vor |ago)/i.test(s)) return null;
-    const n = firstInt(s) ?? 1;
-    for (const [re, f] of AGE_UNITS) if (re.test(s)) return n * f;
+    const s2 = String(text);
+    if (!/(vor |ago)/i.test(s2)) return null;
+    const n = firstInt(s2) ?? 1;
+    for (const [re, f] of AGE_UNITS) if (re.test(s2)) return n * f;
     return null;
   }
   function formatDate(iso, withTime = false) {
@@ -1567,9 +1567,9 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       const m = line.match(STAMP);
       if (!m) continue;
       const sec = toSec(m[1]);
-      const title = line.replace(m[1], "").replace(/^[\s\-–:|.()]+|[\s\-–:|()]+$/g, "").trim();
+      const title2 = line.replace(m[1], "").replace(/^[\s\-–:|.()]+|[\s\-–:|()]+$/g, "").trim();
       if (out.length && sec <= out[out.length - 1].startSec) continue;
-      out.push({ title: title || m[1], startSec: sec });
+      out.push({ title: title2 || m[1], startSec: sec });
     }
     if (out.length < 3 || out[0].startSec !== 0) return [];
     return out;
@@ -1656,7 +1656,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     const titleEl = qs("h3", el) || qs('[class*="MetadataViewModelTitle"]', el);
     const channelLink = qs('a[href^="/@"], a[href^="/channel/"]', el);
     let channel = channelLink?.textContent.trim() || "";
-    const parts = qsa('yt-content-metadata-view-model span[role="text"], yt-content-metadata-view-model span', el).map((s) => s.textContent.trim()).filter(Boolean);
+    const parts = qsa('yt-content-metadata-view-model span[role="text"], yt-content-metadata-view-model span', el).map((s2) => s2.textContent.trim()).filter(Boolean);
     if (!channel && parts.length) channel = parts[0];
     let durationSec = null;
     let live = false;
@@ -2005,17 +2005,17 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     default: true,
     start() {
       const undo = [];
-      const wrap = (obj, key, make) => {
-        if (!obj || typeof obj[key] !== "function") return;
-        const orig = obj[key];
-        const own = Object.prototype.hasOwnProperty.call(obj, key);
+      const wrap = (obj, key2, make) => {
+        if (!obj || typeof obj[key2] !== "function") return;
+        const orig = obj[key2];
+        const own = Object.prototype.hasOwnProperty.call(obj, key2);
         const fn = make(orig);
         try {
-          Object.defineProperty(obj, key, { value: fn, configurable: true, writable: true });
+          Object.defineProperty(obj, key2, { value: fn, configurable: true, writable: true });
           undo.push(() => {
-            if (obj[key] !== fn) return;
-            if (own) obj[key] = orig;
-            else delete obj[key];
+            if (obj[key2] !== fn) return;
+            if (own) obj[key2] = orig;
+            else delete obj[key2];
           });
         } catch {
         }
@@ -2127,7 +2127,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     type: "toggle",
     default: false,
     start(ctx) {
-      const cache4 = /* @__PURE__ */ new Map();
+      const cache5 = /* @__PURE__ */ new Map();
       let busy = false;
       let first = { id: "", pressed: false };
       const render3 = (v) => {
@@ -2160,17 +2160,17 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
         if (ctx.nav.page !== "watch") return;
         const id = ctx.nav.videoId;
         if (!id) return;
-        if (!cache4.has(id) && !busy && hasGmRequest()) {
+        if (!cache5.has(id) && !busy && hasGmRequest()) {
           busy = true;
-          cache4.set(id, null);
+          cache5.set(id, null);
           try {
-            cache4.set(id, parseVotes(await gmJson(API + encodeURIComponent(id), { timeout: 8e3 })));
+            cache5.set(id, parseVotes(await gmJson(API + encodeURIComponent(id), { timeout: 8e3 })));
           } catch {
-            cache4.set(id, null);
+            cache5.set(id, null);
           }
           busy = false;
         }
-        render3(cache4.get(id));
+        render3(cache5.get(id));
       };
       const t = setInterval(tick2, 1500);
       tick2();
@@ -2819,8 +2819,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
   // src/registry/music/initialData.js
   var RE = /initialData\.push\(\{path: '((?:\\.|[^'])*)', params: JSON\.parse\('((?:\\.|[^'])*)'\), data: '((?:\\.|[^'])*)'\}\)/g;
   var SIMPLE = { n: "\n", r: "\r", t: "	", b: "\b", f: "\f", v: "\v", 0: "\0" };
-  function unescapeJs(s) {
-    return s.replace(/\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|[\s\S])/g, (_, e) => {
+  function unescapeJs(s2) {
+    return s2.replace(/\\(x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|[\s\S])/g, (_, e) => {
       if (e[0] === "x" && e.length === 3) return String.fromCharCode(parseInt(e.slice(1), 16));
       if (e[0] === "u" && e.length === 5) return String.fromCharCode(parseInt(e.slice(1), 16));
       return SIMPLE[e] ?? e;
@@ -2904,9 +2904,9 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     collectTypes(w.ytInitialData, out);
     collectTypes(w.ytInitialPlayerResponse, out);
     if (site === "music") {
-      for (const s of document.scripts) {
-        if (s.src || !s.textContent.includes("initialData.push")) continue;
-        for (const b of extractInitialData(s.textContent)) collectTypes(b.data, out);
+      for (const s2 of document.scripts) {
+        if (s2.src || !s2.textContent.includes("initialData.push")) continue;
+        for (const b of extractInitialData(s2.textContent)) collectTypes(b.data, out);
       }
     }
     remember(out);
@@ -2930,6 +2930,3314 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       const list = newTypes();
       if (!list.length) return { status: "ok", detail: `${seen.size} Bausteine gesehen, alle bekannt` };
       return { status: "warn", detail: `${list.length} neue: ${list.slice(0, 8).map((e) => `${e.name} (in ${e.parent || "?"}, seit ${e.first})`).join(", ")}${list.length > 8 ? " …" : ""}` };
+    }
+  };
+
+  // src/core/config.js
+  var SCHEMA = 3;
+  var SITE_KEYS = ["youtube", "music", "mobile"];
+  function defaultFilters() {
+    return {
+      enabled: false,
+      mode: "dim",
+      pages: ["home", "subscriptions", "search", "watch"],
+      shorts: false,
+      live: false,
+      channels: { block: [], allowOnly: [] },
+      title: { keywords: [], regex: [], caseSensitive: false },
+      duration: { minSec: null, maxSec: null },
+      age: { maxDays: null },
+      watched: { hide: false, minPercent: 90 }
+    };
+  }
+  function emptySection(def) {
+    const out = {
+      display: {},
+      vars: { theme: "" },
+      layout: { presets: {}, order: {}, topbar: "", zones: null },
+      behavior: {},
+      features: {}
+    };
+    if (def?.filters) out.filters = defaultFilters();
+    return out;
+  }
+  var isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
+  var strList = (x) => Array.isArray(x) ? x.map((s2) => String(s2).trim()).filter(Boolean) : [];
+  var numOrNull = (x) => x === "" || x === null || x === void 0 || !isFinite(Number(x)) ? null : Number(x);
+  function splitLegacy(raw) {
+    if (!isObj(raw)) return {};
+    if (SITE_KEYS.some((k) => isObj(raw[k]))) return raw;
+    if (["display", "vars", "layout", "behavior", "filters", "features"].some((k) => k in raw)) return { youtube: raw };
+    return {};
+  }
+  function normalize(raw, def) {
+    const src2 = isObj(raw) ? raw : {};
+    const cfg = emptySection(def);
+    const look = def.look;
+    const presets = def.presets;
+    if (isObj(src2.display)) {
+      for (const [id, mode] of Object.entries(src2.display)) {
+        const t = def.targetById[id];
+        if (t && t.modes.includes(mode) && mode !== "show") cfg.display[id] = mode;
+      }
+    }
+    if (isObj(src2.vars)) {
+      if (look.themes.some((t) => t.id === src2.vars.theme)) cfg.vars.theme = src2.vars.theme;
+      for (const [id, v] of Object.entries(src2.vars)) {
+        if (id === "theme") continue;
+        const c = look.controlById[id];
+        if (!c || v === "" || v === null || v === void 0) continue;
+        if (c.type === "range") {
+          const n = Number(v);
+          if (isFinite(n)) cfg.vars[id] = Math.min(c.max, Math.max(c.min, n));
+        } else if (c.type === "color") {
+          if (/^#[0-9a-f]{3,8}$/i.test(v)) cfg.vars[id] = v;
+        } else if (c.type === "select") {
+          if (c.options.some(([val]) => val === v)) cfg.vars[id] = v;
+        }
+      }
+    }
+    if (isObj(src2.layout)) {
+      if (isObj(src2.layout.presets)) {
+        for (const [page, id] of Object.entries(src2.layout.presets)) {
+          const p = presets.presetById[id];
+          if (p && p.pages.includes(page)) cfg.layout.presets[page] = id;
+        }
+      }
+      if (isObj(src2.layout.order)) {
+        for (const [gid, list] of Object.entries(src2.layout.order)) {
+          const g = presets.orderGroups[gid];
+          if (!g) continue;
+          const known3 = new Set(g.items.map(([id]) => id));
+          const clean = strList(list).filter((id) => known3.has(id));
+          if (clean.length) cfg.layout.order[gid] = [...new Set(clean)];
+        }
+      }
+      if (presets.topbarModes.some(([v]) => v === src2.layout.topbar)) cfg.layout.topbar = src2.layout.topbar;
+      if (isObj(src2.layout.zones)) cfg.layout.zones = src2.layout.zones;
+    }
+    if (isObj(src2.behavior)) {
+      for (const [id, v] of Object.entries(src2.behavior)) {
+        const b = def.behaviorById[id];
+        if (!b) continue;
+        if (b.type === "toggle") cfg.behavior[id] = !!v;
+        else if (b.type === "select" && b.options.some(([val]) => val === v)) cfg.behavior[id] = v;
+        else if (b.type === "textarea") cfg.behavior[id] = String(v ?? "");
+      }
+    }
+    if (def.filters && isObj(src2.filters)) {
+      const f = src2.filters;
+      const d = cfg.filters;
+      d.enabled = !!f.enabled;
+      if (["dim", "collapse", "hide"].includes(f.mode)) d.mode = f.mode;
+      if (Array.isArray(f.pages)) d.pages = strList(f.pages);
+      d.shorts = !!f.shorts;
+      d.live = !!f.live;
+      d.channels.block = strList(f.channels?.block);
+      d.channels.allowOnly = strList(f.channels?.allowOnly);
+      d.title.keywords = strList(f.title?.keywords);
+      d.title.regex = strList(f.title?.regex);
+      d.title.caseSensitive = !!f.title?.caseSensitive;
+      d.duration.minSec = numOrNull(f.duration?.minSec);
+      d.duration.maxSec = numOrNull(f.duration?.maxSec);
+      d.age.maxDays = numOrNull(f.age?.maxDays);
+      d.watched.hide = !!f.watched?.hide;
+      d.watched.minPercent = numOrNull(f.watched?.minPercent) ?? 90;
+    }
+    const srcFeatures = isObj(src2.features) ? src2.features : {};
+    for (const m of def.features) {
+      const s2 = isObj(srcFeatures[m.id]) ? srcFeatures[m.id] : {};
+      const out = { enabled: !!s2.enabled };
+      for (const [key2, sd] of Object.entries(m.settings || {})) out[key2] = normalizeSetting(sd, s2[key2]);
+      cfg.features[m.id] = out;
+    }
+    return cfg;
+  }
+  function normalizeProfile(raw, sites2) {
+    const split = splitLegacy(raw);
+    const out = { schema: SCHEMA };
+    for (const key2 of SITE_KEYS) out[key2] = normalize(split[key2], sites2[key2]);
+    return out;
+  }
+  function normalizeSetting(def, v) {
+    switch (def.type) {
+      case "toggle":
+        return v === void 0 ? !!def.default : !!v;
+      case "select":
+        return def.options.some(([val]) => val === v) ? v : def.default;
+      case "multi": {
+        const allowed = new Set(def.options.map(([val]) => val));
+        return Array.isArray(v) ? v.filter((x) => allowed.has(x)) : def.default.slice();
+      }
+      case "range": {
+        const n = Number(v);
+        return isFinite(n) && v !== null && v !== "" ? Math.min(def.max, Math.max(def.min, n)) : def.default;
+      }
+      case "text":
+        return typeof v === "string" ? v : def.default;
+      default:
+        return v ?? def.default;
+    }
+  }
+
+  // src/profiles/youtube.js
+  var H = "hide";
+  var C = "collapse";
+  var tidyDisplay = {
+    "guide.shorts": H,
+    "guide.explore": H,
+    "guide.moreYT": H,
+    "guide.footer": H,
+    "top.create": H,
+    "top.voice": H,
+    "home.shortsShelf": H,
+    "home.chips": H,
+    "home.shelves": H,
+    "home.banner": H,
+    "home.posts": H,
+    "watch.sidebar": C,
+    "watch.comments": C,
+    "watch.shortsShelf": H,
+    "watch.merch": H,
+    "watch.ads": H,
+    "watch.ambient": H,
+    "watch.infoCards": H,
+    "watch.btn.download": H,
+    "watch.btn.clip": H,
+    "watch.btn.thanks": H,
+    "watch.btn.ask": H,
+    "watch.btn.join": H,
+    "player.endscreen": H,
+    "player.cards": H,
+    "player.pauseOverlay": H,
+    "player.paidPromo": H,
+    "player.watermark": H,
+    "player.btn.cast": H,
+    "thumb.hoverPreview": H,
+    "search.shorts": H,
+    "search.peopleAlsoSearch": H,
+    "search.shelves": H,
+    "search.ads": H,
+    "channel.shortsTab": H,
+    "channel.shortsShelf": H,
+    "subs.shorts": H
+  };
+  var tidyFeatures = {
+    "transcript.copy": { enabled: true },
+    "watch.copyInfo": { enabled: true },
+    "playlist.duration": { enabled: true },
+    "playlist.search": { enabled: true },
+    "subs.groups": { enabled: true },
+    "watch.time": { enabled: true },
+    "playlist.dimWatched": { enabled: false },
+    "playlist.sort": { enabled: true },
+    "player.endsAt": { enabled: true },
+    "watch.publishDate": { enabled: true },
+    "thumb.progressBadge": { enabled: true },
+    "ui.proxyButtons": { enabled: false }
+  };
+  var templates = [
+    {
+      id: "youtube",
+      name: "YouTube (Original)",
+      description: "Nichts verändert. Zum Vergleichen und als Notausgang",
+      config: () => ({})
+    },
+    {
+      id: "aufgeraeumt",
+      name: "Aufgeräumt",
+      description: "Shorts und Ablenkungen weg, nützliche Features an",
+      config: () => ({
+        display: { ...tidyDisplay },
+        behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true },
+        filters: { enabled: true, mode: "dim", shorts: true, pages: ["home", "subscriptions", "search", "watch"] },
+        features: structuredClone(tidyFeatures)
+      })
+    },
+    {
+      id: "fokus",
+      name: "Fokus",
+      description: "Radikal: keine Startseite, keine Empfehlungen, keine Thumbnails",
+      config: () => ({
+        display: {
+          ...tidyDisplay,
+          "guide.subs": C,
+          "top.notifications": H,
+          "home.feedAll": H,
+          "watch.sidebar": H,
+          "watch.comments": H,
+          "watch.chat": C,
+          "watch.btn.likeCount": H,
+          "player.btn.autoplay": H,
+          "thumb.image": H
+        },
+        layout: { presets: { watch: "focus", subscriptions: "list" } },
+        behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, homeRedirect: "/feed/subscriptions" },
+        filters: { enabled: true, mode: "hide", shorts: true, pages: ["home", "subscriptions", "search", "watch", "channel"] },
+        features: structuredClone(tidyFeatures)
+      })
+    }
+  ];
+  var templateById = Object.fromEntries(templates.map((t) => [t.id, t]));
+  var DEFAULT_ACTIVE = "aufgeraeumt";
+
+  // src/profiles/music.js
+  var H2 = "hide";
+  var C2 = "collapse";
+  var tidyDisplay2 = {
+    "m.guide.samples": H2,
+    "m.guide.upgrade": H2,
+    "m.guide.signin": H2,
+    "m.promo.mealbar": H2,
+    "m.promo.background": H2,
+    "m.promo.upsell": H2,
+    "m.home.podcastChip": H2,
+    "m.home.podcasts": H2,
+    "m.home.samplesShelf": H2,
+    "m.explore.podcasts": H2,
+    "m.search.podcasts": C2,
+    "m.search.profiles": H2,
+    "m.nav.openApp": H2
+  };
+  var tidyFeatures2 = {
+    "m.history": { enabled: true },
+    "m.favorites": { enabled: true },
+    "m.hub": { enabled: true },
+    "m.releases": { enabled: true },
+    "m.weekly": { enabled: true },
+    "m.smartQueue": { enabled: true },
+    "m.queueInfo": { enabled: true },
+    "m.lyrics": { enabled: true },
+    "m.sleepTimer": { enabled: true },
+    "m.audio": { enabled: false }
+  };
+  var musicTemplates = {
+    youtube: () => ({}),
+    aufgeraeumt: () => ({
+      display: { ...tidyDisplay2 },
+      behavior: { "m.stillThere": true },
+      features: structuredClone(tidyFeatures2)
+    }),
+    fokus: () => ({
+      display: {
+        ...tidyDisplay2,
+        "m.guide.explore": H2,
+        "m.home.chips": H2,
+        "m.home.videos": H2,
+        "m.home.playlists": C2,
+        "m.home.background": H2,
+        "m.player.comments": H2,
+        "m.player.related": H2,
+        "m.search.videos": C2
+      },
+      behavior: { "m.stillThere": true, "m.closePromoDialogs": true },
+      features: { ...structuredClone(tidyFeatures2), "m.audio": { enabled: true, preferAudio: true } }
+    })
+  };
+
+  // src/profiles/mobile.js
+  var H3 = "hide";
+  var C3 = "collapse";
+  var tidyDisplay3 = {
+    "mb.pivot.shorts": H3,
+    "mb.pivot.create": H3,
+    "mb.top.openApp": H3,
+    "mb.home.shorts": H3,
+    "mb.games": H3,
+    "mb.home.posts": H3,
+    "mb.home.nudge": H3,
+    "mb.watch.shorts": H3,
+    "mb.watch.carousel": H3,
+    "mb.watch.endscreen": H3,
+    "mb.search.shorts": H3,
+    "mb.infoPanel": H3,
+    "mb.search.shelves": C3,
+    "mb.channel.shortsTab": H3,
+    "mb.channel.shorts": H3,
+    "mb.subs.shorts": H3,
+    "mb.ads": H3,
+    "mb.premiumPromo": H3
+  };
+  var tidyFeatures3 = {
+    "transcript.copy": { enabled: true },
+    "watch.copyInfo": { enabled: true },
+    "playlist.duration": { enabled: true },
+    "playlist.search": { enabled: true },
+    "playlist.sort": { enabled: true },
+    "playlist.dimWatched": { enabled: false },
+    "subs.groups": { enabled: true },
+    "watch.time": { enabled: true },
+    "player.endsAt": { enabled: true },
+    "watch.publishDate": { enabled: true },
+    "thumb.progressBadge": { enabled: true }
+  };
+  var mobileTemplates = {
+    youtube: () => ({ display: { "mb.pivot.shorts": H3 } }),
+    aufgeraeumt: () => ({
+      display: { ...tidyDisplay3 },
+      behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, swipeDownBack: true },
+      filters: { enabled: true, mode: "dim", shorts: true, pages: ["home", "subscriptions", "search", "watch"] },
+      features: structuredClone(tidyFeatures3)
+    }),
+    fokus: () => ({
+      display: { ...tidyDisplay3, "mb.home.feed": H3, "mb.home.sections": H3, "mb.home.chips": H3, "mb.watch.related": C3, "mb.watch.comments": C3 },
+      behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, swipeDownBack: true, homeRedirect: "/feed/subscriptions" },
+      filters: { enabled: true, mode: "hide", shorts: true, pages: ["home", "subscriptions", "search", "watch", "channel"] },
+      features: structuredClone(tidyFeatures3)
+    })
+  };
+
+  // src/profiles/index.js
+  var templates2 = templates.map((t) => ({
+    ...t,
+    config: () => ({ schema: SCHEMA, youtube: t.config(), music: musicTemplates[t.id]?.() || {}, mobile: mobileTemplates[t.id]?.() || {} })
+  }));
+  var templateById2 = Object.fromEntries(templates2.map((t) => [t.id, t]));
+
+  // src/core/merge.js
+  var isObj2 = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
+  var same = (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b);
+  function merge3(base2, ours, theirs) {
+    if (same(ours, base2)) return theirs;
+    if (same(theirs, base2)) return ours;
+    if (isObj2(ours) && isObj2(theirs)) {
+      const b = isObj2(base2) ? base2 : {};
+      const out = {};
+      for (const k of /* @__PURE__ */ new Set([...Object.keys(ours), ...Object.keys(theirs)])) {
+        const v = merge3(b[k], ours[k], theirs[k]);
+        if (v !== void 0) out[k] = v;
+      }
+      return out;
+    }
+    return ours;
+  }
+
+  // src/core/store.js
+  var KEY2 = "ytx.store";
+  var STATE_KEY = "ytx.state";
+  var hasGM = () => typeof GM_getValue === "function" && typeof GM_setValue === "function";
+  function readRaw(key2) {
+    try {
+      if (hasGM()) {
+        const v = GM_getValue(key2, null);
+        if (v != null) return typeof v === "string" ? JSON.parse(v) : v;
+      }
+    } catch (e) {
+      log.warn("GM_getValue", e);
+    }
+    try {
+      const v = localStorage.getItem(key2);
+      return v ? JSON.parse(v) : null;
+    } catch {
+      return null;
+    }
+  }
+  function writeRaw(key2, value) {
+    const json = JSON.stringify(value);
+    try {
+      if (hasGM()) {
+        GM_setValue(key2, json);
+        return;
+      }
+    } catch (e) {
+      log.warn("GM_setValue", e);
+    }
+    try {
+      localStorage.setItem(key2, json);
+    } catch (e) {
+      log.warn("localStorage", e);
+    }
+  }
+  function slug(name) {
+    return String(name).toLowerCase().replace(/[äöü]/g, (c) => ({ ä: "ae", ö: "oe", ü: "ue" })[c]).replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "profil";
+  }
+  var defaultSettings = () => ({ hotkeys: {}, panelButton: true, panelTab: "display", linkLook: true });
+  function freshData() {
+    const profiles = {};
+    for (const t of templates2) profiles[t.id] = { name: t.name, template: t.id, config: t.config() };
+    return { schema: SCHEMA, active: DEFAULT_ACTIVE, profiles, settings: defaultSettings(), buckets: {}, migrations: MIGRATIONS.map(([id]) => id) };
+  }
+  var MIGRATIONS = [
+    [
+      "schema-3-sites",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const split = splitLegacy(p.config);
+          p.config = { schema: SCHEMA, ...split };
+          const t = templateById2[p.template];
+          if (!p.config.music && t) p.config.music = t.config().music;
+        }
+        d.schema = SCHEMA;
+      }
+    ],
+    [
+      "thumbs-color-default",
+      (d) => {
+        const p = d.profiles.aufgeraeumt;
+        const disp = p?.config?.youtube?.display;
+        if (p?.template === "aufgeraeumt" && disp?.["thumb.image"] === "dim") delete disp["thumb.image"];
+      }
+    ],
+    [
+      // neue features in bestehenden profilen einschalten, ausser im original profil
+      "playlist-search-on",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          if (p.template === "youtube" || !p.config?.youtube) continue;
+          const f = p.config.youtube.features ||= {};
+          if (!f["playlist.search"]) f["playlist.search"] = { enabled: true };
+        }
+      }
+    ],
+    [
+      "groups-watchtime-weekly-on",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          if (p.template === "youtube") continue;
+          if (p.config?.youtube) {
+            const f = p.config.youtube.features ||= {};
+            f["subs.groups"] ||= { enabled: true };
+            f["watch.time"] ||= { enabled: true };
+          }
+          if (p.config?.music) {
+            const f = p.config.music.features ||= {};
+            f["m.weekly"] ||= { enabled: true };
+          }
+        }
+      }
+    ],
+    [
+      // mobil abschnitt fuer bestehende profile aus der vorlage
+      "mobile-section",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          if (!p.config || p.config.mobile) continue;
+          const t = templateById2[p.template] || templateById2.aufgeraeumt;
+          p.config.mobile = p.template === "youtube" ? {} : t.config().mobile;
+        }
+      }
+    ],
+    [
+      "mobile-open-app-hidden",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.mobile;
+          if (!m || p.template === "youtube") continue;
+          m.display ||= {};
+          if (!("mb.top.openApp" in m.display)) m.display["mb.top.openApp"] = "hide";
+        }
+      }
+    ],
+    [
+      "transcript-menu-item",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const f = p.config?.youtube?.features?.["transcript.copy"];
+          if (Array.isArray(f?.placement) && !f.placement.includes("menu")) f.placement.push("menu");
+        }
+      }
+    ],
+    [
+      // handy bekommt die features vom rechner, bestehende profile schalten sie wie die vorlage ein
+      "mobile-desktop-features",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.mobile;
+          if (!m || p.template === "youtube") continue;
+          const f = m.features ||= {};
+          for (const [id, v] of Object.entries(tidyFeatures3)) if (!f[id]) f[id] = { ...v };
+          const b = m.behavior ||= {};
+          if (!("autoplayOff" in b)) b.autoplayOff = true;
+          if (!("channelTrailerPause" in b)) b.channelTrailerPause = true;
+        }
+      }
+    ],
+    [
+      "mobile-swipe-down-back",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.mobile;
+          if (!m || p.template === "youtube") continue;
+          const b = m.behavior ||= {};
+          if (!("swipeDownBack" in b)) b.swipeDownBack = true;
+        }
+      }
+    ],
+    [
+      "music-open-app-hidden",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.music;
+          if (!m || p.template === "youtube") continue;
+          m.display ||= {};
+          if (!("m.nav.openApp" in m.display)) m.display["m.nav.openApp"] = "hide";
+        }
+      }
+    ],
+    [
+      "music-sleep-timer-on",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          if (p.template === "youtube" || !p.config?.music) continue;
+          const f = p.config.music.features ||= {};
+          f["m.sleepTimer"] ||= { enabled: true };
+        }
+      }
+    ],
+    [
+      // theme und farben gelten fuer youtube und music gemeinsam, wer es ausdruecklich ausgeschaltet hat behaelt das
+      "link-look-default-on",
+      (d) => {
+        d.settings ||= {};
+        if (!("linkLook" in d.settings)) d.settings.linkLook = true;
+      }
+    ],
+    [
+      "mobile-app-fullscreen",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.mobile;
+          if (!m || p.template === "youtube") continue;
+          const b = m.behavior ||= {};
+          if (!("appFullscreen" in b)) b.appFullscreen = true;
+          if (!("keepPlaying" in b) && !("m.keepPlaying" in (p.config?.music?.behavior || {}))) (p.config.music ||= {}).behavior = { ...p.config.music.behavior || {}, "m.keepPlaying": true };
+        }
+      }
+    ],
+    [
+      "mobile-info-panel-shorts-pivot",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.mobile;
+          if (!m || p.template === "youtube") continue;
+          m.display ||= {};
+          if (!("mb.infoPanel" in m.display)) m.display["mb.infoPanel"] = "hide";
+          if (!("mb.pivot.shorts" in m.display)) m.display["mb.pivot.shorts"] = "hide";
+        }
+      }
+    ],
+    [
+      "mobile-original-shorts-pivot-off",
+      (d) => {
+        const p = d.profiles?.youtube;
+        const m = p?.config?.mobile;
+        if (!m) return;
+        m.display ||= {};
+        if (!("mb.pivot.shorts" in m.display)) m.display["mb.pivot.shorts"] = "hide";
+      }
+    ],
+    [
+      "music-bottom-nav-on",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.music;
+          if (!m) continue;
+          const b = m.behavior ||= {};
+          if (!("m.bottomNav" in b)) b["m.bottomNav"] = true;
+        }
+      }
+    ],
+    [
+      // eigene profile ohne vorlage hatten werbung und spiele regale am handy nie ausgeblendet
+      "mobile-ads-games-hidden",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          const m = p.config?.mobile;
+          if (!m || p.template === "youtube") continue;
+          m.display ||= {};
+          for (const id of ["mb.ads", "mb.games", "mb.premiumPromo"]) if (!(id in m.display)) m.display[id] = "hide";
+        }
+      }
+    ],
+    [
+      // community beitraege im feed ausblenden, ausser im original profil
+      "home-posts-hidden",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          if (p.template === "youtube") continue;
+          for (const [key2, id] of [["mobile", "mb.home.posts"], ["youtube", "home.posts"]]) {
+            const c = p.config?.[key2];
+            if (!c) continue;
+            c.display ||= {};
+            if (!(id in c.display)) c.display[id] = "hide";
+          }
+        }
+      }
+    ]
+  ];
+  var data = null;
+  var syncMode = "none";
+  var config = null;
+  var subs = /* @__PURE__ */ new Set();
+  var base = null;
+  var pending = false;
+  function persist() {
+    pending = false;
+    const stored = readRaw(KEY2);
+    if (stored && base && JSON.stringify(stored) !== base) {
+      const merged = structuredClone(merge3(JSON.parse(base), data, stored));
+      const changed = !same(merged, data);
+      data = merged;
+      if (changed) {
+        recompute();
+        emit("sync");
+      }
+    }
+    writeRaw(KEY2, data);
+    base = JSON.stringify(data);
+  }
+  var saveSoon = debounce(persist, 250, 1500);
+  var markDirty = () => {
+    pending = true;
+    saveSoon();
+  };
+  function onRemote(raw) {
+    let remote;
+    try {
+      remote = typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      return;
+    }
+    if (!remote?.profiles || !Object.keys(remote.profiles).length) return;
+    const json = JSON.stringify(remote);
+    if (json === base) return;
+    data = structuredClone(pending ? merge3(JSON.parse(base), data, remote) : remote);
+    base = json;
+    data.settings ||= defaultSettings();
+    data.buckets ||= {};
+    if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0];
+    recompute();
+    emit("sync");
+  }
+  function watchRemote() {
+    try {
+      if (typeof GM_addValueChangeListener === "function") {
+        GM_addValueChangeListener(KEY2, (name, oldValue, newValue, remote) => remote && onRemote(newValue));
+        return "gm";
+      }
+    } catch (e) {
+      log.warn("GM_addValueChangeListener", e);
+    }
+    window.addEventListener("storage", (e) => e.key === KEY2 && e.newValue && onRemote(e.newValue));
+    return "storage";
+  }
+  var runtime = readRaw(STATE_KEY) || {};
+  var saveState = debounce(() => writeRaw(STATE_KEY, runtime), 500, 3e3);
+  function migrate() {
+    data.migrations ||= [];
+    let changed = false;
+    for (const [id, fn] of MIGRATIONS) {
+      if (data.migrations.includes(id)) continue;
+      try {
+        fn(data);
+      } catch (e) {
+        log.warn(`migration ${id}`, e);
+      }
+      data.migrations.push(id);
+      changed = true;
+    }
+    if (changed) writeRaw(KEY2, data);
+    base = JSON.stringify(data);
+  }
+  function activeProfile() {
+    return data.profiles[data.active] || data.profiles[Object.keys(data.profiles)[0]];
+  }
+  function recompute() {
+    config = normalize(activeProfile()?.config?.[site2.id], site2);
+  }
+  function emit(reason) {
+    for (const fn of subs) {
+      try {
+        fn(config, reason);
+      } catch (e) {
+        log.error("store subscriber", e);
+      }
+    }
+  }
+  function linkVars(p, oldVars, newVars) {
+    for (const id of SITE_KEYS) {
+      if (id === site2.id) continue;
+      const other = normalize(p.config?.[id], sites[id]);
+      let touched = false;
+      for (const k of /* @__PURE__ */ new Set([...Object.keys(oldVars), ...Object.keys(newVars)])) {
+        if (same(oldVars[k], newVars[k])) continue;
+        if (newVars[k] === void 0) delete other.vars[k];
+        else other.vars[k] = newVars[k];
+        touched = true;
+      }
+      if (touched) p.config = { ...p.config || {}, schema: SCHEMA, [id]: normalize(other, sites[id]) };
+    }
+  }
+  function commit(reason) {
+    recompute();
+    markDirty();
+    emit(reason);
+  }
+  var store = {
+    init() {
+      data = readRaw(KEY2);
+      if (!data || typeof data !== "object" || !data.profiles || !Object.keys(data.profiles).length) {
+        data = freshData();
+        writeRaw(KEY2, data);
+      }
+      data.settings ||= defaultSettings();
+      data.buckets ||= {};
+      base = JSON.stringify(data);
+      migrate();
+      for (const t of templates2) {
+        if (!data.profiles[t.id] && !data.deletedTemplates?.includes(t.id)) data.profiles[t.id] = { name: t.name, template: t.id, config: t.config() };
+      }
+      if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0];
+      recompute();
+      syncMode = watchRemote();
+      const flush = () => this.flush();
+      window.addEventListener("pagehide", flush);
+      document.addEventListener("visibilitychange", () => document.hidden && flush());
+    },
+    flush() {
+      saveSoon.flush();
+      saveState.flush();
+    },
+    get config() {
+      return config;
+    },
+    get data() {
+      return data;
+    },
+    get settings() {
+      return data.settings;
+    },
+    get activeId() {
+      return data.active;
+    },
+    get siteId() {
+      return site2.id;
+    },
+    get syncMode() {
+      return syncMode;
+    },
+    profiles() {
+      return Object.entries(data.profiles).map(([id, p]) => ({ id, name: p.name, template: p.template, active: id === data.active }));
+    },
+    subscribe(fn) {
+      subs.add(fn);
+      return () => subs.delete(fn);
+    },
+    // mutator bekommt den abschnitt der aktuellen seite
+    update(mutator, reason = "update") {
+      const p = activeProfile();
+      const draft = normalize(p.config?.[site2.id], site2);
+      const oldVars = { ...draft.vars };
+      mutator(draft);
+      const next = normalize(draft, site2);
+      p.config = { ...p.config || {}, schema: SCHEMA, [site2.id]: next };
+      if (data.settings.linkLook) linkVars(p, oldVars, next.vars);
+      commit(reason);
+    },
+    get linkLook() {
+      return !!data.settings.linkLook;
+    },
+    // look beider seiten koppeln, beim einschalten einmal alle profile angleichen
+    setLinkLook(on) {
+      data.settings.linkLook = !!on;
+      if (on) for (const p of Object.values(data.profiles)) linkVars(p, {}, normalize(p.config?.[site2.id], site2).vars);
+      commit("profile");
+    },
+    // look (theme/farben/dichte/typografie) der jeweils anderen seite im selben profil
+    // dient dazu, den style zwischen youtube und music zu uebertragen
+    otherLooks() {
+      const p = activeProfile();
+      return SITE_KEYS.filter((id) => id !== site2.id).map((id) => ({
+        id,
+        label: sites[id].label,
+        vars: normalize(p.config?.[id], sites[id]).vars
+      }));
+    },
+    updateSettings(mutator) {
+      mutator(data.settings);
+      markDirty();
+      emit("settings");
+    },
+    // seitenweite einstellungen, normalisiert vom besitzer des buckets
+    bucket(name, normalizeFn) {
+      const b = normalizeFn ? normalizeFn(data.buckets[name]) : data.buckets[name];
+      return b;
+    },
+    updateBucket(name, mutator, normalizeFn) {
+      const draft = normalizeFn ? normalizeFn(data.buckets[name]) : structuredClone(data.buckets[name] || {});
+      mutator(draft);
+      data.buckets[name] = normalizeFn ? normalizeFn(draft) : draft;
+      markDirty();
+      emit(`bucket:${name}`);
+      return data.buckets[name];
+    },
+    setActive(id) {
+      if (!data.profiles[id] || id === data.active) return;
+      data.active = id;
+      commit("profile");
+    },
+    cycleProfile() {
+      const ids = Object.keys(data.profiles);
+      const i = ids.indexOf(data.active);
+      this.setActive(ids[(i + 1) % ids.length]);
+      return data.profiles[data.active].name;
+    },
+    createProfile(name, fromId = data.active) {
+      let id = slug(name);
+      while (data.profiles[id]) id += "-2";
+      const src2 = data.profiles[fromId];
+      data.profiles[id] = { name: String(name).trim() || "Profil", template: null, config: structuredClone(src2 ? src2.config : {}) };
+      data.active = id;
+      commit("profile");
+      return id;
+    },
+    renameProfile(id, name) {
+      if (!data.profiles[id] || !String(name).trim()) return;
+      data.profiles[id].name = String(name).trim();
+      markDirty();
+      emit("profile");
+    },
+    deleteProfile(id) {
+      if (!data.profiles[id] || Object.keys(data.profiles).length <= 1) return false;
+      if (data.profiles[id].template) (data.deletedTemplates ||= []).push(data.profiles[id].template);
+      delete data.profiles[id];
+      if (data.active === id) data.active = Object.keys(data.profiles)[0];
+      commit("profile");
+      return true;
+    },
+    // setzt nur den abschnitt der aktuellen seite zurueck
+    resetProfile(id, allSites = false) {
+      const p = data.profiles[id];
+      if (!p) return;
+      const t = templateById2[p.template];
+      const fresh = t ? t.config() : {};
+      p.config = allSites ? fresh : { ...p.config || {}, schema: SCHEMA, [site2.id]: fresh[site2.id] || {} };
+      commit("profile");
+    },
+    exportJson(all = false) {
+      const p = activeProfile();
+      const out = all ? { ...data, buckets: void 0, settings: { ...data.settings, cloud: void 0 } } : { schema: SCHEMA, profile: { name: p.name, config: normalizeProfile(p.config, sites) } };
+      return JSON.stringify(out, null, 2);
+    },
+    importJson(text) {
+      const obj = JSON.parse(text);
+      if (obj.profiles && typeof obj.profiles === "object") {
+        for (const [id2, p] of Object.entries(obj.profiles)) {
+          if (!p || typeof p !== "object") continue;
+          data.profiles[id2] = { name: String(p.name || id2), template: p.template ?? null, config: normalizeProfile(p.config, sites) };
+        }
+        if (obj.active && data.profiles[obj.active]) data.active = obj.active;
+        if (obj.settings) data.settings = { ...data.settings, ...obj.settings };
+        commit("import");
+        return "Alle Profile importiert";
+      }
+      const cfg = obj.profile?.config || obj.config || obj;
+      const name = obj.profile?.name || "Importiert";
+      const id = this.createProfile(name);
+      data.profiles[id].config = normalizeProfile(cfg, sites);
+      commit("import");
+      return `Profil „${name}“ importiert`;
+    },
+    resetAll() {
+      const buckets2 = data.buckets;
+      data = freshData();
+      data.buckets = buckets2;
+      commit("reset");
+    },
+    state: {
+      get(key2, def) {
+        return key2 in runtime ? runtime[key2] : def;
+      },
+      set(key2, value) {
+        runtime[key2] = value;
+        saveState();
+      }
+    }
+  };
+
+  // src/core/cloudSync.js
+  var CLOUD_DEFAULT_URL = "http://pi.tail5f332e.ts.net:8181";
+  function cloudConfig() {
+    const c = store.settings.cloud || {};
+    return { url: c.url || CLOUD_DEFAULT_URL, user: c.user || "", pass: c.pass || "" };
+  }
+  function cloudReady() {
+    const c = cloudConfig();
+    return !!(c.url && c.user && c.pass);
+  }
+  function davBase(c) {
+    return `${c.url.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(c.user)}/ytx`;
+  }
+  function request(method, url, c, body, extra = {}) {
+    return new Promise((resolve, reject) => {
+      if (typeof GM_xmlhttpRequest !== "function") return reject(new Error("GM_xmlhttpRequest nicht verfügbar"));
+      const headers = { Authorization: `Basic ${btoa(unescape(encodeURIComponent(`${c.user}:${c.pass}`)))}` };
+      if (body != null) headers["Content-Type"] = "application/json";
+      Object.assign(headers, extra);
+      GM_xmlhttpRequest({
+        url,
+        method,
+        headers,
+        data: body ?? null,
+        timeout: 2e4,
+        onload: (r) => resolve({ status: r.status, text: r.responseText }),
+        onerror: () => reject(new Error("Server nicht erreichbar (VPN/Tailscale an?)")),
+        ontimeout: () => reject(new Error("Zeitüberschreitung"))
+      });
+    });
+  }
+  var fail = (r) => new Error(r.status === 401 ? "Anmeldung abgelehnt, App-Passwort prüfen" : `HTTP ${r.status}`);
+  function cloudRequest(method, path, body = null, headers = {}) {
+    const c = cloudConfig();
+    return request(method, `${davBase(c)}/${path}`.replace(/\/+$/, ""), c, body, headers);
+  }
+  async function cloudPush() {
+    const c = cloudConfig();
+    const base2 = davBase(c);
+    const mk = await request("MKCOL", base2, c);
+    if (![201, 405].includes(mk.status)) throw fail(mk);
+    const put = await request("PUT", `${base2}/profiles.json`, c, store.exportJson(true));
+    if (put.status < 200 || put.status >= 300) throw fail(put);
+    return "Profile hochgeladen";
+  }
+  async function cloudPull() {
+    const c = cloudConfig();
+    const r = await request("GET", `${davBase(c)}/profiles.json`, c);
+    if (r.status === 404) throw new Error("Noch nichts hochgeladen");
+    if (r.status < 200 || r.status >= 300) throw fail(r);
+    return store.importJson(r.text);
+  }
+
+  // src/core/device.js
+  var KEY3 = "ytx.device";
+  var cached = null;
+  function read() {
+    try {
+      if (typeof GM_getValue === "function") return GM_getValue(KEY3, null);
+    } catch {
+    }
+    try {
+      return localStorage.getItem(KEY3);
+    } catch {
+      return null;
+    }
+  }
+  function write(v) {
+    try {
+      if (typeof GM_setValue === "function") return GM_setValue(KEY3, v);
+    } catch {
+    }
+    try {
+      localStorage.setItem(KEY3, v);
+    } catch {
+    }
+  }
+  function deviceId() {
+    if (cached) return cached;
+    let v = read();
+    if (typeof v !== "string" || !/^d-[a-z0-9]{8,}$/.test(v)) {
+      v = `d-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
+      write(v);
+    }
+    cached = v;
+    return v;
+  }
+
+  // src/core/idb.js
+  var req = (r) => new Promise((ok, fail2) => {
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => fail2(r.error);
+  });
+  var done = (tx) => new Promise((ok, fail2) => {
+    tx.oncomplete = () => ok();
+    tx.onerror = () => fail2(tx.error);
+    tx.onabort = () => fail2(tx.error || new Error("transaction abgebrochen"));
+  });
+  function openDatabase(name, migrations) {
+    const status = { name, version: migrations.length, open: false, error: null, openedAt: 0, upgradedFrom: null, blocked: false };
+    let dbp = null;
+    const open = () => {
+      if (dbp) return dbp;
+      dbp = new Promise((ok, fail2) => {
+        if (typeof indexedDB === "undefined") return fail2(new Error("IndexedDB nicht verfügbar"));
+        const r = indexedDB.open(name, migrations.length);
+        r.onupgradeneeded = (e) => {
+          const db3 = r.result;
+          const tx = r.transaction;
+          status.upgradedFrom = e.oldVersion;
+          for (let v = e.oldVersion; v < migrations.length; v++) {
+            try {
+              migrations[v](db3, tx);
+            } catch (err) {
+              log.error(`idb migration ${name} v${v + 1}`, err);
+              tx.abort();
+              return;
+            }
+          }
+        };
+        r.onblocked = () => {
+          status.blocked = true;
+          log.warn(`idb ${name} blockiert durch anderen tab`);
+        };
+        r.onsuccess = () => {
+          const db3 = r.result;
+          db3.onversionchange = () => {
+            db3.close();
+            dbp = null;
+            status.open = false;
+          };
+          status.open = true;
+          status.openedAt = Date.now();
+          ok(db3);
+        };
+        r.onerror = () => {
+          status.error = r.error?.message || "unbekannt";
+          dbp = null;
+          fail2(r.error);
+        };
+      });
+      return dbp;
+    };
+    const withStore = async (store2, mode, fn) => {
+      const db3 = await open();
+      const tx = db3.transaction(store2, mode);
+      const result = fn(tx.objectStore(store2), tx);
+      const value = result instanceof IDBRequest ? await req(result) : await result;
+      await done(tx);
+      return value;
+    };
+    return {
+      status,
+      open,
+      get: (store2, key2) => withStore(store2, "readonly", (s2) => s2.get(key2)),
+      put: (store2, value) => withStore(store2, "readwrite", (s2) => s2.put(value)),
+      delete: (store2, key2) => withStore(store2, "readwrite", (s2) => s2.delete(key2)),
+      clear: (store2) => withStore(store2, "readwrite", (s2) => s2.clear()),
+      count: (store2) => withStore(store2, "readonly", (s2) => s2.count()),
+      getAll: (store2, query, count) => withStore(store2, "readonly", (s2) => s2.getAll(query, count)),
+      putMany: (store2, values) => withStore(store2, "readwrite", (s2) => {
+        for (const v of values) s2.put(v);
+      }),
+      deleteMany: (store2, keys) => withStore(store2, "readwrite", (s2) => {
+        for (const k of keys) s2.delete(k);
+      }),
+      byIndex: (store2, index, query, count) => withStore(store2, "readonly", (s2) => s2.index(index).getAll(query, count)),
+      // neueste zuerst ueber einen index mit cursor
+      latest: (store2, index, limit = 50) => withStore(
+        store2,
+        "readonly",
+        (s2) => new Promise((ok, fail2) => {
+          const out = [];
+          const c = s2.index(index).openCursor(null, "prev");
+          c.onsuccess = () => {
+            const cur = c.result;
+            if (!cur || out.length >= limit) return ok(out);
+            out.push(cur.value);
+            cur.continue();
+          };
+          c.onerror = () => fail2(c.error);
+        })
+      ),
+      deleteWhere: (store2, index, range2) => withStore(
+        store2,
+        "readwrite",
+        (s2) => new Promise((ok, fail2) => {
+          let n = 0;
+          const c = s2.index(index).openCursor(range2);
+          c.onsuccess = () => {
+            const cur = c.result;
+            if (!cur) return ok(n);
+            cur.delete();
+            n++;
+            cur.continue();
+          };
+          c.onerror = () => fail2(c.error);
+        })
+      ),
+      async exportAll(stores) {
+        const db3 = await open();
+        const out = { database: name, version: db3.version, exportedAt: (/* @__PURE__ */ new Date()).toISOString(), stores: {} };
+        for (const st of stores || [...db3.objectStoreNames]) out.stores[st] = await withStore(st, "readonly", (s2) => s2.getAll());
+        return out;
+      },
+      async importAll(dump, { replace = false, stores } = {}) {
+        const db3 = await open();
+        const names = stores || Object.keys(dump.stores || {}).filter((n) => db3.objectStoreNames.contains(n));
+        for (const st of names) {
+          await withStore(st, "readwrite", (s2) => {
+            if (replace) s2.clear();
+            for (const v of dump.stores[st] || []) s2.put(v);
+          });
+        }
+        return names;
+      },
+      async sizes() {
+        const db3 = await open();
+        const out = {};
+        for (const st of db3.objectStoreNames) out[st] = await withStore(st, "readonly", (s2) => s2.count());
+        return out;
+      },
+      close() {
+        dbp?.then((db3) => db3.close()).catch(() => {
+        });
+        dbp = null;
+        status.open = false;
+      }
+    };
+  }
+
+  // src/features/youtube/watchtime/db.js
+  var YT_DB = "ytx-youtube";
+  var MIGRATIONS2 = [
+    // v1 schauzeit pro video sitzung
+    (db3) => {
+      const views = db3.createObjectStore("views", { keyPath: "id" });
+      views.createIndex("startedAt", "startedAt");
+      views.createIndex("day", "day");
+      db3.createObjectStore("meta", { keyPath: "key" });
+    }
+  ];
+  var db = null;
+  function ytDb() {
+    db ||= openDatabase(YT_DB, MIGRATIONS2);
+    return db;
+  }
+
+  // src/features/music/data/db.js
+  var MUSIC_DB = "ytx-music";
+  var MIGRATIONS3 = [
+    // v1 grundschema
+    (db3) => {
+      const plays = db3.createObjectStore("plays", { keyPath: "id" });
+      plays.createIndex("startedAt", "startedAt");
+      plays.createIndex("videoId", "videoId");
+      plays.createIndex("artistKeys", "artistKeys", { multiEntry: true });
+      const tracks = db3.createObjectStore("tracks", { keyPath: "videoId" });
+      tracks.createIndex("seenAt", "seenAt");
+      const artists = db3.createObjectStore("artists", { keyPath: "id" });
+      artists.createIndex("checkedAt", "checkedAt");
+      const favorites = db3.createObjectStore("favorites", { keyPath: "key" });
+      favorites.createIndex("type", "type");
+      const releases = db3.createObjectStore("releases", { keyPath: "id" });
+      releases.createIndex("artistId", "artistId");
+      releases.createIndex("firstSeen", "firstSeen");
+      db3.createObjectStore("feedback", { keyPath: "key" });
+      const cache5 = db3.createObjectStore("cache", { keyPath: "key" });
+      cache5.createIndex("ts", "ts");
+      db3.createObjectStore("meta", { keyPath: "key" });
+    },
+    // v2 genre zuordnungen aus genre seiten und suche
+    (db3) => {
+      const genres = db3.createObjectStore("genres", { keyPath: "key" });
+      genres.createIndex("checkedAt", "checkedAt");
+    }
+  ];
+  var USER_STORES = ["plays", "favorites", "feedback", "releases", "meta", "genres"];
+  var db2 = null;
+  function musicDb() {
+    db2 ||= openDatabase(MUSIC_DB, MIGRATIONS3);
+    return db2;
+  }
+  async function getMeta(key2, def = null) {
+    const r = await musicDb().get("meta", key2);
+    return r ? r.value : def;
+  }
+  function setMeta(key2, value) {
+    return musicDb().put("meta", { key: key2, value, ts: Date.now() });
+  }
+
+  // src/features/music/logic/versions.js
+  var VERSION_TAGS = [
+    ["live", /\blive\b|\(live|\blive at\b|\bunplugged\b/i, "Live"],
+    ["remix", /\bremix\b|\brmx\b|\bmix\)|\bedit\)|\bbootleg\b|\bflip\b/i, "Remix"],
+    ["spedup", /sped[\s-]*up|speed[\s-]*up|\bnightcore\b|\bfast(er)? version\b/i, "Sped up"],
+    ["slowed", /\bslowed\b|\breverb\b|\bslow(ed)? version\b/i, "Slowed"],
+    ["karaoke", /\bkaraoke\b|\binstrumental\b|\bbacking track\b/i, "Karaoke"],
+    ["acoustic", /\bacoustic\b|\bakustik\b/i, "Akustik"],
+    ["cover", /\bcover\b/i, "Cover"],
+    ["remaster", /\bremaster(ed)?\b/i, "Remaster"],
+    ["radio", /\bradio edit\b|\bradio version\b/i, "Radio Edit"],
+    ["extended", /\bextended\b/i, "Extended"]
+  ];
+  function versionTags(title2) {
+    const t = String(title2 || "");
+    return VERSION_TAGS.filter(([, re]) => re.test(t)).map(([id]) => id);
+  }
+  function baseTitle(title2) {
+    return String(title2 || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/\((?:[^()]*)\)|\[(?:[^\[\]]*)\]/g, " ").replace(/\s[-–—|]\s.*(live|remix|version|edit|sped|slowed|nightcore|karaoke|instrumental|acoustic|remaster|mix).*$/i, " ").replace(/\b(feat|ft|featuring|prod)\.?\s.*$/i, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  }
+  function artistKey(a) {
+    if (!a) return "";
+    return a.id || `name:${String(a.name || "").trim().toLowerCase()}`;
+  }
+  function trackKey(track) {
+    const first = track?.artists?.[0];
+    const who = first ? String(first.name || first.id || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "") : "";
+    return `${baseTitle(track?.title)}|${who}`;
+  }
+
+  // src/features/music/logic/rules.js
+  var DEFAULT_TERMS = ["live", "sped up", "nightcore", "remix", "slowed", "karaoke"];
+  var escapeRe = (s2) => s2.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  function termRegex(term) {
+    const t = String(term || "").trim();
+    if (!t) return null;
+    const body = t.split(/[\s-]+/).map(escapeRe).join("[\\s-]*");
+    return new RegExp(`(^|[^\\p{L}\\p{N}])${body}($|[^\\p{L}\\p{N}])`, "iu");
+  }
+  function compileRules(blocklist = {}) {
+    const artists = blocklist.artists || [];
+    return {
+      artistIds: new Set(artists.map((a) => a.id).filter(Boolean)),
+      artistNames: new Set(artists.map((a) => String(a.name || "").trim().toLowerCase()).filter(Boolean)),
+      songIds: new Set((blocklist.songs || []).map((s2) => s2.videoId).filter(Boolean)),
+      terms: (blocklist.terms || []).map((t) => [t, termRegex(t)]).filter(([, re]) => re)
+    };
+  }
+  function blockReason(track, rules2) {
+    if (!track || !rules2) return null;
+    if (track.videoId && rules2.songIds.has(track.videoId)) return { kind: "song", label: "Song blockiert" };
+    for (const a of track.artists || []) {
+      if (a.id && rules2.artistIds.has(a.id) || rules2.artistNames.has(String(a.name || "").trim().toLowerCase())) return { kind: "artist", label: `Künstler blockiert: ${a.name}` };
+    }
+    const title2 = `${track.title || ""} ${track.album?.name || ""}`;
+    for (const [term, re] of rules2.terms) if (re.test(title2)) return { kind: "term", label: `Titelbegriff: ${term}` };
+    return null;
+  }
+  function isExcluded(track, excluded = {}) {
+    if (!track) return false;
+    if ((excluded.songs || []).some((s2) => s2.videoId === track.videoId)) return true;
+    const keys = new Set((excluded.artists || []).map(artistKey));
+    return (track.artists || []).some((a) => keys.has(artistKey(a)));
+  }
+
+  // src/features/music/logic/taste.js
+  var DEFAULT_WEIGHTS = {
+    complete: 1,
+    repeat: 0.6,
+    like: 2,
+    partial: 0.4,
+    skip: -1.6,
+    favoriteArtist: 4,
+    favoriteSong: 3,
+    favoriteAlbum: 2,
+    favoritePlaylist: 1,
+    feedback: 1.5
+  };
+  var DAY = 24 * 3600 * 1e3;
+  function playScore(p, w = DEFAULT_WEIGHTS) {
+    const pct2 = Math.max(0, Math.min(1, p.percent ?? 0));
+    let s2 = 0;
+    if (p.completed) s2 = w.complete + (p.repeat ? w.repeat : 0);
+    else if (p.skipped) s2 = w.skip * Math.pow(1 - pct2, 1.5);
+    else s2 = w.partial * pct2;
+    if (p.liked) s2 += w.like;
+    return s2;
+  }
+  var decay = (ageMs, halfLifeDays = 120) => Math.pow(0.5, Math.max(0, ageMs) / (halfLifeDays * DAY));
+  function bump(map, key2, init2) {
+    let v = map.get(key2);
+    if (!v) {
+      v = init2();
+      map.set(key2, v);
+    }
+    return v;
+  }
+  var emptyStats = () => ({ score: 0, plays: 0, completes: 0, skips: 0, quickSkips: 0, listenedSec: 0, lastPlayed: 0, firstPlayed: 0, liked: false });
+  function buildProfile(plays = [], { favorites = [], feedback = [], excluded = {}, now = Date.now(), weights = DEFAULT_WEIGHTS, halfLifeDays = 120 } = {}) {
+    const artists = /* @__PURE__ */ new Map();
+    const songs = /* @__PURE__ */ new Map();
+    const albums = /* @__PURE__ */ new Map();
+    let total = 0;
+    let listened = 0;
+    for (const p of plays) {
+      if (isExcluded(p, excluded)) continue;
+      const d = decay(now - (p.startedAt || now), halfLifeDays);
+      const sc = playScore(p, weights) * d;
+      total++;
+      listened += p.listenedSec || 0;
+      const touch = (st, name) => {
+        st.score += sc;
+        st.plays++;
+        if (p.completed) st.completes++;
+        if (p.skipped) st.skips++;
+        if (p.quickSkip) st.quickSkips++;
+        if (p.liked) st.liked = true;
+        st.listenedSec += p.listenedSec || 0;
+        st.lastPlayed = Math.max(st.lastPlayed, p.startedAt || 0);
+        st.firstPlayed = st.firstPlayed ? Math.min(st.firstPlayed, p.startedAt || now) : p.startedAt || now;
+        if (name && !st.name) st.name = name;
+      };
+      const song = bump(songs, p.videoId, () => ({ ...emptyStats(), videoId: p.videoId, title: p.title, artists: p.artists || [], album: p.album || null }));
+      touch(song, null);
+      const list = (p.artists || []).slice(0, 4);
+      list.forEach((a, i) => {
+        const st = bump(artists, artistKey(a), () => ({ ...emptyStats(), key: artistKey(a), id: a.id || null, name: a.name }));
+        const share = i === 0 ? 1 : 0.5;
+        const before = st.score;
+        touch(st, a.name);
+        st.score = before + sc * share;
+      });
+      if (p.album?.id) touch(bump(albums, p.album.id, () => ({ ...emptyStats(), id: p.album.id, name: p.album.name })), p.album.name);
+    }
+    for (const f of favorites) {
+      if (f.type === "artist") {
+        const st = bump(artists, f.id ? f.id : `name:${(f.name || "").toLowerCase()}`, () => ({ ...emptyStats(), key: f.id, id: f.id, name: f.name }));
+        st.score += weights.favoriteArtist * (f.weight ?? 1);
+        st.favorite = true;
+      } else if (f.type === "song") {
+        const st = bump(songs, f.id, () => ({ ...emptyStats(), videoId: f.id, title: f.name, artists: f.artists || [] }));
+        st.score += weights.favoriteSong * (f.weight ?? 1);
+        st.favorite = true;
+        for (const a of f.artists || []) {
+          const as = bump(artists, artistKey(a), () => ({ ...emptyStats(), key: artistKey(a), id: a.id, name: a.name }));
+          as.score += weights.favoriteSong * 0.4;
+        }
+      } else if (f.type === "album") {
+        const st = bump(albums, f.id, () => ({ ...emptyStats(), id: f.id, name: f.name }));
+        st.score += weights.favoriteAlbum * (f.weight ?? 1);
+        st.favorite = true;
+        for (const a of f.artists || []) {
+          const as = bump(artists, artistKey(a), () => ({ ...emptyStats(), key: artistKey(a), id: a.id, name: a.name }));
+          as.score += weights.favoriteAlbum * 0.5;
+        }
+      }
+    }
+    const ignored = /* @__PURE__ */ new Set();
+    for (const fb of feedback) {
+      if (fb.type === "artist") {
+        const st = bump(artists, fb.id, () => ({ ...emptyStats(), key: fb.id, id: fb.id?.startsWith("name:") ? null : fb.id, name: fb.name }));
+        st.score += weights.feedback * (fb.value || 0);
+        st.feedback = fb.value || 0;
+      } else if (fb.type === "song") {
+        if (fb.ignore) ignored.add(fb.id);
+        const st = bump(songs, fb.id, () => ({ ...emptyStats(), videoId: fb.id, title: fb.name, artists: fb.artists || [] }));
+        st.score += weights.feedback * (fb.value || 0);
+      }
+    }
+    const maxArtist = Math.max(1, ...[...artists.values()].map((a) => Math.abs(a.score)));
+    const maxSong = Math.max(1, ...[...songs.values()].map((s2) => Math.abs(s2.score)));
+    return {
+      artists,
+      songs,
+      albums,
+      ignored,
+      totals: { plays: total, listenedSec: listened },
+      artistAffinity(a) {
+        const st = artists.get(typeof a === "string" ? a : artistKey(a));
+        return st ? Math.max(-1, Math.min(1, st.score / maxArtist)) : 0;
+      },
+      songAffinity(videoId) {
+        const st = songs.get(videoId);
+        return st ? Math.max(-1, Math.min(1, st.score / maxSong)) : 0;
+      },
+      artistPlays(a) {
+        return artists.get(typeof a === "string" ? a : artistKey(a))?.plays || 0;
+      },
+      songPlays(videoId) {
+        return songs.get(videoId)?.plays || 0;
+      },
+      isHighSkip(videoId, { minSkips = 3, rate = 0.6 } = {}) {
+        const st = songs.get(videoId);
+        return !!st && st.skips >= minSkips && st.skips / Math.max(1, st.plays) >= rate;
+      },
+      topArtists(n = 20, { minScore = 0.01 } = {}) {
+        return [...artists.values()].filter((a) => a.score > minScore).sort((a, b) => b.score - a.score).slice(0, n);
+      },
+      topSongs(n = 20) {
+        return [...songs.values()].filter((s2) => s2.score > 0).sort((a, b) => b.score - a.score).slice(0, n);
+      }
+    };
+  }
+
+  // src/features/music/data/prefs.js
+  var PREFS_BUCKET = "music";
+  var isObj3 = (x) => x && typeof x === "object" && !Array.isArray(x);
+  var num = (v, def, min, max) => {
+    const n = Number(v);
+    return v === null || v === void 0 || v === "" || !isFinite(n) ? def : Math.min(max, Math.max(min, n));
+  };
+  var strList2 = (x) => Array.isArray(x) ? [...new Set(x.map((s2) => String(s2).trim()).filter(Boolean))] : null;
+  var artistList = (x) => Array.isArray(x) ? x.filter((a) => isObj3(a) && (a.id || a.name)).map((a) => ({ id: a.id || null, name: String(a.name || a.id) })) : [];
+  var songList = (x) => Array.isArray(x) ? x.filter((s2) => isObj3(s2) && s2.videoId).map((s2) => ({ videoId: s2.videoId, title: String(s2.title || ""), artists: artistList(s2.artists) })) : [];
+  var PROVIDER_IDS = ["local", "musicbrainz", "lastfm", "ollama"];
+  function defaultPrefs() {
+    return {
+      discovery: 0.5,
+      explain: true,
+      history: { paused: false, retentionDays: null, minListenSec: 5, recordContext: true },
+      blocklist: { artists: [], songs: [], terms: DEFAULT_TERMS.slice() },
+      excluded: { artists: [], songs: [] },
+      hideVersions: [],
+      weights: { ...DEFAULT_WEIGHTS },
+      halfLifeDays: 120,
+      releases: { enabled: true, intervalHours: 24, maxArtists: 25, includeTopArtists: true, maxAgeDays: 60 },
+      smartQueue: { autoSkip: false, skipBlocked: true, skipHighSkip: false, skipDuplicates: true, skipRecentlyPlayed: false, markOnly: false },
+      providers: { local: { enabled: true }, musicbrainz: { enabled: false }, lastfm: { enabled: false, apiKey: "" }, ollama: { enabled: false, url: "http://localhost:11434", model: "" } },
+      genres: { favorites: [], inForYou: true }
+    };
+  }
+  function normalizePrefs(raw) {
+    const d = defaultPrefs();
+    if (!isObj3(raw)) return d;
+    d.discovery = num(raw.discovery, d.discovery, 0, 1);
+    d.explain = raw.explain !== false;
+    if (isObj3(raw.history)) {
+      d.history.paused = !!raw.history.paused;
+      d.history.retentionDays = raw.history.retentionDays == null || raw.history.retentionDays === "" ? null : num(raw.history.retentionDays, null, 1, 3650);
+      d.history.minListenSec = num(raw.history.minListenSec, d.history.minListenSec, 0, 120);
+      d.history.recordContext = raw.history.recordContext !== false;
+    }
+    if (isObj3(raw.blocklist)) {
+      d.blocklist.artists = artistList(raw.blocklist.artists);
+      d.blocklist.songs = songList(raw.blocklist.songs);
+      d.blocklist.terms = strList2(raw.blocklist.terms) ?? d.blocklist.terms;
+    }
+    if (isObj3(raw.excluded)) {
+      d.excluded.artists = artistList(raw.excluded.artists);
+      d.excluded.songs = songList(raw.excluded.songs);
+    }
+    d.hideVersions = strList2(raw.hideVersions) || [];
+    if (isObj3(raw.weights)) for (const k of Object.keys(d.weights)) d.weights[k] = num(raw.weights[k], d.weights[k], -10, 10);
+    d.halfLifeDays = num(raw.halfLifeDays, d.halfLifeDays, 7, 3650);
+    if (isObj3(raw.releases)) {
+      d.releases.enabled = raw.releases.enabled !== false;
+      d.releases.intervalHours = num(raw.releases.intervalHours, d.releases.intervalHours, 6, 24 * 14);
+      d.releases.maxArtists = num(raw.releases.maxArtists, d.releases.maxArtists, 1, 100);
+      d.releases.includeTopArtists = raw.releases.includeTopArtists !== false;
+      d.releases.maxAgeDays = num(raw.releases.maxAgeDays, d.releases.maxAgeDays, 7, 730);
+    }
+    if (isObj3(raw.smartQueue)) {
+      for (const k of Object.keys(d.smartQueue)) if (k in raw.smartQueue) d.smartQueue[k] = !!raw.smartQueue[k];
+    }
+    if (isObj3(raw.providers)) {
+      for (const id of PROVIDER_IDS) {
+        const p = raw.providers[id];
+        if (!isObj3(p)) continue;
+        d.providers[id].enabled = id === "local" ? p.enabled !== false : !!p.enabled;
+        for (const k of Object.keys(d.providers[id])) if (k !== "enabled" && typeof p[k] === "string") d.providers[id][k] = p[k];
+      }
+    }
+    if (isObj3(raw.genres)) {
+      d.genres.favorites = strList2(raw.genres.favorites) || [];
+      d.genres.inForYou = raw.genres.inForYou !== false;
+    }
+    return d;
+  }
+  var SESSION_KEY = "ytx.music.session";
+  function readSession() {
+    try {
+      const v = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
+      return v && typeof v === "object" ? v : null;
+    } catch {
+      return null;
+    }
+  }
+  function writeSession(session) {
+    try {
+      if (session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+      else sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+    }
+  }
+
+  // src/features/music/logic/sessions.js
+  var SESSION_PRESETS = [
+    {
+      id: "focus",
+      label: "Fokus",
+      description: "Ruhig und vertraut, keine Live- oder Remix-Versionen",
+      discovery: 0.25,
+      extraTerms: ["live", "remix", "sped up", "nightcore"],
+      moods: ["konzentration", "focus", "chill", "entspann"],
+      skipHighSkip: true
+    },
+    {
+      id: "gym",
+      label: "Gym",
+      description: "Energie, gerne auch neue Songs",
+      discovery: 0.45,
+      extraTerms: ["slowed", "acoustic", "akustik", "karaoke"],
+      moods: ["workout", "power", "party", "sport"],
+      skipHighSkip: true
+    },
+    {
+      id: "evening",
+      label: "Abends",
+      description: "Entspannt, eher Bekanntes",
+      discovery: 0.3,
+      extraTerms: ["sped up", "nightcore"],
+      moods: ["chill", "entspann", "romantik", "einschlafen", "sleep", "relax"],
+      skipHighSkip: true
+    },
+    {
+      id: "explore",
+      label: "Entdecken",
+      description: "Passende Künstler, die du kaum gehört hast",
+      discovery: 0.9,
+      extraTerms: [],
+      moods: [],
+      skipHighSkip: true,
+      skipRecentlyPlayed: true
+    },
+    {
+      id: "known",
+      label: "Nur bekannte Musik",
+      description: "Nur Künstler, die du schon gehört oder favorisiert hast",
+      discovery: 0,
+      extraTerms: [],
+      moods: [],
+      onlyKnownArtists: true,
+      skipHighSkip: true
+    }
+  ];
+  var presetById2 = Object.fromEntries(SESSION_PRESETS.map((p) => [p.id, p]));
+  function effectiveSettings(prefs, session) {
+    const p = session?.presetId ? presetById2[session.presetId] : null;
+    const terms = [.../* @__PURE__ */ new Set([...prefs.blocklist?.terms || [], ...p?.extraTerms || []])];
+    return {
+      discovery: p ? p.discovery : prefs.discovery,
+      blocklist: { ...prefs.blocklist || {}, terms },
+      onlyKnownArtists: !!p?.onlyKnownArtists,
+      skipHighSkip: p ? !!p.skipHighSkip : !!prefs.smartQueue?.skipHighSkip,
+      skipRecentlyPlayed: p ? !!p.skipRecentlyPlayed : !!prefs.smartQueue?.skipRecentlyPlayed,
+      moods: p?.moods || [],
+      preset: p
+    };
+  }
+  function matchMood(moods, keywords) {
+    if (!keywords?.length) return null;
+    const lower2 = keywords.map((k) => k.toLowerCase());
+    return moods.find((m) => lower2.some((k) => m.name.toLowerCase().includes(k))) || null;
+  }
+
+  // src/features/music/runtime.js
+  var handlers = /* @__PURE__ */ new Map();
+  function emit2(type, payload) {
+    for (const fn of handlers.get(type) || []) {
+      try {
+        fn(payload);
+      } catch (e) {
+        log.error(`music event ${type}`, e);
+      }
+    }
+  }
+  var profileCache = null;
+  var profilePromise = null;
+  var invalidate = () => {
+    profileCache = null;
+    profilePromise = null;
+  };
+  var music = {
+    on(type, fn) {
+      if (!handlers.has(type)) handlers.set(type, /* @__PURE__ */ new Set());
+      handlers.get(type).add(fn);
+      return () => handlers.get(type)?.delete(fn);
+    },
+    emit: emit2,
+    // ---------- vorlieben ----------
+    prefs() {
+      return store.bucket(PREFS_BUCKET, normalizePrefs);
+    },
+    updatePrefs(mutator) {
+      const next = store.updateBucket(PREFS_BUCKET, mutator, normalizePrefs);
+      invalidate();
+      emit2("prefs", next);
+      return next;
+    },
+    session() {
+      return readSession();
+    },
+    setSession(presetId) {
+      writeSession(presetId ? { presetId, startedAt: Date.now() } : null);
+      emit2("session", readSession());
+    },
+    effective() {
+      return effectiveSettings(this.prefs(), readSession());
+    },
+    rules() {
+      return compileRules(this.effective().blocklist);
+    },
+    // ---------- verlauf ----------
+    history: {
+      async add(rec) {
+        const p = music.prefs();
+        if (p.history.paused) return false;
+        if ((rec.listenedSec || 0) < p.history.minListenSec && !rec.completed) return false;
+        if (!p.history.recordContext) delete rec.context;
+        await musicDb().put("plays", rec);
+        await musicDb().put("tracks", { videoId: rec.videoId, title: rec.title, artists: rec.artists, album: rec.album, year: rec.year, durationSec: rec.durationSec, seenAt: rec.endedAt }).catch(() => {
+        });
+        await setMeta("lastPlayAt", rec.endedAt);
+        invalidate();
+        emit2("plays", rec);
+        return true;
+      },
+      list({ from = 0, to = Date.now() + DAY } = {}) {
+        return musicDb().byIndex("plays", "startedAt", IDBKeyRange.bound(from, to));
+      },
+      recent(limit = 50) {
+        return musicDb().latest("plays", "startedAt", limit);
+      },
+      count() {
+        return musicDb().count("plays");
+      },
+      async remove(id) {
+        await musicDb().delete("plays", id);
+        invalidate();
+        emit2("plays", null);
+      },
+      async removeMany(ids) {
+        await musicDb().deleteMany("plays", ids);
+        invalidate();
+        emit2("plays", null);
+      },
+      async clear() {
+        await musicDb().clear("plays");
+        await musicDb().clear("tracks");
+        invalidate();
+        emit2("plays", null);
+      },
+      async applyRetention() {
+        const days = music.prefs().history.retentionDays;
+        if (!days) return 0;
+        const n = await musicDb().deleteWhere("plays", "startedAt", IDBKeyRange.upperBound(Date.now() - days * DAY));
+        if (n) {
+          invalidate();
+          emit2("plays", null);
+        }
+        return n;
+      }
+    },
+    // ---------- favoriten ----------
+    favorites: {
+      all() {
+        return musicDb().getAll("favorites");
+      },
+      byType(type) {
+        return musicDb().byIndex("favorites", "type", type);
+      },
+      async has(type, id) {
+        return !!await musicDb().get("favorites", `${type}:${id}`);
+      },
+      async toggle(item) {
+        const key2 = `${item.type}:${item.id}`;
+        const db3 = musicDb();
+        const prev2 = await db3.get("favorites", key2);
+        if (prev2) await db3.delete("favorites", key2);
+        else await db3.put("favorites", { key: key2, type: item.type, id: item.id, name: item.name || item.title || "", artists: item.artists || [], thumbnail: item.thumbnail || "", weight: item.weight ?? 1, addedAt: Date.now() });
+        invalidate();
+        emit2("favorites", { key: key2, on: !prev2 });
+        return !prev2;
+      },
+      async setWeight(key2, weight) {
+        const db3 = musicDb();
+        const prev2 = await db3.get("favorites", key2);
+        if (!prev2) return;
+        await db3.put("favorites", { ...prev2, weight });
+        invalidate();
+        emit2("favorites", { key: key2, on: true });
+      },
+      async remove(key2) {
+        await musicDb().delete("favorites", key2);
+        invalidate();
+        emit2("favorites", { key: key2, on: false });
+      }
+    },
+    // ---------- feedback ----------
+    feedback: {
+      all() {
+        return musicDb().getAll("feedback");
+      },
+      async adjust({ type, id, name, artists, delta = 0, ignore }) {
+        const key2 = `${type}:${id}`;
+        const db3 = musicDb();
+        const prev2 = await db3.get("feedback", key2) || { key: key2, type, id, name, artists: artists || [], value: 0 };
+        const next = { ...prev2, name: name || prev2.name, value: Math.max(-3, Math.min(3, (prev2.value || 0) + delta)), ts: Date.now() };
+        if (ignore !== void 0) next.ignore = !!ignore;
+        await db3.put("feedback", next);
+        invalidate();
+        emit2("feedback", next);
+        return next;
+      },
+      async remove(key2) {
+        await musicDb().delete("feedback", key2);
+        invalidate();
+        emit2("feedback", null);
+      }
+    },
+    // aktionen aus empfehlungen und player
+    async act(kind, track) {
+      const first = track?.artists?.[0];
+      const aKey = first ? artistKey(first) : null;
+      switch (kind) {
+        case "more":
+          await music.feedback.adjust({ type: "song", id: track.videoId, name: track.title, artists: track.artists, delta: 1 });
+          if (aKey) await music.feedback.adjust({ type: "artist", id: aKey, name: first.name, delta: 0.5 });
+          return "Mehr davon gemerkt";
+        case "less":
+          await music.feedback.adjust({ type: "song", id: track.videoId, name: track.title, artists: track.artists, delta: -1 });
+          if (aKey) await music.feedback.adjust({ type: "artist", id: aKey, name: first.name, delta: -0.5 });
+          return "Weniger davon gemerkt";
+        case "preferArtist":
+          if (!aKey) return "Kein Künstler erkannt";
+          await music.feedback.adjust({ type: "artist", id: aKey, name: first.name, delta: 2 });
+          return `${first.name} wird bevorzugt`;
+        case "blockArtist":
+          if (!first) return "Kein Künstler erkannt";
+          music.updatePrefs((p) => {
+            if (!p.blocklist.artists.some((a) => artistKey(a) === aKey)) p.blocklist.artists.push({ id: first.id || null, name: first.name });
+          });
+          return `${first.name} blockiert`;
+        case "ignoreSong":
+          await music.feedback.adjust({ type: "song", id: track.videoId, name: track.title, artists: track.artists, delta: -1, ignore: true });
+          return "Song wird ignoriert";
+        case "excludeArtist":
+          if (!first) return "Kein Künstler erkannt";
+          music.updatePrefs((p) => {
+            if (!p.excluded.artists.some((a) => artistKey(a) === aKey)) p.excluded.artists.push({ id: first.id || null, name: first.name });
+          });
+          return `${first.name} zählt nicht mehr zum Profil`;
+        case "excludeSong":
+          music.updatePrefs((p) => {
+            if (!p.excluded.songs.some((s2) => s2.videoId === track.videoId)) p.excluded.songs.push({ videoId: track.videoId, title: track.title, artists: track.artists || [] });
+          });
+          return "Song zählt nicht mehr zum Profil";
+        default:
+          return "";
+      }
+    },
+    // ---------- neuerscheinungen ----------
+    releases: {
+      all() {
+        return musicDb().getAll("releases");
+      },
+      latest(limit = 50) {
+        return musicDb().latest("releases", "firstSeen", limit);
+      },
+      async markSeen() {
+        await setMeta("releasesSeenAt", Date.now());
+        emit2("releases", null);
+      },
+      async unseenCount() {
+        const seen3 = await getMeta("releasesSeenAt", 0) || 0;
+        const list = await musicDb().byIndex("releases", "firstSeen", IDBKeyRange.lowerBound(seen3 + 1));
+        return list.filter((r) => r.fresh).length;
+      }
+    },
+    // ---------- profil ----------
+    async profile({ now = Date.now() } = {}) {
+      if (profileCache && now - profileCache.at < 60 * 1e3) return profileCache.value;
+      if (profilePromise) return profilePromise;
+      profilePromise = (async () => {
+        const p = music.prefs();
+        const [plays, favorites, feedback] = await Promise.all([musicDb().getAll("plays"), musicDb().getAll("favorites"), musicDb().getAll("feedback")]);
+        const value = buildProfile(plays, { favorites, feedback, excluded: p.excluded, now, weights: p.weights, halfLifeDays: p.halfLifeDays });
+        value.playsList = plays;
+        profileCache = { at: Date.now(), value };
+        profilePromise = null;
+        return value;
+      })().catch((e) => {
+        profilePromise = null;
+        throw e;
+      });
+      return profilePromise;
+    },
+    invalidate,
+    // ---------- export und import ----------
+    async exportData() {
+      const dump = await musicDb().exportAll(USER_STORES);
+      dump.prefs = music.prefs();
+      dump.app = "ytx-music";
+      return dump;
+    },
+    async importData(dump, { replace = false } = {}) {
+      if (!dump || dump.database !== MUSIC_DB || typeof dump.stores !== "object") throw new Error("keine ytx Music Sicherung");
+      const names = await musicDb().importAll(dump, { replace, stores: USER_STORES.filter((s2) => Array.isArray(dump.stores[s2])) });
+      if (dump.prefs) store.updateBucket(PREFS_BUCKET, (p) => Object.assign(p, normalizePrefs(dump.prefs)), normalizePrefs);
+      invalidate();
+      emit2("plays", null);
+      emit2("favorites", null);
+      emit2("prefs", music.prefs());
+      return names;
+    },
+    db: musicDb,
+    getMeta,
+    setMeta
+  };
+  var scheduleRetention = debounce(() => {
+    music.history.applyRetention().catch((e) => log.warn("music retention", e));
+  }, 5e3);
+
+  // src/features/youtube/subGroups/logic.js
+  var GROUPS_BUCKET = "youtube.subGroups";
+  var NONE = "__none";
+  var isObj4 = (x) => x && typeof x === "object" && !Array.isArray(x);
+  var lower = (s2) => String(s2 || "").trim().toLowerCase();
+  function channelKey(ch) {
+    return ch?.id || (ch?.handle ? lower(ch.handle) : null) || (ch?.name ? `name:${lower(ch.name)}` : null);
+  }
+  function cleanChannel(c) {
+    if (!isObj4(c)) return null;
+    const ch = { id: typeof c.id === "string" && c.id ? c.id : null, handle: c.handle ? lower(c.handle) : null, name: String(c.name || "").trim() };
+    return channelKey(ch) ? ch : null;
+  }
+  function normalizeGroups(raw) {
+    const out = { groups: [] };
+    const seen3 = /* @__PURE__ */ new Set();
+    for (const g of isObj4(raw) && Array.isArray(raw.groups) ? raw.groups : []) {
+      if (!isObj4(g) || !String(g.name || "").trim()) continue;
+      let id = String(g.id || "").trim() || `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+      while (seen3.has(id)) id += "x";
+      seen3.add(id);
+      const chans = /* @__PURE__ */ new Map();
+      for (const c of Array.isArray(g.channels) ? g.channels : []) {
+        const ch = cleanChannel(c);
+        if (ch && !chans.has(channelKey(ch))) chans.set(channelKey(ch), ch);
+      }
+      out.groups.push({ id, name: String(g.name).trim().slice(0, 40), channels: [...chans.values()] });
+    }
+    return out;
+  }
+  function sameChannel(a, b) {
+    if (!a || !b) return false;
+    if (a.id && b.id) return a.id === b.id;
+    if (a.handle && b.handle) return lower(a.handle) === lower(b.handle);
+    return !!a.name && !!b.name && lower(a.name) === lower(b.name);
+  }
+  function groupsOf(ch, data2) {
+    return data2.groups.filter((g) => g.channels.some((c) => sameChannel(c, ch)));
+  }
+  function visibleIn(ch, groupId, data2) {
+    if (!groupId) return true;
+    if (groupId === NONE) return !groupsOf(ch, data2).length;
+    const g = data2.groups.find((x) => x.id === groupId);
+    return g ? g.channels.some((c) => sameChannel(c, ch)) : true;
+  }
+  function toggleChannel(data2, groupId, ch) {
+    const g = data2.groups.find((x) => x.id === groupId);
+    if (!g) return false;
+    const i = g.channels.findIndex((c) => sameChannel(c, ch));
+    if (i >= 0) {
+      g.channels.splice(i, 1);
+      return false;
+    }
+    g.channels.push({ id: ch.id || null, handle: ch.handle || null, name: ch.name || "" });
+    return true;
+  }
+  function enrich(data2, ch) {
+    let changed = false;
+    for (const g of data2.groups) {
+      for (const c of g.channels) {
+        if (!sameChannel(c, ch)) continue;
+        if (!c.id && ch.id) c.id = ch.id, changed = true;
+        if (!c.handle && ch.handle) c.handle = lower(ch.handle), changed = true;
+        if (!c.name && ch.name) c.name = ch.name, changed = true;
+      }
+    }
+    return changed;
+  }
+
+  // src/core/css.js
+  var sheets = /* @__PURE__ */ new Map();
+  function setCss(id, text) {
+    let el = sheets.get(id);
+    if (!el) {
+      el = document.createElement("style");
+      el.setAttribute("data-ytx-own", "");
+      el.setAttribute("data-ytx-css", id);
+      sheets.set(id, el);
+    }
+    if (el.textContent !== text) el.textContent = text;
+    if (!el.isConnected) (document.head || document.documentElement).append(el);
+  }
+  function removeCss(id) {
+    const el = sheets.get(id);
+    if (el) {
+      el.remove();
+      sheets.delete(id);
+    }
+  }
+  function ensureCss() {
+    for (const el of sheets.values()) {
+      if (!el.isConnected) (document.head || document.documentElement).append(el);
+    }
+  }
+  function cssStats() {
+    let rules2 = 0;
+    for (const el of sheets.values()) rules2 += el.sheet?.cssRules?.length || 0;
+    return { sheets: sheets.size, rules: rules2 };
+  }
+  onDispose(() => {
+    for (const el of sheets.values()) el.remove();
+    sheets.clear();
+  });
+
+  // src/features/ui.js
+  var CSS = `
+.ytx-btn { all: initial; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 18px; cursor: pointer; white-space: nowrap; user-select: none;
+  font: 500 14px/36px Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); background: var(--yt-sys-color-baseline--tonal-background, rgba(255,255,255,.1)); }
+.ytx-btn:hover { background: var(--yt-sys-color-baseline--mono-tonal-hover, rgba(255,255,255,.2)); }
+.ytx-btn:focus-visible { outline: 2px solid var(--yt-sys-color-baseline--call-to-action, #3ea6ff); }
+.ytx-btn[disabled] { opacity: .5; cursor: default; }
+.ytx-btn .ytx-ico { font-size: 16px; line-height: 1; }
+.ytx-btn, .ytx-split { flex: none !important; }
+.ytx-split { all: initial; display: inline-flex; align-items: stretch; margin-left: 8px; vertical-align: middle; }
+.ytx-modal { position: fixed; z-index: 2500; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.5); }
+.ytx-modal > div { width: min(720px, 92vw); max-height: 80vh; display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 12px;
+  font: 400 14px/1.4 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); background: var(--yt-sys-color-baseline--menu-background, #282828); }
+.ytx-modal textarea { flex: 1; min-height: 300px; resize: vertical; padding: 8px; border-radius: 8px; font: 12px/1.4 ui-monospace, Consolas, monospace;
+  color: inherit; background: var(--yt-sys-color-baseline--raised-background, #1f1f1f); border: 1px solid var(--yt-sys-color-baseline--outline, #444); }
+.ytx-modal .ytx-row { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
+.ytx-split > .ytx-btn:first-child { border-radius: 18px 0 0 18px; padding-right: 10px; }
+.ytx-split > .ytx-btn:last-child { border-radius: 0 18px 18px 0; padding: 0 10px; border-left: 1px solid var(--yt-sys-color-baseline--outline, rgba(255,255,255,.2)); }
+.ytx-small { height: 28px; line-height: 28px; font-size: 12px; padding: 0 10px; border-radius: 14px; }
+.ytx-inline { all: initial; font: inherit; color: inherit; visibility: inherit; }
+.ytx-note { all: initial; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font: 400 12px/1.4 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-secondary, #aaa); }
+.ytx-note b { font-weight: 500; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); }
+.ytx-link { all: initial; cursor: pointer; font: 500 12px/1.4 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--call-to-action, #3ea6ff); }
+.ytx-link:hover { text-decoration: underline; }
+.ytx-menu { position: fixed; z-index: 2300; min-width: 240px; max-width: 340px; max-height: 70vh; overflow: auto; padding: 8px 0; border-radius: 12px; box-sizing: border-box;
+  font: 400 14px/1.35 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); background: var(--yt-sys-color-baseline--menu-background, #282828);
+  box-shadow: 0 4px 32px rgba(0,0,0,.4); }
+.ytx-menu-title { padding: 8px 16px 4px; font-size: 11px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--yt-sys-color-baseline--text-secondary, #aaa); }
+.ytx-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 16px; box-sizing: border-box; cursor: pointer; border: 0; background: none; text-align: left; font: inherit; color: inherit; }
+.ytx-menu-item:hover, .ytx-menu-item:focus-visible { outline: none; background: var(--yt-sys-color-baseline--additive-background, rgba(255,255,255,.1)); }
+.ytx-menu-item[disabled] { opacity: .45; cursor: default; background: none; }
+.ytx-menu-item .ytx-check { width: 14px; text-align: center; color: var(--yt-sys-color-baseline--call-to-action, #3ea6ff); }
+.ytx-menu-item .ytx-sub { margin-left: auto; padding-left: 12px; font-size: 12px; color: var(--yt-sys-color-baseline--text-secondary, #aaa); }
+.ytx-menu-sep { height: 1px; margin: 6px 0; background: var(--yt-sys-color-baseline--outline, rgba(255,255,255,.1)); }
+.ytx-menu-foot { padding: 6px 16px 2px; font-size: 12px; color: var(--yt-sys-color-baseline--text-secondary, #aaa); }
+.ytx-toast { position: fixed; z-index: 2400; left: 50%; bottom: 32px; transform: translateX(-50%); max-width: 80vw; padding: 10px 16px; border-radius: 8px;
+  font: 400 14px/1.3 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary-inverse, #0f0f0f); background: var(--yt-sys-color-baseline--inverted-background, #f1f1f1); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+.ytx-toast[data-kind="error"] { background: #c62828; color: #fff; }
+/* eigener stapel, sonst liegt das abzeichen ueber dem festgehaltenen player */
+:has(> .ytx-badge) { isolation: isolate; }
+.ytx-badge { position: absolute; z-index: 3; right: 4px; top: 4px; padding: 1px 5px; border-radius: 4px; pointer-events: none; font: 500 11px/16px Roboto, Arial, sans-serif; color: #fff; background: rgba(0,0,0,.75); }
+`;
+  function initUiCss() {
+    setCss("ui", CSS);
+  }
+  function button({ label, icon, title: title2, small, onClick }) {
+    const b = h("button", { class: ["ytx-btn", small && "ytx-small"], type: "button", title: title2, "data-ytx-own": "" }, icon && h("span", { class: "ytx-ico", text: icon }), label && h("span", { class: "ytx-label", text: label }));
+    if (onClick)
+      b.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClick(e);
+      });
+    return b;
+  }
+  function splitButton({ label, icon, title: title2, onMain, onMenu }) {
+    const main = button({ label, icon, title: title2, onClick: onMain });
+    const more = button({ icon: "▾", title: "Optionen", onClick: (e) => onMenu(more, e) });
+    const wrap = h("div", { class: "ytx-split", "data-ytx-own": "" }, main, more);
+    wrap.main = main;
+    wrap.more = more;
+    return wrap;
+  }
+  var openMenu = null;
+  function closeMenu() {
+    openMenu?.remove();
+    openMenu = null;
+  }
+  function showMenu(anchorEl, items) {
+    const wasOpenForThis = openMenu && openMenu.__anchor === anchorEl;
+    closeMenu();
+    if (wasOpenForThis) return;
+    const menu = h("div", { class: "ytx-menu", role: "menu", "data-ytx-own": "" });
+    menu.__anchor = anchorEl;
+    for (const it of items) {
+      if (!it) continue;
+      if (it.sep) menu.append(h("div", { class: "ytx-menu-sep" }));
+      else if (it.title) menu.append(h("div", { class: "ytx-menu-title", text: it.title }));
+      else if (it.foot) menu.append(h("div", { class: "ytx-menu-foot", text: it.foot }));
+      else {
+        const b = h(
+          "button",
+          { class: "ytx-menu-item", role: "menuitem", type: "button", disabled: it.disabled },
+          it.checked !== void 0 && h("span", { class: "ytx-check", text: it.checked ? "●" : "" }),
+          h("span", { text: it.label }),
+          it.sub && h("span", { class: "ytx-sub", text: it.sub })
+        );
+        b.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!it.keepOpen) closeMenu();
+          it.run?.();
+        });
+        menu.append(b);
+      }
+    }
+    document.body.append(menu);
+    const r = anchorEl.getBoundingClientRect();
+    const mw = menu.offsetWidth;
+    const mh = menu.offsetHeight;
+    let left = Math.min(r.left, window.innerWidth - mw - 8);
+    let top2 = r.bottom + 6;
+    if (top2 + mh > window.innerHeight - 8) top2 = Math.max(8, r.top - mh - 6);
+    menu.style.left = `${Math.max(8, left)}px`;
+    menu.style.top = `${top2}px`;
+    openMenu = menu;
+    menu.querySelector(".ytx-menu-item:not([disabled])")?.focus({ preventScroll: true });
+  }
+  var toastEl = null;
+  var toastTimer = null;
+  function toast(text, kind = "info", ms = 2600) {
+    toastEl?.remove();
+    clearTimeout(toastTimer);
+    toastEl = h("div", { class: "ytx-toast", "data-kind": kind, "data-ytx-own": "", role: "status", text });
+    document.body.append(toastEl);
+    toastTimer = setTimeout(() => {
+      toastEl?.remove();
+      toastEl = null;
+    }, ms);
+  }
+  function textDialog(title2, text) {
+    document.querySelector(".ytx-modal")?.remove();
+    const ta = h("textarea", { readonly: true, spellcheck: "false" });
+    ta.value = text;
+    const close = () => modal.remove();
+    const closeBtn = button({ label: "Schließen", onClick: close });
+    const modal = h("div", { class: "ytx-modal", "data-ytx-own": "" }, h("div", null, h("b", { text: title2 }), h("span", { class: "ytx-note", text: "Die Zwischenablage war blockiert. Text ist markiert – mit Strg+C kopieren." }), ta, h("div", { class: "ytx-row" }, closeBtn)));
+    modal.addEventListener("click", (e) => e.target === modal && close());
+    modal.addEventListener("keydown", (e) => {
+      e.stopPropagation();
+      if (e.key === "Escape") close();
+    });
+    document.body.append(modal);
+    ta.focus();
+    ta.select();
+  }
+  function setButtonBusy(btn2, busy, label) {
+    const l = btn2.querySelector(".ytx-label");
+    if (busy) {
+      btn2.__label ??= l?.textContent;
+      btn2.disabled = true;
+      if (l && label) l.textContent = label;
+    } else {
+      btn2.disabled = false;
+      if (l && btn2.__label != null) l.textContent = btn2.__label;
+      btn2.__label = null;
+    }
+  }
+  function initMenuDismiss() {
+    listen(document, "pointerdown", (e) => {
+      if (openMenu && !e.composedPath().includes(openMenu) && !e.composedPath().includes(openMenu.__anchor)) closeMenu();
+    }, true);
+    listen(document, "keydown", (e) => e.key === "Escape" && closeMenu(), true);
+    listen(window, "resize", closeMenu);
+    listen(document, "yt-navigate-start", closeMenu);
+    onDispose(() => {
+      closeMenu();
+      toastEl?.remove();
+    });
+  }
+
+  // src/features/youtube/subGroups/index.js
+  var cards = () => site2.filters;
+  var channelRefOf2 = (card2) => site2.channels.channelRefOf(card2);
+  var channelPageInfo2 = () => site2.channels.channelPageInfo();
+  var subscribedChannels2 = () => site2.channels.subscribedChannels();
+  var readCard2 = (el) => cards().readCard(el);
+  var ATTR = "data-ytx-sg-hide";
+  var groupsData = () => store.bucket(GROUPS_BUCKET, normalizeGroups);
+  var updateGroups = (fn) => store.updateBucket(GROUPS_BUCKET, fn, normalizeGroups);
+  function addGroup(name) {
+    const n = String(name || "").trim();
+    if (!n) return null;
+    let id = null;
+    updateGroups((d) => {
+      id = `g${Date.now().toString(36)}`;
+      d.groups.push({ id, name: n, channels: [] });
+    });
+    return id;
+  }
+  function knownChannels() {
+    const out = /* @__PURE__ */ new Map();
+    const add2 = (c) => {
+      if (!c?.name && !c?.id) return;
+      const key2 = c.id || c.handle || `name:${c.name.toLowerCase()}`;
+      const prev2 = out.get(key2);
+      out.set(key2, { id: c.id || prev2?.id || null, handle: c.handle || prev2?.handle || null, name: c.name || prev2?.name || "" });
+    };
+    for (const c of subscribedChannels2()) add2(c);
+    for (const el of outerCards()) add2(channelRefOf2(readCard2(el)));
+    for (const g of groupsData().groups) for (const c of g.channels) add2(c);
+    return [...out.values()].sort((a, b) => a.name.localeCompare(b.name, "de"));
+  }
+  function outerCards() {
+    const out = [];
+    const f = cards();
+    for (const root of f.activePageRoots()) {
+      for (const el of qsa(f.CARD_SELECTORS.join(", "), root)) if (!el.parentElement?.closest(f.CARD_PARENT)) out.push(el);
+    }
+    return out;
+  }
+  function openPanelTab() {
+    const panel = pageWindow.__ytx?.panel;
+    if (!panel) return;
+    panel.open();
+    panel.select("subGroups");
+  }
+  var subGroups_default = {
+    id: "subs.groups",
+    label: "Abo-Gruppen",
+    group: "Abos",
+    description: "Eigene Gruppen wie „Tech“ oder „Musik“ für deine Abos. Filterleiste über dem Abo-Feed, Zuordnen auf der Kanalseite und im Tab „Abo-Gruppen“",
+    pages: ["subscriptions", "channel"],
+    stability: "mittel",
+    anchors: ["subs.feedTop", "channel.headerButtons"],
+    settings: {
+      showNone: { type: "toggle", label: "Chip „Ohne Gruppe“ anzeigen", default: true },
+      rememberGroup: { type: "toggle", label: "Zuletzt gewählte Gruppe merken", default: false }
+    },
+    setup(ctx) {
+      let s2 = ctx.settings;
+      let active = s2.rememberGroup ? ctx.state.get("subs.activeGroup", null) : null;
+      const stats2 = { checked: 0, hidden: 0 };
+      ctx.css(`[${ATTR}] { display: none !important; }
+.ytx-sg-bar { all: initial; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 8px; font: 500 14px Roboto, Arial, sans-serif; }
+.ytx-sg-chip { all: initial; cursor: pointer; padding: 6px 12px; border-radius: 8px; font: 500 14px/20px Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); background: var(--yt-sys-color-baseline--additive-background, rgba(255,255,255,.1)); }
+.ytx-sg-chip:hover { background: var(--yt-sys-color-baseline--mono-tonal-hover, rgba(255,255,255,.2)); }
+.ytx-sg-chip[aria-pressed="true"] { color: var(--yt-sys-color-baseline--text-primary-inverse, #0f0f0f); background: var(--yt-sys-color-baseline--text-primary, #f1f1f1); }
+.ytx-sg-chip small { opacity: .65; margin-left: 4px; font-size: 12px; }
+.ytx-sg-edit { all: initial; cursor: pointer; font: 500 13px Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--call-to-action, #3ea6ff); margin-left: 4px; }
+.ytx-sg-info { font: 400 12px Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-secondary, #aaa); margin-left: auto; }`);
+      function apply() {
+        const data2 = groupsData();
+        let checked = 0;
+        let hidden = 0;
+        let learned = false;
+        for (const el of outerCards()) {
+          const card2 = readCard2(el);
+          if (!card2) continue;
+          const ch = channelRefOf2(card2);
+          checked++;
+          if (groupsOf(ch, data2).length && enrich(data2, ch)) learned = true;
+          const show = ctx.nav.page !== "subscriptions" || visibleIn(ch, active, data2);
+          if (show) el.removeAttribute(ATTR);
+          else {
+            el.setAttribute(ATTR, "");
+            hidden++;
+          }
+        }
+        if (learned) updateGroups((d) => Object.assign(d, data2));
+        stats2.checked = checked;
+        stats2.hidden = hidden;
+      }
+      function drawBar(node) {
+        const data2 = groupsData();
+        const chip = (id, label, count) => {
+          const b = h("button", { type: "button", class: "ytx-sg-chip", "aria-pressed": String((active || null) === id) }, label, count != null && h("small", { text: String(count) }));
+          b.addEventListener("click", () => {
+            active = id;
+            if (s2.rememberGroup) ctx.state.set("subs.activeGroup", id);
+            apply();
+            drawBar(node);
+            window.scrollTo({ top: 0 });
+          });
+          return b;
+        };
+        const edit = h("button", { type: "button", class: "ytx-sg-edit", text: data2.groups.length ? "✎ Gruppen bearbeiten" : "+ Abo-Gruppe anlegen" });
+        edit.addEventListener("click", openPanelTab);
+        const kids = [chip(null, "Alle")];
+        for (const g of data2.groups) kids.push(chip(g.id, g.name, g.channels.length));
+        if (s2.showNone && data2.groups.length) kids.push(chip(NONE, "Ohne Gruppe"));
+        kids.push(edit);
+        if (active) kids.push(h("span", { class: "ytx-sg-info", text: `${stats2.checked - stats2.hidden} von ${stats2.checked} Videos` }));
+        node.replaceChildren(...kids);
+      }
+      const bar = ctx.mount({
+        id: "subs.groups.bar",
+        anchor: "subs.feedTop",
+        position: "before",
+        when: () => ctx.nav.page === "subscriptions",
+        create: () => h("div", { class: "ytx-sg-bar" }),
+        update: (node) => drawBar(node)
+      });
+      const chan = ctx.mount({
+        id: "subs.groups.channel",
+        anchor: "channel.headerButtons",
+        position: "append",
+        when: () => ctx.nav.page === "channel" && !!channelPageInfo2(),
+        create: () => {
+          const b = button({
+            label: "Gruppen",
+            icon: "☰",
+            title: "Kanal einer Abo-Gruppe zuordnen",
+            onClick: () => {
+              const ch = channelPageInfo2();
+              if (!ch) return toast("Kanal noch nicht erkannt");
+              const data2 = groupsData();
+              const items = [{ title: ch.name }];
+              for (const g of data2.groups) {
+                const on = groupsOf(ch, data2).some((x) => x.id === g.id);
+                items.push({ label: g.name, checked: on, run: () => {
+                  updateGroups((d) => toggleChannel(d, g.id, ch));
+                  toast(`${ch.name} ${on ? "aus" : "in"} „${g.name}“`);
+                  chan.refresh();
+                } });
+              }
+              items.push({ sep: true }, { label: "Neue Gruppe …", run: () => {
+                const name = pageWindow.prompt("Name der neuen Abo-Gruppe");
+                const id = addGroup(name);
+                if (!id) return;
+                updateGroups((d) => toggleChannel(d, id, ch));
+                toast(`${ch.name} in „${name.trim()}“`);
+                chan.refresh();
+              } }, { label: "Alle Gruppen verwalten", run: openPanelTab });
+              showMenu(chan.node, items);
+            }
+          });
+          b.style.marginLeft = "8px";
+          return b;
+        },
+        update: (node) => {
+          const ch = channelPageInfo2();
+          const names = ch ? groupsOf(ch, groupsData()).map((g) => g.name) : [];
+          const label = node.querySelector(".ytx-label");
+          const text = names.length ? names.join(", ") : "Gruppen";
+          if (label && label.textContent !== text) label.textContent = text;
+        }
+      });
+      const off = ctx.onSweep(() => {
+        if (ctx.nav.page === "subscriptions") {
+          apply();
+          if (bar.node && active) drawBar(bar.node);
+        }
+      });
+      return {
+        onPage(page) {
+          if (page !== "subscriptions") for (const el of qsa(`[${ATTR}]`)) el.removeAttribute(ATTR);
+          bar.refresh();
+          chan.refresh();
+        },
+        update(next) {
+          s2 = next;
+          bar.refresh();
+        },
+        dispose() {
+          off();
+          for (const el of qsa(`[${ATTR}]`)) el.removeAttribute(ATTR);
+          bar.destroy();
+          chan.destroy();
+        },
+        health() {
+          const n = groupsData().groups.length;
+          if (ctx.nav.page === "subscriptions") return bar.ok ? { status: "ok", detail: `${n} Gruppen · ${active ? `Filter aktiv, ${stats2.hidden}/${stats2.checked} ausgeblendet` : "kein Filter"}` } : { status: "warn", detail: "Abo-Feed nicht gefunden (Anmeldung nötig)" };
+          if (ctx.nav.page === "channel") return chan.ok ? { status: "ok", detail: "Gruppen-Button auf der Kanalseite" } : { status: "warn", detail: "Kanal-Kopf nicht gefunden" };
+          return { status: "skip", detail: `${n} Gruppen` };
+        },
+        debug: { apply, setActive: (id) => (active = id, apply()), stats: stats2 }
+      };
+    }
+  };
+
+  // src/features/stats/logic.js
+  var DAY2 = 24 * 3600 * 1e3;
+  var pad = (n) => String(n).padStart(2, "0");
+  var dayKey = (ts) => {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
+  function fromViews(views, groupsOf2 = () => []) {
+    const out = [];
+    for (const v of views || []) {
+      if (!v || !(v.wallSec > 0)) continue;
+      const key2 = v.channel?.id || v.channel?.name || "?";
+      const cats = [...v.category ? [v.category] : [], ...groupsOf2(v.channel || {})];
+      out.push({
+        id: `yt:${v.id}`,
+        src: "yt",
+        start: v.startedAt,
+        sec: v.wallSec,
+        key: key2,
+        name: v.channel?.name || "Unbekannt",
+        item: v.videoId,
+        title: v.title || v.videoId,
+        cats,
+        kind: v.kind || "video",
+        done: v.percent != null ? v.percent >= 0.9 : null,
+        skipped: v.percent != null ? v.percent < 0.3 : null,
+        skipAt: v.percent ?? null,
+        liked: false,
+        device: v.device || null
+      });
+    }
+    return out;
+  }
+  function fromPlays(plays, genresOf = () => []) {
+    const out = [];
+    for (const p of plays || []) {
+      if (!p || !(p.listenedSec > 0)) continue;
+      const a = p.artists?.[0];
+      const key2 = p.artistKeys?.[0] || a?.id || a?.name || "?";
+      out.push({
+        id: `music:${p.id}`,
+        src: "music",
+        start: p.startedAt,
+        sec: p.listenedSec,
+        key: key2,
+        name: a?.name || "Unbekannt",
+        item: p.videoId,
+        title: p.title || p.videoId,
+        cats: genresOf(p) || [],
+        kind: "song",
+        done: !!p.completed,
+        skipped: !!p.skipped,
+        skipAt: p.skipped ? p.skipAtPct ?? null : null,
+        liked: !!p.liked,
+        device: p.device || null
+      });
+    }
+    return out;
+  }
+  function dedupe(events) {
+    const seen3 = /* @__PURE__ */ new Map();
+    for (const e of events) if (!seen3.has(e.id)) seen3.set(e.id, e);
+    return [...seen3.values()].sort((a, b) => a.start - b.start);
+  }
+  function period(kind, now = Date.now(), offset = 0, first = null) {
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    if (kind === "week") {
+      const dow = (d.getDay() + 6) % 7;
+      const from2 = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dow + offset * 7);
+      const to = new Date(from2.getFullYear(), from2.getMonth(), from2.getDate() + 7);
+      return { kind, from: +from2, to: +to, label: `Woche ab ${from2.getDate()}.${from2.getMonth() + 1}.` };
+    }
+    if (kind === "month") {
+      const from2 = new Date(d.getFullYear(), d.getMonth() + offset, 1);
+      const to = new Date(from2.getFullYear(), from2.getMonth() + 1, 1);
+      return { kind, from: +from2, to: +to, label: from2.toLocaleDateString("de-DE", { month: "long", year: "numeric" }) };
+    }
+    if (kind === "year") {
+      const from2 = new Date(d.getFullYear() + offset, 0, 1);
+      return { kind, from: +from2, to: +new Date(from2.getFullYear() + 1, 0, 1), label: String(from2.getFullYear()) };
+    }
+    const from = first ? +new Date(new Date(first).setHours(0, 0, 0, 0)) : +d - 365 * DAY2;
+    return { kind: "all", from, to: +d + DAY2, label: "Gesamt" };
+  }
+  function previous(p) {
+    if (p.kind === "all") return null;
+    return period(p.kind, p.from, -1);
+  }
+  function buckets(p) {
+    const days = Math.round((p.to - p.from) / DAY2);
+    const out = [];
+    if (days <= 45) {
+      for (let t = p.from; t < p.to; t += DAY2) {
+        const d2 = new Date(t);
+        out.push({ from: t, to: t + DAY2, label: `${d2.getDate()}.${d2.getMonth() + 1}.` });
+      }
+      for (const b of out) {
+        b.from = +new Date(new Date(b.from + 36e5 * 3).setHours(0, 0, 0, 0));
+        b.to = b.from + DAY2;
+      }
+      return { unit: "day", list: out };
+    }
+    if (days <= 400) {
+      let t = p.from;
+      while (t < p.to) {
+        const d2 = new Date(t);
+        const next = +new Date(d2.getFullYear(), d2.getMonth(), d2.getDate() + 7);
+        out.push({ from: t, to: Math.min(next, p.to), label: `${d2.getDate()}.${d2.getMonth() + 1}.` });
+        t = next;
+      }
+      return { unit: "week", list: out };
+    }
+    let d = new Date(new Date(p.from).getFullYear(), new Date(p.from).getMonth(), 1);
+    while (+d < p.to) {
+      const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      out.push({ from: +d, to: +next, label: `${pad(d.getMonth() + 1)}/${String(d.getFullYear()).slice(2)}` });
+      d = next;
+    }
+    return { unit: "month", list: out };
+  }
+  var inRange = (e, p) => e.start >= p.from && e.start < p.to;
+  function rank(list, keyOf, nameOf, limit) {
+    const m = /* @__PURE__ */ new Map();
+    for (const e of list) {
+      const k = keyOf(e);
+      if (k == null) continue;
+      const v = m.get(k) || { key: k, name: nameOf(e), src: e.src, sec: 0, count: 0 };
+      v.sec += e.sec;
+      v.count++;
+      m.set(k, v);
+    }
+    return [...m.values()].sort((a, b) => b.sec - a.sec).slice(0, limit);
+  }
+  function withTrend(cur, prevList) {
+    const prev2 = new Map(prevList.map((x, i) => [x.key, { ...x, place: i + 1 }]));
+    return cur.map((x, i) => {
+      const p = prev2.get(x.key);
+      return { ...x, place: i + 1, prevSec: p?.sec || 0, prevPlace: p?.place || null, delta: p ? x.sec / Math.max(1, p.sec) - 1 : null };
+    });
+  }
+  function shares(list, limit = 8) {
+    const m = /* @__PURE__ */ new Map();
+    let total = 0;
+    for (const e of list) {
+      if (!e.cats.length) continue;
+      const part = e.sec / e.cats.length;
+      for (const c of e.cats) m.set(c, (m.get(c) || 0) + part);
+      total += e.sec;
+    }
+    const all = [...m.entries()].sort((a, b) => b[1] - a[1]);
+    const top2 = all.slice(0, limit).map(([name, sec]) => ({ name, sec, share: total ? sec / total : 0 }));
+    const rest = all.slice(limit).reduce((n, [, s2]) => n + s2, 0);
+    if (rest) top2.push({ name: "Sonstige", sec: rest, share: rest / total, other: true });
+    return { total, list: top2, unknownSec: list.filter((e) => !e.cats.length).reduce((n, e) => n + e.sec, 0) };
+  }
+  function behavior(list) {
+    const n = list.length;
+    const known3 = list.filter((e) => e.done != null);
+    const skips = list.filter((e) => e.skipAt != null && (e.src === "yt" || e.skipped));
+    const skipBins2 = Array(10).fill(0);
+    for (const e of skips) skipBins2[Math.min(9, Math.floor(e.skipAt * 10))]++;
+    return {
+      count: n,
+      done: known3.length ? known3.filter((e) => e.done).length / known3.length : null,
+      skipped: known3.length ? known3.filter((e) => e.skipped).length / known3.length : null,
+      skipBins: skipBins2,
+      liked: n ? list.filter((e) => e.liked).length : 0,
+      shorts: list.filter((e) => e.kind === "short").reduce((s2, e) => s2 + e.sec, 0)
+    };
+  }
+  function sessions(list, gapMs = 10 * 60 * 1e3) {
+    const out = [];
+    let cur = null;
+    for (const e of [...list].sort((a, b) => a.start - b.start)) {
+      const end = e.start + e.sec * 1e3;
+      if (cur && e.start - cur.end <= gapMs) {
+        cur.end = Math.max(cur.end, end);
+        cur.sec += e.sec;
+      } else {
+        cur = { start: e.start, end, sec: e.sec };
+        out.push(cur);
+      }
+    }
+    return out;
+  }
+  function records(all) {
+    const byDay = /* @__PURE__ */ new Map();
+    for (const e of all) byDay.set(dayKey(e.start), (byDay.get(dayKey(e.start)) || 0) + e.sec);
+    const days = [...byDay.keys()].sort();
+    let best = 0;
+    let run2 = 0;
+    let prev2 = null;
+    for (const d of days) {
+      const t = +/* @__PURE__ */ new Date(`${d}T12:00:00`);
+      run2 = prev2 && Math.round((t - prev2) / DAY2) === 1 ? run2 + 1 : 1;
+      best = Math.max(best, run2);
+      prev2 = t;
+    }
+    const topDay = [...byDay.entries()].sort((a, b) => b[1] - a[1])[0] || null;
+    const longest = sessions(all).sort((a, b) => b.sec - a.sec)[0] || null;
+    return { streak: best, topDay: topDay && { day: topDay[0], sec: topDay[1] }, longestSession: longest, totalSec: all.reduce((n, e) => n + e.sec, 0), count: all.length };
+  }
+  function discovery(all, p) {
+    const first = /* @__PURE__ */ new Map();
+    for (const e of all) {
+      const k = `${e.src}:${e.key}`;
+      if (!first.has(k) || e.start < first.get(k).start) first.set(k, e);
+    }
+    const inP = all.filter((e) => inRange(e, p));
+    const keys = new Set(inP.map((e) => `${e.src}:${e.key}`));
+    const fresh = [...keys].filter((k) => inRange(first.get(k), p));
+    const freshSet = new Set(fresh);
+    const newSec = inP.filter((e) => freshSet.has(`${e.src}:${e.key}`)).reduce((n, e) => n + e.sec, 0);
+    const total = inP.reduce((n, e) => n + e.sec, 0);
+    return { total: keys.size, fresh: fresh.length, newShare: total ? newSec / total : 0, freshList: fresh.map((k) => first.get(k)).map((e) => ({ src: e.src, key: e.key, name: e.name, first: e.start })) };
+  }
+  var MARKS = [10, 50, 100, 250, 500, 1e3];
+  function milestones(all, p) {
+    const count = /* @__PURE__ */ new Map();
+    const out = [];
+    for (const e of all) {
+      if (e.start >= p.to) break;
+      const k = `${e.src}:${e.key}`;
+      const n = (count.get(k) || 0) + 1;
+      count.set(k, n);
+      if (MARKS.includes(n) && inRange(e, p)) out.push({ src: e.src, key: e.key, name: e.name, n, at: e.start });
+    }
+    return out.sort((a, b) => b.n - a.n).slice(0, 8);
+  }
+  function analyze(allEvents, p, { limit = 10 } = {}) {
+    const all = dedupe(allEvents);
+    const list = all.filter((e) => inRange(e, p));
+    const prevP = previous(p);
+    const prevList = prevP ? all.filter((e) => inRange(e, prevP)) : [];
+    const bySrc = (l, s2) => l.filter((e) => e.src === s2);
+    const sum = (l) => l.reduce((n, e) => n + e.sec, 0);
+    const b = buckets(p);
+    const bars3 = b.list.map((x) => {
+      const inB = list.filter((e) => e.start >= x.from && e.start < x.to);
+      return { ...x, yt: sum(bySrc(inB, "yt")), music: sum(bySrc(inB, "music")) };
+    });
+    const heat = { yt: Array.from({ length: 7 }, () => Array(24).fill(0)), music: Array.from({ length: 7 }, () => Array(24).fill(0)) };
+    for (const e of list) {
+      const d = new Date(e.start);
+      heat[e.src][(d.getDay() + 6) % 7][d.getHours()] += e.sec;
+    }
+    const side = (s2) => {
+      const cur = bySrc(list, s2);
+      const prev2 = bySrc(prevList, s2);
+      return {
+        sec: sum(cur),
+        prevSec: prevP ? sum(prev2) : null,
+        top: withTrend(rank(cur, (e) => e.key, (e) => e.name, limit), rank(prev2, (e) => e.key, (e) => e.name, 100)),
+        items: rank(cur, (e) => e.item, (e) => `${e.title}\0${e.name}`, limit).map((x) => {
+          const [title2, by] = x.name.split("\0");
+          return { ...x, name: title2, by };
+        }),
+        cats: shares(cur),
+        behavior: behavior(cur),
+        sessions: sessions(cur)
+      };
+    };
+    return {
+      period: p,
+      prevPeriod: prevP,
+      total: sum(list),
+      prevTotal: prevP ? sum(prevList) : null,
+      unit: b.unit,
+      bars: bars3,
+      heat,
+      yt: side("yt"),
+      music: side("music"),
+      discovery: discovery(all, p),
+      milestones: milestones(all, p),
+      records: records(all),
+      devices: [...new Set(list.map((e) => e.device).filter(Boolean))]
+    };
+  }
+  function detail(allEvents, { src: src2, key: key2, cat }, p) {
+    const all = dedupe(allEvents).filter((e) => (src2 ? e.src === src2 : true) && (key2 != null ? e.key === key2 : true) && (cat ? e.cats.includes(cat) : true));
+    const list = all.filter((e) => inRange(e, p));
+    const b = buckets(p);
+    const hours = Array(24).fill(0);
+    for (const e of list) hours[new Date(e.start).getHours()] += e.sec;
+    return {
+      name: all[0]?.name || cat || key2,
+      total: list.reduce((n, e) => n + e.sec, 0),
+      count: list.length,
+      first: all[0]?.start || null,
+      allTime: all.reduce((n, e) => n + e.sec, 0),
+      bars: b.list.map((x) => ({ ...x, sec: list.filter((e) => e.start >= x.from && e.start < x.to).reduce((n, e) => n + e.sec, 0) })),
+      hours,
+      items: rank(list, (e) => e.item, (e) => e.title, 10),
+      behavior: behavior(list)
+    };
+  }
+
+  // src/features/stats/data.js
+  var isMusic = () => site2.id === "music";
+  var SRC = () => isMusic() ? "music" : "yt";
+  async function localEvents(from = 0) {
+    if (isMusic()) return fromPlays(await music.history.list({ from }));
+    const views = await ytDb().byIndex("views", "startedAt", IDBKeyRange.lowerBound(from));
+    const data2 = groupsData();
+    return fromViews(views, (ch) => groupsOf(ch, data2).map((g) => g.name));
+  }
+  var cacheDb = null;
+  var cache = () => cacheDb ||= openDatabase("ytx-stats", [(db3) => db3.createObjectStore("remote", { keyPath: "path" })]);
+  var monthKey = (ts) => {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  };
+  async function pushHistory({ months = 2 } = {}) {
+    if (!cloudReady()) return { pushed: 0, skipped: "Nextcloud nicht eingerichtet" };
+    const dev = deviceId();
+    const now = /* @__PURE__ */ new Date();
+    const from = +new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+    const events = await localEvents(from);
+    for (const dir of ["history", `history/${dev}`]) {
+      const r = await cloudRequest("MKCOL", dir);
+      if (![201, 405].includes(r.status)) throw new Error(`Nextcloud ${dir}: HTTP ${r.status}`);
+    }
+    const byMonth = /* @__PURE__ */ new Map();
+    for (const e of events) {
+      const k = monthKey(e.start);
+      if (!byMonth.has(k)) byMonth.set(k, []);
+      byMonth.get(k).push(e);
+    }
+    let pushed = 0;
+    for (const [month, list] of byMonth) {
+      const body = JSON.stringify({ v: 1, device: dev, site: site2.id, src: SRC(), month, at: Date.now(), events: list });
+      const r = await cloudRequest("PUT", `history/${dev}/${site2.id}-${month}.json`, body);
+      if (r.status < 200 || r.status >= 300) throw new Error(`Nextcloud hochladen: HTTP ${r.status}`);
+      pushed += list.length;
+    }
+    return { pushed, months: byMonth.size };
+  }
+  function parseList(xml) {
+    const doc = new DOMParser().parseFromString(xml, "application/xml");
+    const out = [];
+    for (const r of doc.getElementsByTagNameNS("DAV:", "response")) {
+      const href = decodeURIComponent(r.getElementsByTagNameNS("DAV:", "href")[0]?.textContent || "");
+      const etag = r.getElementsByTagNameNS("DAV:", "getetag")[0]?.textContent || "";
+      const dir = r.getElementsByTagNameNS("DAV:", "collection").length > 0;
+      out.push({ name: href.replace(/\/+$/, "").split("/").pop(), etag, dir });
+    }
+    return out;
+  }
+  var LIST_BODY = '<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:getetag/><d:resourcetype/></d:prop></d:propfind>';
+  async function listDir(path) {
+    const r = await cloudRequest("PROPFIND", path, LIST_BODY, { Depth: "1", "Content-Type": "application/xml" });
+    if (r.status === 404) return [];
+    if (r.status !== 207) throw new Error(`Nextcloud Liste: HTTP ${r.status}`);
+    return parseList(r.text).slice(1);
+  }
+  async function remoteEvents() {
+    if (!cloudReady()) return { events: [], files: 0, note: "Nextcloud nicht eingerichtet, nur Daten dieses Geräts" };
+    const dev = deviceId();
+    const db3 = cache();
+    const events = [];
+    let files = 0;
+    const devices = (await listDir("history")).filter((x) => x.dir);
+    for (const d of devices) {
+      for (const f of await listDir(`history/${d.name}`)) {
+        if (f.dir || !f.name.endsWith(".json")) continue;
+        if (d.name === dev && f.name.startsWith(`${site2.id}-`)) continue;
+        const path = `history/${d.name}/${f.name}`;
+        let hit = await db3.get("remote", path).catch(() => null);
+        if (!hit || hit.etag !== f.etag) {
+          const r = await cloudRequest("GET", path);
+          if (r.status !== 200) continue;
+          try {
+            const j = JSON.parse(r.text);
+            hit = { path, etag: f.etag, device: j.device, site: j.site, events: Array.isArray(j.events) ? j.events : [] };
+            await db3.put("remote", hit);
+          } catch (e) {
+            log.warn(`statistik ${path}`, e);
+            continue;
+          }
+        }
+        files++;
+        events.push(...hit.events);
+      }
+    }
+    return { events, files, devices: devices.length };
+  }
+  async function cachedRemote() {
+    try {
+      const dev = deviceId();
+      const all = await cache().getAll("remote");
+      return all.filter((x) => !(x.device === dev && x.site === site2.id)).flatMap((x) => x.events);
+    } catch {
+      return [];
+    }
+  }
+
+  // src/panel/styles.js
+  var PANEL_CSS = `
+:host { all: initial; }
+* { box-sizing: border-box; }
+.panel {
+  --bg: var(--yt-sys-color-baseline--menu-background, #212121);
+  --bg2: var(--yt-sys-color-baseline--raised-background, #2a2a2a);
+  --fg: var(--yt-sys-color-baseline--text-primary, #f1f1f1);
+  --fg2: var(--yt-sys-color-baseline--text-secondary, #aaa);
+  --line: var(--yt-sys-color-baseline--outline, rgba(255,255,255,.12));
+  --hover: var(--yt-sys-color-baseline--additive-background, rgba(255,255,255,.08));
+  --accent: var(--yt-sys-color-baseline--call-to-action, #3ea6ff);
+  --ok: #3fb950; --warn: #d29922; --fail: #f85149; --skip: #6e7681;
+  position: fixed; z-index: 2250; top: 64px; right: 12px; bottom: 12px; width: min(440px, calc(100vw - 24px));
+  min-width: min(300px, calc(100vw - 16px)); min-height: min(220px, calc(100vh - 16px)); max-width: calc(100vw - 16px); max-height: calc(100vh - 16px);
+  display: flex; flex-direction: column; overflow: auto; resize: both; border-radius: 14px;
+  font: 400 13px/1.4 Roboto, "Segoe UI", Arial, sans-serif; color: var(--fg); background: var(--bg);
+  box-shadow: 0 8px 40px rgba(0,0,0,.45); border: 1px solid var(--line);
+}
+.panel[hidden] { display: none; }
+header { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: move; user-select: none; touch-action: none; }
+header select, header button { cursor: pointer; }
+header .logo { font-weight: 700; font-size: 15px; letter-spacing: .02em; }
+header select { flex: 1; min-width: 0; }
+.iconbtn { width: 30px; height: 30px; border: 0; border-radius: 50%; background: none; color: var(--fg2); cursor: pointer; font-size: 16px; }
+.iconbtn:hover { background: var(--hover); color: var(--fg); }
+nav { flex: none; display: flex; flex-wrap: wrap; gap: 2px 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+nav button { flex: none; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--fg2); cursor: pointer; font: 500 12px/1.2 inherit; font-family: inherit; }
+nav button:hover { background: var(--hover); color: var(--fg); }
+nav button[aria-selected="true"] { background: var(--fg); color: var(--bg); }
+@media (pointer: coarse) {
+  .panel { font-size: 14px; }
+  nav button { padding: 9px 12px; font-size: 13px; }
+  .seg button { padding: 8px 10px; font-size: 12px; }
+  .switch { width: 44px; height: 26px; border-radius: 13px; }
+  .switch::after { width: 20px; height: 20px; }
+  .switch[aria-checked="true"]::after { transform: translateX(18px); }
+  .btn { padding: 8px 12px; font-size: 13px; }
+  .btn.tiny { padding: 6px 9px; }
+  .chip { padding: 7px 11px; font-size: 12px; }
+  .iconbtn { width: 38px; height: 38px; }
+  select, input[type="text"], input[type="number"], input[type="search"] { padding: 8px 10px; font-size: 14px; }
+  input[type="range"] { width: 110px; }
+}
+main { flex: 1 1 auto; min-height: 120px; overflow: auto; padding: 10px 12px 20px; }
+footer { flex: none; padding: 6px 12px 6px 12px; padding-right: 22px; border-top: 1px solid var(--line); color: var(--fg2); font-size: 11px; display: flex; justify-content: space-between; gap: 8px; }
+h3 { margin: 16px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--fg2); }
+h3:first-child { margin-top: 4px; }
+details { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: var(--bg2); }
+details > summary { list-style: none; cursor: pointer; padding: 8px 10px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+details > summary::-webkit-details-marker { display: none; }
+details > summary::before { content: '▸'; color: var(--fg2); transition: transform .15s; }
+details[open] > summary::before { transform: rotate(90deg); }
+details > summary .count { margin-left: auto; color: var(--fg2); font-weight: 400; font-size: 11px; }
+details > .body { padding: 2px 10px 8px; }
+.row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); }
+details .row:first-child, .card .row:first-child { border-top: 0; }
+.row .label { flex: 1; min-width: 0; }
+.row .label small { display: block; color: var(--fg2); font-size: 11px; margin-top: 1px; }
+.row.stack { flex-direction: column; align-items: stretch; gap: 6px; }
+.badge { display: inline-block; padding: 0 6px; border-radius: 6px; font-size: 10px; line-height: 16px; vertical-align: 1px; margin-left: 4px; background: var(--hover); color: var(--fg2); }
+.badge.radical { background: rgba(248,81,73,.15); color: var(--fail); }
+.badge.hits { min-width: 18px; text-align: center; }
+.badge.hits.zero { opacity: .45; }
+.seg { display: inline-flex; flex: none; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; padding: 4px 8px; background: none; color: var(--fg2); cursor: pointer; font: 500 11px/1.2 inherit; font-family: inherit; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button:hover { background: var(--hover); color: var(--fg); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.seg button[aria-pressed="true"][data-mode="hide"] { background: var(--fail); }
+.seg button[aria-pressed="true"][data-mode="dim"] { background: var(--warn); color: #111; }
+.seg button[aria-pressed="true"][data-mode="collapse"] { background: #8957e5; }
+.seg button[aria-pressed="true"][data-mode="show"] { background: var(--hover); color: var(--fg); }
+select, input[type="text"], input[type="number"], input[type="search"], textarea {
+  font: inherit; color: var(--fg); background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; min-width: 0; }
+select:focus, input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+textarea { width: 100%; min-height: 64px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
+input[type="number"] { width: 90px; }
+input[type="search"] { width: 100%; }
+input[type="color"] { width: 34px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
+input[type="range"] { width: 130px; accent-color: var(--accent); }
+.val { width: 58px; text-align: right; color: var(--fg2); font-variant-numeric: tabular-nums; font-size: 12px; }
+.val.set { color: var(--fg); font-weight: 500; }
+.switch { position: relative; flex: none; width: 34px; height: 20px; border-radius: 10px; border: 0; background: var(--line); cursor: pointer; transition: background .15s; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.switch[aria-checked="true"] { background: var(--accent); }
+.switch[aria-checked="true"]::after { transform: translateX(14px); }
+.btn { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg2); color: var(--fg); cursor: pointer; font: 500 12px/1.2 inherit; font-family: inherit; }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.danger { color: var(--fail); }
+.btn.tiny { padding: 2px 6px; font-size: 11px; }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.reset { border: 0; background: none; color: var(--fg2); cursor: pointer; font-size: 13px; padding: 2px 4px; visibility: hidden; }
+.reset.on { visibility: visible; }
+.reset:hover { color: var(--fg); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { border: 1px solid var(--line); border-radius: 12px; padding: 3px 9px; background: none; color: var(--fg2); cursor: pointer; font: 500 11px/1.2 inherit; font-family: inherit; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.card { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: var(--bg2); }
+.card > .head { display: flex; align-items: center; gap: 8px; padding: 9px 10px; }
+.card > .head .title { flex: 1; font-weight: 500; }
+.card > .desc { padding: 0 10px 6px; color: var(--fg2); font-size: 12px; }
+.card > .settings { padding: 0 10px 8px; }
+.status { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+.status:first-child { border-top: 0; }
+.dot { flex: none; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--skip); }
+.dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.fail { background: var(--fail); }
+.status .txt { flex: 1; min-width: 0; }
+.status .txt small { display: block; color: var(--fg2); font-size: 11px; word-break: break-word; }
+.summary { display: flex; gap: 12px; margin: 4px 0 8px; font-size: 12px; }
+.summary span b { font-size: 15px; margin-right: 3px; }
+.muted { color: var(--fg2); font-size: 12px; }
+.hint { color: var(--fg2); font-size: 11px; margin: 4px 0; }
+.err { color: var(--fail); font-size: 11px; }
+.orderlist { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.orderlist .item { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 8px; }
+.orderlist .item span { flex: 1; }
+.profiles .row .label b { font-weight: 500; }
+.kbd { font-family: ui-monospace, Consolas, monospace; font-size: 11px; padding: 3px 8px; min-width: 90px; text-align: center; }
+.kbd.rec { outline: 2px solid var(--accent); }
+.log { font-family: ui-monospace, Consolas, monospace; font-size: 11px; white-space: pre-wrap; word-break: break-word; color: var(--fg2); max-height: 200px; overflow: auto; }
+`;
+
+  // src/features/music/logic/genres.js
+  var GENRE_GROUPS = [
+    ["Techno", ["Techno", "Hard Techno", "Melodic Techno", "Minimal Techno", "Peak Time Techno", "Acid Techno", "Industrial Techno", "Schranz", "Hypnotic Techno", "Rave"]],
+    ["Hardstyle & Hard Dance", ["Hardstyle", "Euphoric Hardstyle", "Rawstyle", "Hardcore", "Frenchcore", "Uptempo Hardcore", "Hard Dance", "Hardtekk", "Happy Hardcore"]],
+    ["Hip-Hop & Rap", ["Deutschrap", "Straßenrap", "Trap", "Deutsch Trap", "Drill", "UK Drill", "Boom Bap", "Cloud Rap", "Phonk", "Lo-Fi Hip-Hop", "Old School Hip-Hop", "Conscious Rap", "Afro Trap", "Melodic Rap", "R&B"]],
+    ["Elektronisch", ["House", "Tech House", "Deep House", "Afro House", "Drum & Bass", "Dubstep", "Trance", "Psytrance", "EDM", "Future Bass"]],
+    ["Weitere", ["Pop", "Deutschpop", "Indie", "Rock", "Metal", "Punk", "Reggaeton", "Afrobeats", "Schlager", "Jazz", "Klassik", "Soundtrack"]]
+  ];
+  var ALL_GENRES = GENRE_GROUPS.flatMap(([, list]) => list);
+  function suggestGenres(favorites = [], { extra = [], limit = 10 } = {}) {
+    const have = new Set(favorites.map((g) => g.toLowerCase()));
+    const near = GENRE_GROUPS.filter(([, list]) => list.some((g) => have.has(g.toLowerCase()))).flatMap(([, list]) => list);
+    const spread = GENRE_GROUPS.flatMap(([, list]) => list.slice(0, 2));
+    return [.../* @__PURE__ */ new Set([...extra, ...near, ...spread])].filter((g) => g && !have.has(g.toLowerCase())).slice(0, limit);
+  }
+
+  // src/features/stats/colors.js
+  var SRC_COLOR = { yt: "#ff5a4f", music: "#b07cff" };
+  var SRC_LABEL = { yt: "YouTube", music: "Music" };
+  var YT_CATEGORIES = {
+    "Film & Animation": ["Film & Animation", "#e8a33d"],
+    "Autos & Vehicles": ["Autos & Fahrzeuge", "#8d9aa6"],
+    Music: ["Musik", "#b07cff"],
+    "Pets & Animals": ["Tiere", "#7cc576"],
+    Sports: ["Sport", "#2fb3a5"],
+    "Travel & Events": ["Reisen & Events", "#4fa3e0"],
+    Gaming: ["Gaming", "#3fbf5f"],
+    "People & Blogs": ["Menschen & Blogs", "#f08ab8"],
+    Comedy: ["Comedy", "#f5d042"],
+    Entertainment: ["Unterhaltung", "#ff8a4c"],
+    "News & Politics": ["Nachrichten & Politik", "#5b7cfa"],
+    "Howto & Style": ["Anleitungen & Stil", "#d97fd0"],
+    Education: ["Bildung", "#39c2e8"],
+    "Science & Technology": ["Wissenschaft & Technik", "#22a7f0"],
+    "Nonprofits & Activism": ["Gemeinnützig", "#a3b84f"]
+  };
+  var catLabel = (name) => YT_CATEGORIES[name]?.[0] || name;
+  var PALETTE = ["#ff8a4c", "#3fbf5f", "#5b7cfa", "#f5d042", "#e8619a", "#2fb3a5", "#b07cff", "#e8a33d", "#39c2e8", "#a3b84f", "#d97fd0", "#c9784f"];
+  var GROUP_HUE = { "Techno": 174, "Hardstyle & Hard Dance": 350, "Hip-Hop & Rap": 28, "Elektronisch": 205, "Weitere": 280 };
+  var GENRE_COLOR = /* @__PURE__ */ new Map();
+  for (const [group, list] of GENRE_GROUPS) {
+    const hue = GROUP_HUE[group] ?? 0;
+    list.forEach((g, i) => GENRE_COLOR.set(g.toLowerCase(), `hsl(${hue + (i % 3 - 1) * 8} ${62 + i % 2 * 10}% ${48 + i % 4 * 7}%)`));
+  }
+  function hash(s2) {
+    let x = 2166136261;
+    for (let i = 0; i < s2.length; i++) x = Math.imul(x ^ s2.charCodeAt(i), 16777619);
+    return x >>> 0;
+  }
+  function catColor(name) {
+    if (!name || name === "Sonstige") return "#7a7a7a";
+    return YT_CATEGORIES[name]?.[1] || GENRE_COLOR.get(String(name).toLowerCase()) || PALETTE[hash(String(name).toLowerCase()) % PALETTE.length];
+  }
+  function catColors(names) {
+    const used = /* @__PURE__ */ new Set();
+    const out = /* @__PURE__ */ new Map();
+    for (const n of names) {
+      let c = catColor(n);
+      if (used.has(c) && n !== "Sonstige") {
+        const start = hash(String(n).toLowerCase());
+        for (let i = 1; i <= PALETTE.length && used.has(c); i++) c = PALETTE[(start + i) % PALETTE.length];
+      }
+      used.add(c);
+      out.set(n, c);
+    }
+    return out;
+  }
+
+  // src/features/stats/charts.js
+  var NS = "http://www.w3.org/2000/svg";
+  function s(tag, attrs = {}, ...kids) {
+    const el = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) if (v != null) el.setAttribute(k, String(v));
+    for (const c of kids.flat()) if (c) el.append(c);
+    return el;
+  }
+  var title = (text) => s("title", {}, document.createTextNode(text));
+  var mins = (sec) => formatDuration(sec);
+  function stackedBars(bars3, { srcs = ["yt", "music"], onPick } = {}) {
+    const W = 320;
+    const H5 = 110;
+    const n = bars3.length || 1;
+    const gap = n > 40 ? 1 : 3;
+    const bw = Math.max(2, (W - gap * (n - 1)) / n);
+    const max = Math.max(60, ...bars3.map((b) => srcs.reduce((t, k) => t + (b[k] || 0), 0)));
+    const svg = s("svg", { viewBox: `0 0 ${W} ${H5 + 16}`, class: "chart", role: "img" });
+    bars3.forEach((b, i) => {
+      const x = i * (bw + gap);
+      let y = H5;
+      const total = srcs.reduce((t, k) => t + (b[k] || 0), 0);
+      const g = s("g", { class: onPick ? "pick" : null }, title(`${b.label}: ${mins(total)}${srcs.length > 1 ? ` (YouTube ${mins(b.yt || 0)}, Music ${mins(b.music || 0)})` : ""}`));
+      if (!total) g.append(s("rect", { x, y: H5 - 2, width: bw, height: 2, fill: "currentColor", opacity: 0.18 }));
+      for (const k of srcs) {
+        const hgt = (b[k] || 0) / max * H5;
+        if (!hgt) continue;
+        y -= hgt;
+        g.append(s("rect", { x, y, width: bw, height: Math.max(1, hgt), rx: 1.5, fill: SRC_COLOR[k] }));
+      }
+      if (onPick) g.addEventListener("click", () => onPick(b));
+      svg.append(g);
+    });
+    const marks = n <= 8 ? bars3.map((_, i) => i) : [0, Math.floor(n / 2), n - 1];
+    for (const i of marks) {
+      const anchor = n <= 8 ? "middle" : i === 0 ? "start" : i === n - 1 ? "end" : "middle";
+      const x = anchor === "start" ? 0 : anchor === "end" ? W : i * (bw + gap) + bw / 2;
+      const t = s("text", { x, y: H5 + 12, "text-anchor": anchor, class: "axis" });
+      t.textContent = bars3[i]?.label || "";
+      svg.append(t);
+    }
+    return svg;
+  }
+  var WD = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+  function heatmap(grid, color2) {
+    const cw = 12;
+    const ch = 12;
+    const L = 20;
+    const svg = s("svg", { viewBox: `0 0 ${L + 24 * cw} ${7 * ch + 14}`, class: "chart", role: "img" });
+    const max = Math.max(1, ...grid.flat());
+    grid.forEach((row2, d) => {
+      const t = s("text", { x: 0, y: d * ch + 9, class: "axis" });
+      t.textContent = WD[d];
+      svg.append(t);
+      row2.forEach((v, hr) => {
+        svg.append(s("rect", { x: L + hr * cw + 0.5, y: d * ch + 0.5, width: cw - 1, height: ch - 1, rx: 2, fill: v ? color2 : "currentColor", opacity: v ? 0.15 + 0.85 * Math.sqrt(v / max) : 0.06 }, title(`${WD[d]} ${hr}–${hr + 1} Uhr: ${mins(v)}`)));
+      });
+    });
+    for (const hr of [0, 6, 12, 18]) {
+      const t = s("text", { x: L + hr * cw, y: 7 * ch + 11, class: "axis" });
+      t.textContent = `${hr}`;
+      svg.append(t);
+    }
+    return svg;
+  }
+  function shareBar(cats, { onPick } = {}) {
+    const bar = h("div", { class: "share" });
+    const legend = h("div", { class: "legend" });
+    const colors = catColors(cats.list.map((c) => c.name));
+    for (const c of cats.list) {
+      const color2 = colors.get(c.name);
+      const label = catLabel(c.name);
+      bar.append(h("span", { title: `${label}: ${Math.round(c.share * 100)} %`, style: { flex: `${c.share} 0 0`, background: color2 } }));
+      const item = h("button", { type: "button", class: "leg", disabled: c.other || !onPick }, h("i", { style: { background: color2 } }), `${label} `, h("small", { text: `${Math.round(c.share * 100)} %` }));
+      if (onPick && !c.other) item.addEventListener("click", () => onPick(c.name));
+      legend.append(item);
+    }
+    return h("div", null, bar, legend);
+  }
+  function rankList(list, { color: color2, onPick, sub } = {}) {
+    const max = Math.max(1, ...list.map((x) => x.sec));
+    return h("ol", { class: "rank" }, ...list.map((x) => {
+      let trend = null;
+      if (x.prevPlace == null && x.place) trend = h("span", { class: "tr new", text: "neu" });
+      else if (x.prevPlace && x.prevPlace > x.place) trend = h("span", { class: "tr up", text: `▲${x.prevPlace - x.place}` });
+      else if (x.prevPlace && x.prevPlace < x.place) trend = h("span", { class: "tr down", text: `▼${x.place - x.prevPlace}` });
+      const row2 = h(
+        "li",
+        { class: onPick ? "pick" : null },
+        h("div", { class: "rl" }, h("span", { class: "nm", text: x.name }), trend, h("span", { class: "val", text: mins(x.sec) })),
+        sub ? h("small", { text: sub(x) }) : null,
+        h("div", { class: "rb" }, h("span", { style: { width: `${x.sec / max * 100}%`, background: color2 } }))
+      );
+      if (onPick) row2.addEventListener("click", () => onPick(x));
+      return row2;
+    }));
+  }
+  function skipBins(bins, color2) {
+    const max = Math.max(1, ...bins);
+    const svg = s("svg", { viewBox: "0 0 200 60", class: "chart small", role: "img" });
+    bins.forEach((v, i) => {
+      const hgt = v / max * 44;
+      svg.append(s("rect", { x: i * 20 + 1, y: 46 - hgt, width: 18, height: Math.max(1, hgt), rx: 2, fill: color2, opacity: v ? 1 : 0.2 }, title(`${i * 10}–${i * 10 + 10} %: ${v}`)));
+    });
+    for (const [x, l] of [[1, "0 %"], [100, "50 %"], [199, "100 %"]]) {
+      const t = s("text", { x, y: 58, "text-anchor": x > 150 ? "end" : x > 50 ? "middle" : "start", class: "axis" });
+      t.textContent = l;
+      svg.append(t);
+    }
+    return svg;
+  }
+  function hourBars(hours, color2) {
+    const max = Math.max(1, ...hours);
+    const svg = s("svg", { viewBox: "0 0 240 56", class: "chart small", role: "img" });
+    hours.forEach((v, i) => {
+      const hgt = v / max * 40;
+      svg.append(s("rect", { x: i * 10 + 0.5, y: 42 - hgt, width: 9, height: Math.max(1, hgt), rx: 1.5, fill: color2, opacity: v ? 1 : 0.2 }, title(`${i}–${i + 1} Uhr: ${mins(v)}`)));
+    });
+    for (const hr of [0, 6, 12, 18, 23]) {
+      const t = s("text", { x: hr * 10 + 4, y: 54, "text-anchor": "middle", class: "axis" });
+      t.textContent = `${hr}`;
+      svg.append(t);
+    }
+    return svg;
+  }
+  var CHART_CSS = `
+.chart { width: 100%; height: auto; display: block; color: var(--fg2); overflow: visible; }
+.chart .axis { font-size: 8px; fill: var(--fg2); }
+.chart.small { max-width: 360px; }
+.chart .pick { cursor: pointer; }
+.share { display: flex; height: 14px; border-radius: 7px; overflow: hidden; margin: 6px 0; gap: 1px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+.leg { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; color: var(--fg); padding: 2px 0; font: inherit; cursor: pointer; }
+.leg[disabled] { cursor: default; }
+.leg i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.leg small, .rank small { color: var(--fg2); }
+.rank { list-style: none; margin: 4px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rank li.pick { cursor: pointer; }
+.rank .rl { display: flex; align-items: baseline; gap: 6px; }
+.rank .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank .val { color: var(--fg2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rank .rb { height: 4px; border-radius: 2px; background: color-mix(in srgb, var(--fg2) 18%, transparent); margin-top: 2px; }
+.rank .rb span { display: block; height: 100%; border-radius: 2px; }
+.tr { font-size: 10px; font-weight: 600; }
+.tr.up { color: #3fbf5f; }
+.tr.down { color: #ff5a4f; }
+.tr.new { color: var(--accent); }
+`;
+
+  // src/features/stats/view.js
+  var KINDS = [["week", "Woche"], ["month", "Monat"], ["year", "Jahr"], ["all", "Gesamt"]];
+  var SRCS = [["all", "Alle"], ["yt", "YouTube"], ["music", "Music"]];
+  var pct = (x) => x == null ? "–" : `${Math.round(x * 100)} %`;
+  var change = (cur, prev2) => prev2 ? `${cur >= prev2 ? "+" : "−"}${Math.round(Math.abs(cur / prev2 - 1) * 100)} %` : null;
+  var VIEW_CSS = `
+.st { display: flex; flex-direction: column; gap: 4px; }
+.st .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.st .nav { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+.st .nav button { border: 1px solid var(--line); background: none; color: var(--fg); border-radius: 50%; width: 26px; height: 26px; cursor: pointer; }
+.st .nav span { min-width: 90px; text-align: center; font-weight: 500; }
+.st .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 6px; margin: 6px 0; }
+.st .kpi { background: var(--hover); border-radius: 10px; padding: 8px 10px; }
+.st .kpi b { display: block; font-size: 15px; font-weight: 600; white-space: nowrap; }
+.st .kpi small { color: var(--fg2); }
+.st .kpi .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+.st .cols { display: grid; gap: 4px 20px; }
+.st.full .cols { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.st .sec h3 { display: flex; align-items: center; gap: 6px; }
+.st .sec h3 i { width: 8px; height: 8px; border-radius: 50%; }
+.st .note { color: var(--fg2); font-size: 11px; }
+.st .pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.st .pill { background: var(--hover); border-radius: 12px; padding: 4px 10px; }
+.st .back { align-self: flex-start; }
+.st .heat2 { display: grid; gap: 8px; }
+.st.full .heat2 { grid-template-columns: 1fr 1fr; }
+.st .heat2 small { color: var(--fg2); }
+`;
+  var full = null;
+  function closeFull() {
+    full?.remove();
+    full = null;
+  }
+  function openFull() {
+    closeFull();
+    full = h("ytx-stats", { "data-ytx-own": "" });
+    const shadow = full.attachShadow({ mode: "closed" });
+    const style = document.createElement("style");
+    style.textContent = `${PANEL_CSS}
+${CHART_CSS}
+${VIEW_CSS}
+.panel.fullv { inset: 0; top: 0; right: 0; bottom: 0; width: auto; max-width: none; max-height: none; border-radius: 0; resize: none; z-index: 2300; }
+.fullv header { cursor: default; }
+.fullv main { padding: 12px 16px 40px; max-width: 1100px; width: 100%; margin: 0 auto; }
+.fullv .chart:not(.small) { max-width: 760px; margin: 0 auto; }`;
+    const close = h("button", { class: "iconbtn", title: "Schließen", text: "✕" });
+    close.addEventListener("click", closeFull);
+    const main = h("main");
+    shadow.append(style, h("div", { class: "panel fullv" }, h("header", null, h("span", { class: "logo", text: "ytx Statistik" }), h("span", { style: { flex: "1" } }), close), main));
+    document.body.append(full);
+    renderStats(main, { full: true });
+  }
+  function renderStats(root, { full: isFull = false, onFull } = {}) {
+    const ui = { kind: "week", offset: 0, src: "all", detail: null };
+    const st = { events: [], remote: [], syncNote: "", syncing: false, devices: 0 };
+    const box2 = h("div", { class: ["st", isFull && "full"] });
+    if (!isFull) {
+      const style = h("style", { text: `${CHART_CSS}
+${VIEW_CSS}` });
+      root.append(style);
+    }
+    root.append(box2);
+    const limit = isFull ? 10 : 5;
+    const chip = (label, on, fn) => {
+      const b = h("button", { type: "button", class: "chip", "aria-pressed": String(on), text: label });
+      b.addEventListener("click", fn);
+      return b;
+    };
+    function controls4(p, { noSrc = false } = {}) {
+      const prev2 = h("button", { type: "button", title: "Zeitraum davor", text: "‹" });
+      const next = h("button", { type: "button", title: "Zeitraum danach", text: "›", disabled: ui.offset >= 0 });
+      prev2.addEventListener("click", () => (ui.offset -= 1, draw()));
+      next.addEventListener("click", () => (ui.offset = Math.min(0, ui.offset + 1), draw()));
+      return h(
+        "div",
+        { class: "bar" },
+        h("div", { class: "chips" }, ...KINDS.map(([k, l]) => chip(l, ui.kind === k, () => (ui.kind = k, ui.offset = 0, draw())))),
+        ui.kind === "all" ? null : h("div", { class: "nav" }, prev2, h("span", { text: p.label }), next),
+        noSrc ? null : h("div", { class: "chips" }, ...SRCS.map(([k, l]) => chip(l, ui.src === k, () => (ui.src = k, draw())))),
+        onFull ? h("button", { type: "button", class: "chip", text: "⤢ Groß", onclick: onFull }) : null
+      );
+    }
+    const events = () => {
+      const all = [...st.events, ...st.remote];
+      return ui.src === "all" ? all : all.filter((e) => e.src === ui.src);
+    };
+    const openDetail = (d) => {
+      ui.detail = d;
+      draw();
+      box2.scrollIntoView?.({ block: "start" });
+    };
+    function kpi(label, value, sub, color2) {
+      return h("div", { class: "kpi" }, h("b", { text: value }), h("small", null, color2 ? h("span", { class: "dot", style: { background: color2 } }) : null, label, sub ? ` · ${sub}` : ""));
+    }
+    function sideSection(r, src2) {
+      const side = r[src2];
+      const color2 = SRC_COLOR[src2];
+      const isYt = src2 === "yt";
+      const sec = h("div", { class: "sec" }, h("h3", null, h("i", { style: { background: color2 } }), SRC_LABEL[src2]));
+      if (!side.sec) {
+        sec.append(h("p", { class: "muted", text: "Keine Daten in diesem Zeitraum." }));
+        return sec;
+      }
+      sec.append(h("h3", { text: isYt ? "YouTuber" : "Künstler" }), rankList(side.top, { color: color2, onPick: (x) => openDetail({ src: src2, key: x.key }), sub: (x) => `${x.count} ${isYt ? "Videos" : "Songs"}` }));
+      sec.append(h("h3", { text: isYt ? "Videos" : "Songs" }), rankList(side.items.slice(0, limit), { color: color2, sub: (x) => `${x.by} · ${x.count}×` }));
+      sec.append(h("h3", { text: isYt ? "Kategorien & Gruppen" : "Genres" }));
+      if (side.cats.list.length) sec.append(shareBar(side.cats, { onPick: (cat) => openDetail({ src: src2, cat }) }));
+      if (side.cats.unknownSec) sec.append(h("p", { class: "note", text: isYt ? `${mins(side.cats.unknownSec)} ohne Kategorie (ältere Einträge vor dem 22.11.2026)` : `${mins(side.cats.unknownSec)} noch ohne Genre. Genres ergänzt später der Mini-PC (MusicBrainz).` }));
+      const b = side.behavior;
+      const ses = side.sessions;
+      const avg = ses.length ? ses.reduce((n, x) => n + x.sec, 0) / ses.length : 0;
+      sec.append(h("h3", { text: "Verhalten" }), h(
+        "div",
+        { class: "kpis" },
+        kpi(isYt ? "zu Ende geschaut" : "zu Ende gehört", pct(b.done)),
+        kpi(isYt ? "früh abgebrochen" : "übersprungen", pct(b.skipped)),
+        isYt ? kpi("Shorts", pct(side.sec ? b.shorts / side.sec : 0)) : kpi("Likes", String(b.liked)),
+        kpi("Ø Sitzung", mins(avg), `${ses.length}×`)
+      ));
+      if (b.skipBins.some(Boolean)) sec.append(h("div", { class: "note", text: isYt ? "Wie weit du Videos schaust" : "Wo du überspringst (Stelle im Song)" }), skipBins(b.skipBins, color2));
+      return sec;
+    }
+    function overview(r) {
+      const p = r.period;
+      const nodes = [controls4(p)];
+      if (!r.total) {
+        nodes.push(h("p", { class: "muted", text: "In diesem Zeitraum keine Daten. Schauzeit (YouTube) und Hörverlauf (Music) müssen an sein." }));
+        return nodes;
+      }
+      nodes.push(h(
+        "div",
+        { class: "kpis" },
+        kpi("gesamt", mins(r.total), r.prevPeriod ? `${change(r.total, r.prevTotal) || "neu"} zu davor` : null),
+        ui.src !== "music" ? kpi("YouTube", mins(r.yt.sec), change(r.yt.sec, r.yt.prevSec), SRC_COLOR.yt) : null,
+        ui.src !== "yt" ? kpi("Music", mins(r.music.sec), change(r.music.sec, r.music.prevSec), SRC_COLOR.music) : null,
+        kpi("neu entdeckt", String(r.discovery.fresh), `${pct(r.discovery.newShare)} der Zeit`)
+      ));
+      const srcs = ui.src === "all" ? ["yt", "music"] : [ui.src];
+      nodes.push(h("h3", { text: { day: "Pro Tag", week: "Pro Woche", month: "Pro Monat" }[r.unit] }), stackedBars(r.bars, { srcs }));
+      nodes.push(h("h3", { text: "Wann" }), h("div", { class: "heat2" }, ...srcs.map((k) => h("div", null, srcs.length > 1 ? h("small", { text: SRC_LABEL[k] }) : null, heatmap(r.heat[k], SRC_COLOR[k])))));
+      nodes.push(h("div", { class: "cols" }, ...srcs.map((k) => sideSection(r, k))));
+      const extra = h("div", { class: "sec" }, h("h3", { text: "Rekorde & Meilensteine" }));
+      const rec = r.records;
+      extra.append(h(
+        "div",
+        { class: "pills" },
+        h("span", { class: "pill", text: `längste Serie ${rec.streak} Tage` }),
+        rec.topDay ? h("span", { class: "pill", text: `stärkster Tag ${formatDate(rec.topDay.day)} · ${mins(rec.topDay.sec)}` }) : null,
+        rec.longestSession ? h("span", { class: "pill", text: `längste Sitzung ${mins(rec.longestSession.sec)}` }) : null,
+        h("span", { class: "pill", text: `seit Beginn ${mins(rec.totalSec)}` })
+      ));
+      if (r.milestones.length) extra.append(h("div", { class: "pills", style: { marginTop: "6px" } }, ...r.milestones.map((m) => h("span", { class: "pill", text: `${m.n}. Mal ${m.name}` }))));
+      if (r.discovery.freshList.length) {
+        extra.append(h("h3", { text: `Neu entdeckt · ${r.discovery.fresh}` }), h("div", { class: "pills" }, ...r.discovery.freshList.slice(0, isFull ? 30 : 12).map((x) => {
+          const b = h("button", { type: "button", class: "chip", text: x.name, style: { borderColor: SRC_COLOR[x.src] } });
+          b.addEventListener("click", () => openDetail({ src: x.src, key: x.key }));
+          return b;
+        })));
+      }
+      nodes.push(extra);
+      return nodes;
+    }
+    function detailView(d, p) {
+      const r = detail([...st.events, ...st.remote], d, p);
+      const color2 = d.cat ? catColor(d.cat) : SRC_COLOR[d.src];
+      const back = h("button", { type: "button", class: "chip back", text: "‹ Übersicht" });
+      back.addEventListener("click", () => (ui.detail = null, draw()));
+      const bars3 = r.bars.map((x) => ({ ...x, [d.src]: x.sec }));
+      return [
+        back,
+        controls4(p, { noSrc: true }),
+        h("h3", { text: d.cat ? catLabel(d.cat) : r.name, style: { fontSize: "15px", textTransform: "none", color: "var(--fg)" } }),
+        h(
+          "div",
+          { class: "kpis" },
+          kpi("in diesem Zeitraum", mins(r.total), `${r.count}×`, color2),
+          kpi("seit Beginn", mins(r.allTime)),
+          kpi("zuerst", r.first ? formatDate(new Date(r.first).toISOString()) : "–"),
+          kpi(d.src === "yt" ? "zu Ende geschaut" : "zu Ende gehört", pct(r.behavior.done))
+        ),
+        h("h3", { text: "Verlauf" }),
+        stackedBars(bars3, { srcs: [d.src] }),
+        h("h3", { text: "Uhrzeit" }),
+        hourBars(r.hours, color2),
+        h("h3", { text: d.src === "yt" ? "Videos" : "Songs" }),
+        r.items.length ? rankList(r.items, { color: color2, sub: (x) => `${x.count}×` }) : h("p", { class: "muted", text: "Keine in diesem Zeitraum." })
+      ];
+    }
+    function syncLine() {
+      const t = st.syncing ? "gleicht mit der Nextcloud ab …" : st.syncNote;
+      return h("p", { class: "note", text: t });
+    }
+    function draw() {
+      const p = period(ui.kind, Date.now(), ui.offset, Math.min(Date.now(), ...[...st.events, ...st.remote].map((e) => e.start)));
+      const body = ui.detail ? detailView(ui.detail, p) : overview(analyze(events(), p, { limit }));
+      box2.replaceChildren(...body, syncLine());
+    }
+    async function load5() {
+      box2.replaceChildren(h("p", { class: "muted", text: "rechnet …" }));
+      try {
+        st.events = await localEvents(0);
+        st.remote = await cachedRemote();
+      } catch (e) {
+        box2.replaceChildren(h("p", { class: "err", text: e.message }));
+        return;
+      }
+      draw();
+      st.syncing = true;
+      draw();
+      try {
+        await pushHistory();
+        const r = await remoteEvents();
+        st.remote = r.events;
+        st.syncNote = r.note || `Daten von ${r.devices} Gerät${r.devices === 1 ? "" : "en"} · ${r.files} Dateien aus der Nextcloud`;
+      } catch (e) {
+        st.syncNote = `Abgleich nicht möglich: ${e.message}. Gezeigt wird der letzte Stand.`;
+      }
+      st.syncing = false;
+      draw();
+    }
+    load5();
+    return { reload: load5 };
+  }
+
+  // src/behaviors/statsSync.js
+  var EVERY = 6 * 3600 * 1e3;
+  var key = () => `ytx.statsPush.${site2.id}`;
+  function last() {
+    try {
+      return Number(localStorage.getItem(key())) || 0;
+    } catch {
+      return 0;
+    }
+  }
+  var statsSync = {
+    id: "statsSync",
+    label: "Statistik über Nextcloud abgleichen",
+    description: "Legt Schauzeit und Hörverlauf dieses Geräts alle 6 Stunden in der Nextcloud ab (ytx/history), damit die Statistik auf allen Geräten alles zeigt. Nur wenn die Nextcloud im Tab Profile eingerichtet ist",
+    type: "toggle",
+    default: true,
+    start() {
+      const state2 = { at: last(), error: null, pushed: null };
+      const t = setTimeout(async () => {
+        if (!cloudReady() || Date.now() - state2.at < EVERY) return;
+        try {
+          state2.pushed = await pushHistory();
+          state2.at = Date.now();
+          try {
+            localStorage.setItem(key(), String(state2.at));
+          } catch {
+          }
+        } catch (e) {
+          state2.error = e.message;
+        }
+      }, 6e4);
+      statsSync.state = state2;
+      return () => {
+        clearTimeout(t);
+        closeFull();
+      };
+    },
+    health() {
+      const s2 = statsSync.state;
+      if (!cloudReady()) return { status: "skip", detail: "Nextcloud nicht eingerichtet" };
+      if (s2?.error) return { status: "warn", detail: s2.error };
+      return { status: "ok", detail: s2?.at ? `zuletzt ${new Date(s2.at).toLocaleString("de-DE")}` : "noch nicht abgeglichen" };
     }
   };
 
@@ -3214,7 +6522,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     shareClean,
     dislikeCount,
     likeCount,
-    typeRadar
+    typeRadar,
+    statsSync
   ];
   function parseFlags(text) {
     const out = {};
@@ -3235,12 +6544,12 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     CARD_SELECTORS: () => CARD_SELECTORS2,
     activePageRoots: () => activePageRoots2,
     activePlayback: () => activePlayback2,
-    channelPageInfo: () => channelPageInfo2,
+    channelPageInfo: () => channelPageInfo3,
     pauseActive: () => pauseActive2,
     playlistPage: () => playlistPage2,
     playlistPanel: () => playlistPanel2,
-    readCard: () => readCard2,
-    subscribedChannels: () => subscribedChannels2,
+    readCard: () => readCard3,
+    subscribedChannels: () => subscribedChannels3,
     videoMenu: () => videoMenu2,
     watch: () => watch2
   });
@@ -3260,14 +6569,14 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       return {};
     }
   }
-  function readCard2(el) {
+  function readCard3(el) {
     const a = qs('a[href^="/watch"], a[href^="/shorts/"], a[href^="/playlist"]', el);
     const href = a?.getAttribute("href") || "";
     const info2 = parseHref2(href);
     const channelLink = qs('a[href^="/@"], a[href^="/channel/"]', el);
     const lines2 = qsa(".ytmBadgeAndBylineRendererItemByline, ytm-badge-and-byline-renderer", el).map((x) => x.textContent.trim()).filter(Boolean);
-    const parts = lines2.flatMap((l) => l.split("•").map((s) => s.trim())).filter(Boolean);
-    const title = (qs('.media-item-headline, h3, [class*="Headline"], [class*="Title"]', el)?.textContent || a?.getAttribute("title") || a?.getAttribute("aria-label") || "").trim();
+    const parts = lines2.flatMap((l) => l.split("•").map((s2) => s2.trim())).filter(Boolean);
+    const title2 = (qs('.media-item-headline, h3, [class*="Headline"], [class*="Title"]', el)?.textContent || a?.getAttribute("title") || a?.getAttribute("aria-label") || "").trim();
     const badge2 = qs("ytm-thumbnail-overlay-time-status-renderer, badge-shape", el);
     const live = badge2?.getAttribute("data-style") === "LIVE" || /live/i.test(badge2?.className || "");
     const bar = qs('ytm-thumbnail-overlay-resume-playback-renderer [style*="width"], [class*="ResumePlayback"] [style*="width"], [class*="ProgressBarSegment"][style*="width"]', el);
@@ -3280,7 +6589,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     return {
       kind: href.startsWith("/playlist") ? "playlist" : info2.radio ? "mix" : "video",
       videoId: info2.videoId || null,
-      title,
+      title: title2,
       // erste zeile der byline ist der kanal, avatar link liefert das handle
       channel: isShort ? "" : parts[0] || "",
       channelUrl: channelLink?.getAttribute("href") || "",
@@ -3292,14 +6601,14 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       ageDays
     };
   }
-  function channelPageInfo2() {
+  function channelPageInfo3() {
     const m = location.pathname.match(/^\/(@[^/]+)/);
     const id = (location.pathname.match(/^\/channel\/(UC[\w-]{22})/) || [])[1] || null;
     if (!m && !id) return null;
     const name = qs("ytm-browse yt-page-header-view-model h1, ytm-browse yt-page-header-renderer h1, ytm-browse .page-header-view-model-wiz__page-header-title")?.textContent.trim() || "";
     return { id, handle: m ? decodeURIComponent(m[1]).toLowerCase() : null, name: name || (m ? decodeURIComponent(m[1]).slice(1) : "") };
   }
-  function subscribedChannels2() {
+  function subscribedChannels3() {
     return [];
   }
   function mainPlayer2() {
@@ -3364,10 +6673,10 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     chapters() {
       const out = [];
       for (const el of qsa("ytm-macro-markers-list-item-renderer")) {
-        const title = qs('h4, [class*="title" i]', el)?.textContent.trim() || "";
+        const title2 = qs('h4, [class*="title" i]', el)?.textContent.trim() || "";
         const time = qs('[class*="time" i]', el)?.textContent.trim() || "";
         const sec = parseDuration(time);
-        if (title && sec != null && !out.some((c) => c.startSec === sec)) out.push({ title, startSec: sec });
+        if (title2 && sec != null && !out.some((c) => c.startSec === sec)) out.push({ title: title2, startSec: sec });
       }
       return out.length ? out : chaptersFromDescription(this.description());
     },
@@ -3451,9 +6760,9 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     readElement(el) {
       const a = qs('a[href*="/watch?"]', el);
       const videoId = a ? new URL(a.getAttribute("href"), location.origin).searchParams.get("v") : null;
-      const title = qs('h4, [class*="Headline"]', el)?.textContent.trim() || "";
+      const title2 = qs('h4, [class*="Headline"]', el)?.textContent.trim() || "";
       const channel = qs('[class*="Byline"], [class*="Subhead"], [class*="subhead"]', el)?.textContent.trim() || "";
-      return videoId ? { videoId, title, channel } : null;
+      return videoId ? { videoId, title: title2, channel } : null;
     }
   };
   var videoMenu2 = {
@@ -3475,7 +6784,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
   var playlistPage3 = src.playlistPage;
   var playlistPanel3 = src.playlistPanel;
   var videoMenu3 = src.videoMenu;
-  var readCard3 = src.readCard;
+  var readCard4 = src.readCard;
 
   // src/features/youtube/transcript/panelSource.js
   var PANEL = 'ytd-engagement-panel-section-list-renderer[target-id="engagement-panel-searchable-transcript"]';
@@ -3514,15 +6823,15 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     try {
       const first = await waitFor(() => qsa(SEGMENTS).length || null, { timeout: 9e3, interval: 200 });
       if (!first) return null;
-      let last2 = -1;
+      let last3 = -1;
       for (let i = 0; i < 10; i++) {
         const n = qsa(SEGMENTS).length;
-        if (n === last2) break;
-        last2 = n;
+        if (n === last3) break;
+        last3 = n;
         await sleep(250);
       }
       const segs = readSegments();
-      return segs.length ? { events: segs.map((s) => ({ tStartMs: s.startMs, dDurationMs: Math.max(0, s.endMs - s.startMs), segs: [{ utf8: s.text }] })) } : null;
+      return segs.length ? { events: segs.map((s2) => ({ tStartMs: s2.startMs, dDurationMs: Math.max(0, s2.endMs - s2.startMs), segs: [{ utf8: s2.text }] })) } : null;
     } finally {
       if (opened) {
         const p = qsa(PANEL).find((x) => x.getAttribute("visibility") === "ENGAGEMENT_PANEL_VISIBILITY_EXPANDED");
@@ -3675,10 +6984,10 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
   function buildUrl(base2, track) {
     const u = new URL(base2);
     const t = new URL(track.baseUrl, location.origin);
-    for (const key of ["lang", "kind", "name", "tlang"]) {
-      const v = t.searchParams.get(key);
-      if (v) u.searchParams.set(key, v);
-      else u.searchParams.delete(key);
+    for (const key2 of ["lang", "kind", "name", "tlang"]) {
+      const v = t.searchParams.get(key2);
+      if (v) u.searchParams.set(key2, v);
+      else u.searchParams.delete(key2);
     }
     if (track.kind) u.searchParams.set("kind", track.kind);
     u.searchParams.set("fmt", "json3");
@@ -3690,11 +6999,11 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     if (!res.ok || !text.trim()) return null;
     return JSON.parse(text);
   }
-  var cache = /* @__PURE__ */ new Map();
+  var cache2 = /* @__PURE__ */ new Map();
   var adShowing = () => !!document.querySelector("#movie_player.ad-showing");
   async function fetchTrack(videoId, track, { onStatus } = {}) {
-    const key = `${videoId}|${track.id}`;
-    if (cache.has(key)) return cache.get(key);
+    const key2 = `${videoId}|${track.id}`;
+    if (cache2.has(key2)) return cache2.get(key2);
     const t0 = performance.now();
     let json = null;
     let base2 = hasToken(videoId) ? tokenUrls.get(videoId) : null;
@@ -3739,8 +7048,8 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       throw new Error(`Transkript nicht verfügbar: ${hint}`);
     }
     sourceStats.lastError = null;
-    if (sourceStats.lastMethod.startsWith("Token")) cache.set(key, json);
-    if (cache.size > 20) cache.delete(cache.keys().next().value);
+    if (sourceStats.lastMethod.startsWith("Token")) cache2.set(key2, json);
+    if (cache2.size > 20) cache2.delete(cache2.keys().next().value);
     return json;
   }
 
@@ -3749,7 +7058,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     const segs = [];
     for (const ev of json.events || []) {
       if (!ev.segs) continue;
-      const raw = ev.segs.map((s) => s.utf8 || "").join("");
+      const raw = ev.segs.map((s2) => s2.utf8 || "").join("");
       const text = raw.replace(/\s+/g, " ").trim();
       if (!text) continue;
       const startMs = ev.tStartMs || 0;
@@ -3760,21 +7069,21 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       if (segs[i].endMs > segs[i + 1].startMs) segs[i].endMs = Math.max(segs[i].startMs, segs[i + 1].startMs);
     }
     const out = [];
-    for (const s of segs) {
+    for (const s2 of segs) {
       const prev2 = out[out.length - 1];
-      if (prev2 && prev2.text === s.text && s.startMs - prev2.endMs < 1500) {
-        prev2.endMs = s.endMs;
+      if (prev2 && prev2.text === s2.text && s2.startMs - prev2.endMs < 1500) {
+        prev2.endMs = s2.endMs;
         continue;
       }
-      out.push(s);
+      out.push(s2);
     }
     return out;
   }
   var TAG_RE = /\[(?:musik|music|applaus|applause|gelächter|laughter|lachen|geräusche|noise|__)\]|\((?:musik|music|applaus|applause)\)|♪+/gi;
   function cleanSegments(segs, { stripTags = true, speakerHeuristic = true } = {}) {
     const out = [];
-    for (const s of segs) {
-      let text = s.text;
+    for (const s2 of segs) {
+      let text = s2.text;
       let speaker = false;
       if (speakerHeuristic && /^(>>|&gt;&gt;|- )/.test(text)) {
         speaker = true;
@@ -3782,7 +7091,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       }
       if (stripTags) text = text.replace(TAG_RE, "").replace(/\s+/g, " ").trim();
       if (!text) continue;
-      out.push({ ...s, text, speaker });
+      out.push({ ...s2, text, speaker });
     }
     return out;
   }
@@ -3799,33 +7108,33 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
       return idx;
     };
     for (let i = 0; i < segs.length; i++) {
-      const s = segs[i];
+      const s2 = segs[i];
       const prev2 = segs[i - 1];
-      let title = null;
+      let title2 = null;
       if (useChapters) {
-        const idx = chapterFor(s.startMs);
+        const idx = chapterFor(s2.startMs);
         if (idx !== chIdx) {
           chIdx = idx;
-          if (idx >= 0) title = chapters[idx].title;
+          if (idx >= 0) title2 = chapters[idx].title;
         }
       }
-      const gap = prev2 ? s.startMs - prev2.endMs : 0;
+      const gap = prev2 ? s2.startMs - prev2.endMs : 0;
       const long = cur && cur.chars > maxChars && SENTENCE_END.test(prev2?.text || "");
-      const brk = !cur || title !== null || s.speaker || splitPause && (gap >= pauseMs || long);
+      const brk = !cur || title2 !== null || s2.speaker || splitPause && (gap >= pauseMs || long);
       if (brk) {
-        cur = { startMs: s.startMs, title, segs: [], chars: 0 };
+        cur = { startMs: s2.startMs, title: title2, segs: [], chars: 0 };
         paras.push(cur);
       }
-      cur.segs.push(s);
-      cur.chars += s.text.length + 1;
+      cur.segs.push(s2);
+      cur.chars += s2.text.length + 1;
     }
     return paras;
   }
   function stats(segs) {
-    const words = segs.reduce((n, s) => n + s.text.split(/\s+/).filter(Boolean).length, 0);
+    const words = segs.reduce((n, s2) => n + s2.text.split(/\s+/).filter(Boolean).length, 0);
     return { words, readingMin: Math.max(1, Math.round(words / 230)) };
   }
-  var joinText = (segs) => segs.map((s) => s.text).join(" ").replace(/\s+([,.!?;:])/g, "$1");
+  var joinText = (segs) => segs.map((s2) => s2.text).join(" ").replace(/\s+([,.!?;:])/g, "$1");
   function videoLink(videoId, sec) {
     return `https://www.youtube.com/watch?v=${videoId}${sec ? `&t=${Math.floor(sec)}s` : ""}`;
   }
@@ -3844,16 +7153,16 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
   }
   function render(format, { meta, segs, paras }, { header = true, timestampEvery = "paragraph" } = {}) {
     if (format === "srt") {
-      return segs.map((s, i) => `${i + 1}
-${subtitleTime(s.startMs, ",")} --> ${subtitleTime(Math.max(s.endMs, s.startMs + 500), ",")}
-${s.text}
+      return segs.map((s2, i) => `${i + 1}
+${subtitleTime(s2.startMs, ",")} --> ${subtitleTime(Math.max(s2.endMs, s2.startMs + 500), ",")}
+${s2.text}
 `).join("\n");
     }
     if (format === "vtt") {
       return `WEBVTT
 
-${segs.map((s) => `${subtitleTime(s.startMs, ".")} --> ${subtitleTime(Math.max(s.endMs, s.startMs + 500), ".")}
-${s.text}
+${segs.map((s2) => `${subtitleTime(s2.startMs, ".")} --> ${subtitleTime(Math.max(s2.endMs, s2.startMs + 500), ".")}
+${s2.text}
 `).join("\n")}`;
     }
     const out = [];
@@ -3862,7 +7171,7 @@ ${s.text}
       for (const p of paras) {
         if (p.title) out.push(`## [${p.title}](${videoLink(meta.videoId, p.startMs / 1e3)})`, "");
         if (timestampEvery === "segment") {
-          out.push(p.segs.map((s) => `[${clock(s.startMs / 1e3)}](${videoLink(meta.videoId, s.startMs / 1e3)}) ${s.text}`).join("  \n"), "");
+          out.push(p.segs.map((s2) => `[${clock(s2.startMs / 1e3)}](${videoLink(meta.videoId, s2.startMs / 1e3)}) ${s2.text}`).join("  \n"), "");
         } else {
           out.push(`[${clock(p.startMs / 1e3)}](${videoLink(meta.videoId, p.startMs / 1e3)}) ${joinText(p.segs)}`, "");
         }
@@ -3873,7 +7182,7 @@ ${s.text}
     for (const p of paras) {
       if (p.title) out.push(format === "timestamps" ? `[${clock(p.startMs / 1e3)}] ${p.title}` : p.title, "");
       if (format === "timestamps") {
-        if (timestampEvery === "segment") out.push(p.segs.map((s) => `[${clock(s.startMs / 1e3)}] ${s.text}`).join("\n"), "");
+        if (timestampEvery === "segment") out.push(p.segs.map((s2) => `[${clock(s2.startMs / 1e3)}] ${s2.text}`).join("\n"), "");
         else out.push(`[${clock(p.startMs / 1e3)}] ${joinText(p.segs)}`, "");
       } else {
         out.push(joinText(p.segs), "");
@@ -3888,202 +7197,6 @@ ${s.text}
     srt: "SRT-Untertitel",
     vtt: "WebVTT-Untertitel"
   };
-
-  // src/core/css.js
-  var sheets = /* @__PURE__ */ new Map();
-  function setCss(id, text) {
-    let el = sheets.get(id);
-    if (!el) {
-      el = document.createElement("style");
-      el.setAttribute("data-ytx-own", "");
-      el.setAttribute("data-ytx-css", id);
-      sheets.set(id, el);
-    }
-    if (el.textContent !== text) el.textContent = text;
-    if (!el.isConnected) (document.head || document.documentElement).append(el);
-  }
-  function removeCss(id) {
-    const el = sheets.get(id);
-    if (el) {
-      el.remove();
-      sheets.delete(id);
-    }
-  }
-  function ensureCss() {
-    for (const el of sheets.values()) {
-      if (!el.isConnected) (document.head || document.documentElement).append(el);
-    }
-  }
-  function cssStats() {
-    let rules2 = 0;
-    for (const el of sheets.values()) rules2 += el.sheet?.cssRules?.length || 0;
-    return { sheets: sheets.size, rules: rules2 };
-  }
-  onDispose(() => {
-    for (const el of sheets.values()) el.remove();
-    sheets.clear();
-  });
-
-  // src/features/ui.js
-  var CSS = `
-.ytx-btn { all: initial; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 18px; cursor: pointer; white-space: nowrap; user-select: none;
-  font: 500 14px/36px Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); background: var(--yt-sys-color-baseline--tonal-background, rgba(255,255,255,.1)); }
-.ytx-btn:hover { background: var(--yt-sys-color-baseline--mono-tonal-hover, rgba(255,255,255,.2)); }
-.ytx-btn:focus-visible { outline: 2px solid var(--yt-sys-color-baseline--call-to-action, #3ea6ff); }
-.ytx-btn[disabled] { opacity: .5; cursor: default; }
-.ytx-btn .ytx-ico { font-size: 16px; line-height: 1; }
-.ytx-btn, .ytx-split { flex: none !important; }
-.ytx-split { all: initial; display: inline-flex; align-items: stretch; margin-left: 8px; vertical-align: middle; }
-.ytx-modal { position: fixed; z-index: 2500; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.5); }
-.ytx-modal > div { width: min(720px, 92vw); max-height: 80vh; display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 12px;
-  font: 400 14px/1.4 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); background: var(--yt-sys-color-baseline--menu-background, #282828); }
-.ytx-modal textarea { flex: 1; min-height: 300px; resize: vertical; padding: 8px; border-radius: 8px; font: 12px/1.4 ui-monospace, Consolas, monospace;
-  color: inherit; background: var(--yt-sys-color-baseline--raised-background, #1f1f1f); border: 1px solid var(--yt-sys-color-baseline--outline, #444); }
-.ytx-modal .ytx-row { display: flex; gap: 8px; justify-content: flex-end; align-items: center; }
-.ytx-split > .ytx-btn:first-child { border-radius: 18px 0 0 18px; padding-right: 10px; }
-.ytx-split > .ytx-btn:last-child { border-radius: 0 18px 18px 0; padding: 0 10px; border-left: 1px solid var(--yt-sys-color-baseline--outline, rgba(255,255,255,.2)); }
-.ytx-small { height: 28px; line-height: 28px; font-size: 12px; padding: 0 10px; border-radius: 14px; }
-.ytx-inline { all: initial; font: inherit; color: inherit; visibility: inherit; }
-.ytx-note { all: initial; display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font: 400 12px/1.4 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-secondary, #aaa); }
-.ytx-note b { font-weight: 500; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); }
-.ytx-link { all: initial; cursor: pointer; font: 500 12px/1.4 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--call-to-action, #3ea6ff); }
-.ytx-link:hover { text-decoration: underline; }
-.ytx-menu { position: fixed; z-index: 2300; min-width: 240px; max-width: 340px; max-height: 70vh; overflow: auto; padding: 8px 0; border-radius: 12px; box-sizing: border-box;
-  font: 400 14px/1.35 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); background: var(--yt-sys-color-baseline--menu-background, #282828);
-  box-shadow: 0 4px 32px rgba(0,0,0,.4); }
-.ytx-menu-title { padding: 8px 16px 4px; font-size: 11px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--yt-sys-color-baseline--text-secondary, #aaa); }
-.ytx-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 16px; box-sizing: border-box; cursor: pointer; border: 0; background: none; text-align: left; font: inherit; color: inherit; }
-.ytx-menu-item:hover, .ytx-menu-item:focus-visible { outline: none; background: var(--yt-sys-color-baseline--additive-background, rgba(255,255,255,.1)); }
-.ytx-menu-item[disabled] { opacity: .45; cursor: default; background: none; }
-.ytx-menu-item .ytx-check { width: 14px; text-align: center; color: var(--yt-sys-color-baseline--call-to-action, #3ea6ff); }
-.ytx-menu-item .ytx-sub { margin-left: auto; padding-left: 12px; font-size: 12px; color: var(--yt-sys-color-baseline--text-secondary, #aaa); }
-.ytx-menu-sep { height: 1px; margin: 6px 0; background: var(--yt-sys-color-baseline--outline, rgba(255,255,255,.1)); }
-.ytx-menu-foot { padding: 6px 16px 2px; font-size: 12px; color: var(--yt-sys-color-baseline--text-secondary, #aaa); }
-.ytx-toast { position: fixed; z-index: 2400; left: 50%; bottom: 32px; transform: translateX(-50%); max-width: 80vw; padding: 10px 16px; border-radius: 8px;
-  font: 400 14px/1.3 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary-inverse, #0f0f0f); background: var(--yt-sys-color-baseline--inverted-background, #f1f1f1); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
-.ytx-toast[data-kind="error"] { background: #c62828; color: #fff; }
-/* eigener stapel, sonst liegt das abzeichen ueber dem festgehaltenen player */
-:has(> .ytx-badge) { isolation: isolate; }
-.ytx-badge { position: absolute; z-index: 3; right: 4px; top: 4px; padding: 1px 5px; border-radius: 4px; pointer-events: none; font: 500 11px/16px Roboto, Arial, sans-serif; color: #fff; background: rgba(0,0,0,.75); }
-`;
-  function initUiCss() {
-    setCss("ui", CSS);
-  }
-  function button({ label, icon, title, small, onClick }) {
-    const b = h("button", { class: ["ytx-btn", small && "ytx-small"], type: "button", title, "data-ytx-own": "" }, icon && h("span", { class: "ytx-ico", text: icon }), label && h("span", { class: "ytx-label", text: label }));
-    if (onClick)
-      b.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick(e);
-      });
-    return b;
-  }
-  function splitButton({ label, icon, title, onMain, onMenu }) {
-    const main = button({ label, icon, title, onClick: onMain });
-    const more = button({ icon: "▾", title: "Optionen", onClick: (e) => onMenu(more, e) });
-    const wrap = h("div", { class: "ytx-split", "data-ytx-own": "" }, main, more);
-    wrap.main = main;
-    wrap.more = more;
-    return wrap;
-  }
-  var openMenu = null;
-  function closeMenu() {
-    openMenu?.remove();
-    openMenu = null;
-  }
-  function showMenu(anchorEl, items) {
-    const wasOpenForThis = openMenu && openMenu.__anchor === anchorEl;
-    closeMenu();
-    if (wasOpenForThis) return;
-    const menu = h("div", { class: "ytx-menu", role: "menu", "data-ytx-own": "" });
-    menu.__anchor = anchorEl;
-    for (const it of items) {
-      if (!it) continue;
-      if (it.sep) menu.append(h("div", { class: "ytx-menu-sep" }));
-      else if (it.title) menu.append(h("div", { class: "ytx-menu-title", text: it.title }));
-      else if (it.foot) menu.append(h("div", { class: "ytx-menu-foot", text: it.foot }));
-      else {
-        const b = h(
-          "button",
-          { class: "ytx-menu-item", role: "menuitem", type: "button", disabled: it.disabled },
-          it.checked !== void 0 && h("span", { class: "ytx-check", text: it.checked ? "●" : "" }),
-          h("span", { text: it.label }),
-          it.sub && h("span", { class: "ytx-sub", text: it.sub })
-        );
-        b.addEventListener("click", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (!it.keepOpen) closeMenu();
-          it.run?.();
-        });
-        menu.append(b);
-      }
-    }
-    document.body.append(menu);
-    const r = anchorEl.getBoundingClientRect();
-    const mw = menu.offsetWidth;
-    const mh = menu.offsetHeight;
-    let left = Math.min(r.left, window.innerWidth - mw - 8);
-    let top2 = r.bottom + 6;
-    if (top2 + mh > window.innerHeight - 8) top2 = Math.max(8, r.top - mh - 6);
-    menu.style.left = `${Math.max(8, left)}px`;
-    menu.style.top = `${top2}px`;
-    openMenu = menu;
-    menu.querySelector(".ytx-menu-item:not([disabled])")?.focus({ preventScroll: true });
-  }
-  var toastEl = null;
-  var toastTimer = null;
-  function toast(text, kind = "info", ms = 2600) {
-    toastEl?.remove();
-    clearTimeout(toastTimer);
-    toastEl = h("div", { class: "ytx-toast", "data-kind": kind, "data-ytx-own": "", role: "status", text });
-    document.body.append(toastEl);
-    toastTimer = setTimeout(() => {
-      toastEl?.remove();
-      toastEl = null;
-    }, ms);
-  }
-  function textDialog(title, text) {
-    document.querySelector(".ytx-modal")?.remove();
-    const ta = h("textarea", { readonly: true, spellcheck: "false" });
-    ta.value = text;
-    const close = () => modal.remove();
-    const closeBtn = button({ label: "Schließen", onClick: close });
-    const modal = h("div", { class: "ytx-modal", "data-ytx-own": "" }, h("div", null, h("b", { text: title }), h("span", { class: "ytx-note", text: "Die Zwischenablage war blockiert. Text ist markiert – mit Strg+C kopieren." }), ta, h("div", { class: "ytx-row" }, closeBtn)));
-    modal.addEventListener("click", (e) => e.target === modal && close());
-    modal.addEventListener("keydown", (e) => {
-      e.stopPropagation();
-      if (e.key === "Escape") close();
-    });
-    document.body.append(modal);
-    ta.focus();
-    ta.select();
-  }
-  function setButtonBusy(btn2, busy, label) {
-    const l = btn2.querySelector(".ytx-label");
-    if (busy) {
-      btn2.__label ??= l?.textContent;
-      btn2.disabled = true;
-      if (l && label) l.textContent = label;
-    } else {
-      btn2.disabled = false;
-      if (l && btn2.__label != null) l.textContent = btn2.__label;
-      btn2.__label = null;
-    }
-  }
-  function initMenuDismiss() {
-    listen(document, "pointerdown", (e) => {
-      if (openMenu && !e.composedPath().includes(openMenu) && !e.composedPath().includes(openMenu.__anchor)) closeMenu();
-    }, true);
-    listen(document, "keydown", (e) => e.key === "Escape" && closeMenu(), true);
-    listen(window, "resize", closeMenu);
-    listen(document, "yt-navigate-start", closeMenu);
-    onDispose(() => {
-      closeMenu();
-      toastEl?.remove();
-    });
-  }
 
   // src/features/youtube/transcript/index.js
   var FORMATS = Object.entries(FORMAT_LABELS);
@@ -4141,7 +7254,7 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
       ["transcript.quote", "Aktuelle Stelle zitieren", "Alt+Q"]
     ],
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       let tracks = [];
       let chosen = /* @__PURE__ */ new Map();
       let lastStats = null;
@@ -4154,16 +7267,16 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
         const prVid = pr?.videoDetails?.videoId;
         tracks = prVid && prVid === vid ? listTracks(pr) : [];
       };
-      const currentTrack2 = () => chosen.get(ctx.nav.videoId) || pickTrack(tracks, s);
+      const currentTrack2 = () => chosen.get(ctx.nav.videoId) || pickTrack(tracks, s2);
       async function buildDoc(track, onStatus) {
         const vid = ctx.nav.videoId;
         const json = await fetchTrack(vid, track, { onStatus });
         const pr = watch3.playerResponse();
         const vd = pr?.videoDetails || {};
         const segsRaw = parseJson3(json);
-        const segs = cleanSegments(segsRaw, s);
-        const chapters = s.paragraphs === "chapters" ? watch3.chapters() : [];
-        const paras = toParagraphs(segs, { mode: s.paragraphs === "none" ? "none" : s.paragraphs, pauseMs: s.pauseMs, chapters });
+        const segs = cleanSegments(segsRaw, s2);
+        const chapters = s2.paragraphs === "chapters" ? watch3.chapters() : [];
+        const paras = toParagraphs(segs, { mode: s2.paragraphs === "none" ? "none" : s2.paragraphs, pauseMs: s2.pauseMs, chapters });
         const meta = {
           videoId: vid,
           title: vd.title || document.title.replace(/ - YouTube$/, ""),
@@ -4176,7 +7289,7 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
         lastStats = { ...stats(segs), segments: segs.length, track: track.label, video: vid };
         return { meta, segs, paras };
       }
-      async function copy(format = s.format, track = currentTrack2(), btn2) {
+      async function copy(format = s2.format, track = currentTrack2(), btn2) {
         if (busy) return;
         if (!track) return toast("Für dieses Video gibt es kein Transkript", "error");
         busy = true;
@@ -4184,10 +7297,10 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
         try {
           const doc = await buildDoc(track, (label) => btn2 && setButtonBusy(btn2, true, label));
           if (!doc.segs.length) throw new Error("Transkript ist leer");
-          const text = render(format, doc, s);
+          const text = render(format, doc, s2);
           const ok = await ctx.copyText(text);
           lastError = null;
-          const extra = s.showStats ? ` · ${lastStats.words.toLocaleString("de-DE")} Wörter · ~${lastStats.readingMin} min Lesezeit` : "";
+          const extra = s2.showStats ? ` · ${lastStats.words.toLocaleString("de-DE")} Wörter · ~${lastStats.readingMin} min Lesezeit` : "";
           if (ok) toast(`Kopiert: ${FORMAT_LABELS[format]}${extra}`);
           else textDialog(`Transkript (${FORMAT_LABELS[format]})`, text);
         } catch (e) {
@@ -4221,7 +7334,7 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
       function openMenu3(anchor) {
         const cur = currentTrack2();
         const items = [{ title: "Kopieren als" }];
-        for (const [id, label] of FORMATS) items.push({ label, sub: id === s.format ? "Standard" : "", run: () => copy(id, cur, anchor.parentElement?.main) });
+        for (const [id, label] of FORMATS) items.push({ label, sub: id === s2.format ? "Standard" : "", run: () => copy(id, cur, anchor.parentElement?.main) });
         items.push({ sep: true }, { label: "Aktuelle Stelle zitieren", sub: "Alt+Q", run: quote });
         if (tracks.length > 1) {
           items.push({ sep: true }, { title: "Spur" });
@@ -4236,7 +7349,7 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
       const mounts2 = [];
       const mountAll = () => {
         for (const m of mounts2.splice(0)) m.destroy();
-        if (s.placement.includes("actions")) {
+        if (s2.placement.includes("actions")) {
           mounts2.push(
             ctx.mount({
               id: "actions.transcript",
@@ -4244,13 +7357,13 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
               position: "before",
               when: available,
               create: () => {
-                const sb = splitButton({ label: "Transkript", icon: "⧉", title: "Transkript kopieren (Alt+T)", onMain: () => copy(s.format, currentTrack2(), sb.main), onMenu: (more) => openMenu3(more) });
+                const sb = splitButton({ label: "Transkript", icon: "⧉", title: "Transkript kopieren (Alt+T)", onMain: () => copy(s2.format, currentTrack2(), sb.main), onMenu: (more) => openMenu3(more) });
                 return sb;
               }
             })
           );
         }
-        if (s.placement.includes("panel")) {
+        if (s2.placement.includes("panel")) {
           mounts2.push(
             ctx.mount({
               id: "panel.transcript",
@@ -4258,7 +7371,7 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
               position: "append",
               when: available,
               create: () => {
-                const b = button({ label: "Kopieren", icon: "⧉", small: true, title: "Komplettes Transkript kopieren", onClick: () => copy(s.format, currentTrack2(), b) });
+                const b = button({ label: "Kopieren", icon: "⧉", small: true, title: "Komplettes Transkript kopieren", onClick: () => copy(s2.format, currentTrack2(), b) });
                 b.style.marginLeft = "8px";
                 return b;
               }
@@ -4328,11 +7441,11 @@ html[data-ytx-site="mobile"] .ytx-yt-item { min-height: 48px; gap: 12px; padding
         if (!t || t.closest(videoMenu3.popup) || !t.closest("button, yt-icon-button")) return;
         for (const old of qsa(".ytx-yt-item")) old.remove();
         menuFor = null;
-        if (!s.placement.includes("menu")) return;
+        if (!s2.placement.includes("menu")) return;
         const card2 = t.closest(videoMenu3.cards);
         let videoId = null;
         if (card2) {
-          const c = readCard3(card2);
+          const c = readCard4(card2);
           if (c?.kind === "video" && !c.live) videoId = c.videoId;
         } else if (ctx.nav.page === "watch" && t.closest(videoMenu3.watchOwn)) videoId = ctx.nav.videoId;
         if (!videoId) return;
@@ -4360,8 +7473,8 @@ ${MENU_CSS}`);
           checkPending();
         },
         update(next) {
-          const placementChanged = JSON.stringify(next.placement) !== JSON.stringify(s.placement);
-          s = next;
+          const placementChanged = JSON.stringify(next.placement) !== JSON.stringify(s2.placement);
+          s2 = next;
           if (placementChanged) mountAll();
         },
         dispose() {
@@ -4503,32 +7616,32 @@ ${MENU_CSS}`);
       longFormat: { type: "select", label: "Lange Dauer als", options: [["hours", "Stunden (27 h)"], ["days", "Tage (1 d 3 h)"]], default: "hours" }
     },
     setup(ctx) {
-      let s = ctx.settings;
-      let last2 = null;
+      let s2 = ctx.settings;
+      let last3 = null;
       let autoTriedFor = null;
       const rate = () => {
-        if (!s.speed) return null;
-        if (s.speed === "player") {
+        if (!s2.speed) return null;
+        if (s2.speed === "player") {
           const r = player()?.getPlaybackRate?.();
           return r && r !== 1 ? r : null;
         }
-        return Number(s.speed);
+        return Number(s2.speed);
       };
-      const fmt = (sec) => formatDuration(sec, { long: s.longFormat });
+      const fmt = (sec) => formatDuration(sec, { long: s2.longFormat });
       function statsParts(sum, complete, approx) {
         const pre = complete ? "" : "≥ ";
         const parts = [];
-        if (s.show.includes("total")) parts.push([`${pre}${fmt(sum.total)}`, "gesamt"]);
-        if (s.show.includes("watched") && sum.withProgress) parts.push([`~${fmt(sum.watched)}`, "gesehen"]);
-        if (s.show.includes("remaining")) parts.push([`${approx && sum.withProgress ? "~" : pre}${fmt(sum.remaining)}`, "übrig"]);
+        if (s2.show.includes("total")) parts.push([`${pre}${fmt(sum.total)}`, "gesamt"]);
+        if (s2.show.includes("watched") && sum.withProgress) parts.push([`~${fmt(sum.watched)}`, "gesehen"]);
+        if (s2.show.includes("remaining")) parts.push([`${approx && sum.withProgress ? "~" : pre}${fmt(sum.remaining)}`, "übrig"]);
         const r = rate();
         if (r) parts.push([`${pre}${fmt(sum.remaining / r)}`, `bei ${String(r).replace(".", ",")}×`]);
         return parts;
       }
       function renderPage(node) {
         const data2 = readPlaylist();
-        const sum = summarize(data2.items, s);
-        last2 = { ...sum, loaded: data2.items.length, expected: data2.total, complete: data2.complete, kind: data2.kind };
+        const sum = summarize(data2.items, s2);
+        last3 = { ...sum, loaded: data2.items.length, expected: data2.total, complete: data2.complete, kind: data2.kind };
         clear(node);
         node.append(h("span", { text: "⏱" }));
         for (const [val, label] of statsParts(sum, data2.complete, true)) node.append(h("span", null, h("b", { text: val }), ` ${label}`));
@@ -4563,7 +7676,7 @@ ${MENU_CSS}`);
         const total = d.total ?? d.items.length;
         const cur = d.current ?? 0;
         const complete = !d.infinite && maxIndex >= total - 1;
-        const all = summarize(d.items.map((i) => ({ ...i, unavailable: !i.durationSec })), s);
+        const all = summarize(d.items.map((i) => ({ ...i, unavailable: !i.durationSec })), s2);
         const rest = d.items.filter((i) => i.index >= cur);
         let restSec = rest.reduce((n, i) => n + (i.durationSec || 0), 0);
         const t = player()?.getCurrentTime?.() || 0;
@@ -4571,12 +7684,12 @@ ${MENU_CSS}`);
         const pre = complete ? "" : "≥ ";
         clear(node);
         const parts = [];
-        if (s.panelFromHere) parts.push([`${pre}${fmt(restSec)}`, "ab hier"]);
-        if (s.show.includes("total")) parts.push([`${complete && minIndex === 0 ? "" : "≥ "}${fmt(all.total)}`, "gesamt"]);
+        if (s2.panelFromHere) parts.push([`${pre}${fmt(restSec)}`, "ab hier"]);
+        if (s2.show.includes("total")) parts.push([`${complete && minIndex === 0 ? "" : "≥ "}${fmt(all.total)}`, "gesamt"]);
         const r = rate();
-        if (r && s.panelFromHere) parts.push([`${pre}${fmt(restSec / r)}`, `bei ${String(r).replace(".", ",")}×`]);
+        if (r && s2.panelFromHere) parts.push([`${pre}${fmt(restSec / r)}`, `bei ${String(r).replace(".", ",")}×`]);
         node.append(h("span", { text: "⏱" }), ...parts.map(([v, l]) => h("span", null, h("b", { text: v }), ` ${l}`)));
-        last2 = { panel: true, restSec, loaded: d.items.length, expected: total, complete };
+        last3 = { panel: true, restSec, loaded: d.items.length, expected: total, complete };
       }
       const pageMount = ctx.mount({
         id: "playlist.duration",
@@ -4601,14 +7714,14 @@ ${MENU_CSS}`);
       }, 5e3);
       return {
         onSweep() {
-          if (s.autoLoadAll && ctx.nav.page === "playlist" && autoTriedFor !== ctx.nav.url && pageMount.node?.isConnected) {
+          if (s2.autoLoadAll && ctx.nav.page === "playlist" && autoTriedFor !== ctx.nav.url && pageMount.node?.isConnected) {
             autoTriedFor = ctx.nav.url;
             const d = readPlaylist();
             if (!d.complete && d.items.length) startLoad(pageMount.node);
           }
         },
         update(next) {
-          s = next;
+          s2 = next;
           pageMount.refresh();
           panelMount.refresh();
         },
@@ -4620,19 +7733,19 @@ ${MENU_CSS}`);
         health() {
           if (ctx.nav.page === "playlist") {
             if (!pageMount.ok) return { status: "fail", detail: "Anker im Playlist-Kopf nicht gefunden" };
-            if (!last2 || !last2.loaded) return { status: "warn", detail: "Keine Einträge erkannt" };
-            return { status: "ok", detail: `${last2.kind === "lockup" ? "neue Komponenten" : "Polymer"} · ${last2.loaded}${last2.expected ? `/${last2.expected}` : ""} geladen · ${fmt(last2.total ?? 0)} · ${last2.complete ? "vollständig" : "teilweise"} · ${last2.unavailable} ohne Dauer` };
+            if (!last3 || !last3.loaded) return { status: "warn", detail: "Keine Einträge erkannt" };
+            return { status: "ok", detail: `${last3.kind === "lockup" ? "neue Komponenten" : "Polymer"} · ${last3.loaded}${last3.expected ? `/${last3.expected}` : ""} geladen · ${fmt(last3.total ?? 0)} · ${last3.complete ? "vollständig" : "teilweise"} · ${last3.unavailable} ohne Dauer` };
           }
           if (!playlistPanel3.read()) return { status: "skip", detail: "Keine Playlist im Video" };
-          return panelMount.ok ? { status: "ok", detail: `Panel · ${last2?.loaded ?? 0}/${last2?.expected ?? "?"} Einträge` } : { status: "warn", detail: "Anker im Playlist-Panel fehlt" };
+          return panelMount.ok ? { status: "ok", detail: `Panel · ${last3?.loaded ?? 0}/${last3?.expected ?? "?"} Einträge` } : { status: "warn", detail: "Anker im Playlist-Panel fehlt" };
         },
-        debug: { readPlaylist, loadAll: () => loadAll(), last: () => last2 }
+        debug: { readPlaylist, loadAll: () => loadAll(), last: () => last3 }
       };
     }
   };
 
   // src/features/youtube/playlist/dimWatched.js
-  var ATTR = "data-ytx-watched";
+  var ATTR2 = "data-ytx-watched";
   var dimWatched_default = {
     id: "playlist.dimWatched",
     label: "Gesehene Videos in Playlists markieren",
@@ -4645,24 +7758,24 @@ ${MENU_CSS}`);
       threshold: { type: "range", label: "Ab Fortschritt", min: 10, max: 100, step: 5, unit: "%", default: 90 }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       let marked = 0;
       ctx.css(`
-[${ATTR}="dim"] { opacity: var(--ytx-dim-opacity, .35) !important; }
-[${ATTR}="dim"]:hover { opacity: 1 !important; }
-[${ATTR}="hide"] { display: none !important; }`);
+[${ATTR2}="dim"] { opacity: var(--ytx-dim-opacity, .35) !important; }
+[${ATTR2}="dim"]:hover { opacity: 1 !important; }
+[${ATTR2}="hide"] { display: none !important; }`);
       const clearAll = () => {
-        for (const el of qsa(`[${ATTR}]`)) el.removeAttribute(ATTR);
+        for (const el of qsa(`[${ATTR2}]`)) el.removeAttribute(ATTR2);
       };
       const run2 = () => {
         marked = 0;
         if (ctx.nav.page === "playlist") {
           for (const it of readPlaylist().items) {
-            const on = it.percent != null && it.percent >= s.threshold;
+            const on = it.percent != null && it.percent >= s2.threshold;
             if (on) {
-              it.wrapper.setAttribute(ATTR, s.mode);
+              it.wrapper.setAttribute(ATTR2, s2.mode);
               marked++;
-            } else if (it.wrapper.hasAttribute(ATTR)) it.wrapper.removeAttribute(ATTR);
+            } else if (it.wrapper.hasAttribute(ATTR2)) it.wrapper.removeAttribute(ATTR2);
           }
         } else if (ctx.nav.page === "watch") {
           const d = playlistPanel3.read();
@@ -4670,11 +7783,11 @@ ${MENU_CSS}`);
           const els = playlistPanel3.itemElements();
           els.forEach((el, i) => {
             const it = d.items[i];
-            const on = it && !it.selected && it.percent != null && it.percent >= s.threshold;
+            const on = it && !it.selected && it.percent != null && it.percent >= s2.threshold;
             if (on) {
-              el.setAttribute(ATTR, "dim");
+              el.setAttribute(ATTR2, "dim");
               marked++;
-            } else if (el.hasAttribute(ATTR)) el.removeAttribute(ATTR);
+            } else if (el.hasAttribute(ATTR2)) el.removeAttribute(ATTR2);
           });
         }
       };
@@ -4682,7 +7795,7 @@ ${MENU_CSS}`);
         onSweep: run2,
         onPage: run2,
         update(next) {
-          s = next;
+          s2 = next;
           clearAll();
           run2();
         },
@@ -4707,8 +7820,8 @@ ${MENU_CSS}`);
     ["reverse", "Umgekehrt"]
   ];
   var cmpText = (a, b) => a.localeCompare(b, "de", { sensitivity: "base" });
-  function sorter(key) {
-    switch (key) {
+  function sorter(key2) {
+    switch (key2) {
       case "duration-asc":
         return (a, b) => (a.durationSec ?? Infinity) - (b.durationSec ?? Infinity);
       case "duration-desc":
@@ -4738,8 +7851,8 @@ ${MENU_CSS}`);
       loadBeforeSort: { type: "toggle", label: "Vor dem Sortieren alle Einträge laden", default: true }
     },
     setup(ctx) {
-      let s = ctx.settings;
-      let key = "";
+      let s2 = ctx.settings;
+      let key2 = "";
       let applied = 0;
       ctx.css(`
 [data-ytx-sorted] { display: flex !important; flex-direction: column !important; }
@@ -4753,21 +7866,21 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         applied = 0;
       };
       const apply = () => {
-        if (!key) return reset();
+        if (!key2) return reset();
         const data2 = readPlaylist();
         const container = playlistPage3.listContainer(data2.kind);
         if (!container) return;
-        const cmp = sorter(key);
+        const cmp = sorter(key2);
         const sorted = data2.items.slice().sort((a, b) => cmp(a, b) || (a.index ?? 0) - (b.index ?? 0));
-        container.setAttribute("data-ytx-sorted", key);
+        container.setAttribute("data-ytx-sorted", key2);
         sorted.forEach((it, i) => it.wrapper.style.setProperty("order", String(i)));
         for (const child of container.children) if (!child.style.order) child.style.setProperty("order", "999999");
         applied = sorted.length;
       };
       const select2 = h("select", { class: "ytx-btn ytx-small", title: "Anzeige sortieren", style: { paddingRight: "8px" } }, SORTS.map(([v, l]) => h("option", { value: v, text: l })));
       select2.addEventListener("change", async () => {
-        key = select2.value;
-        if (key && s.loadBeforeSort && !readPlaylist().complete) {
+        key2 = select2.value;
+        if (key2 && s2.loadBeforeSort && !readPlaylist().complete) {
           select2.disabled = true;
           toast("Lade alle Einträge zum Sortieren …");
           await loadAll();
@@ -4784,7 +7897,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       });
       return {
         onPage() {
-          key = "";
+          key2 = "";
           select2.value = "";
           reset();
         },
@@ -4792,23 +7905,23 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           reset();
         },
         onSweep() {
-          if (key && !isLoading()) apply();
+          if (key2 && !isLoading()) apply();
         },
         update(next) {
-          s = next;
+          s2 = next;
         },
         dispose() {
           reset();
           mount2.destroy();
           ctx.css("");
         },
-        health: () => qs('ytd-browse[page-subtype="playlist"]') ? { status: mount2.ok ? "ok" : "warn", detail: key ? `${applied} Einträge sortiert (${key})` : "Original-Reihenfolge" } : { status: "skip" }
+        health: () => qs('ytd-browse[page-subtype="playlist"]') ? { status: mount2.ok ? "ok" : "warn", detail: key2 ? `${applied} Einträge sortiert (${key2})` : "Original-Reihenfolge" } : { status: "skip" }
       };
     }
   };
 
   // src/features/youtube/playlist/search.js
-  var ATTR2 = "data-ytx-plhide";
+  var ATTR3 = "data-ytx-plhide";
   function norm(text) {
     return String(text || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "");
   }
@@ -4819,7 +7932,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     return words.every((w) => hay.includes(w));
   }
   function clearHidden() {
-    for (const el of qsa(`[${ATTR2}]`)) el.removeAttribute(ATTR2);
+    for (const el of qsa(`[${ATTR3}]`)) el.removeAttribute(ATTR3);
   }
   var search_default = {
     id: "playlist.search",
@@ -4833,18 +7946,18 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       autoLoad: { type: "toggle", label: "Beim Suchen große Playlists komplett nachladen", default: true }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       const q2 = { page: "", panel: "" };
       const stats2 = { page: null, panel: null };
-      ctx.css(`[${ATTR2}] { display: none !important; }`);
+      ctx.css(`[${ATTR3}] { display: none !important; }`);
       function applyPage() {
         const data2 = readPlaylist();
         let shown = 0;
         for (const it of data2.items) {
           const ok = matches(it, q2.page);
           if (ok) shown++;
-          if (ok) it.wrapper.removeAttribute(ATTR2);
-          else it.wrapper.setAttribute(ATTR2, "");
+          if (ok) it.wrapper.removeAttribute(ATTR3);
+          else it.wrapper.setAttribute(ATTR3, "");
         }
         stats2.page = { shown, loaded: data2.items.length, total: data2.total, complete: data2.complete };
         return stats2.page;
@@ -4858,8 +7971,8 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           loaded++;
           const ok = matches(it, q2.panel);
           if (ok) shown++;
-          if (ok) el.removeAttribute(ATTR2);
-          else el.setAttribute(ATTR2, "");
+          if (ok) el.removeAttribute(ATTR3);
+          else el.setAttribute(ATTR3, "");
         }
         stats2.panel = { shown, loaded };
         return stats2.panel;
@@ -4886,7 +7999,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         return wrap;
       }
       const autoLoad = debounce(async () => {
-        if (!s.autoLoad || !q2.page || isLoading()) return;
+        if (!s2.autoLoad || !q2.page || isLoading()) return;
         const d = readPlaylist();
         if (d.complete) return;
         await loadAll(() => refresh("page"));
@@ -4937,7 +8050,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           }
         },
         update(next) {
-          s = next;
+          s2 = next;
         },
         dispose() {
           clearHidden();
@@ -4953,1360 +8066,9 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     }
   };
 
-  // src/core/config.js
-  var SCHEMA = 3;
-  var SITE_KEYS = ["youtube", "music", "mobile"];
-  function defaultFilters() {
-    return {
-      enabled: false,
-      mode: "dim",
-      pages: ["home", "subscriptions", "search", "watch"],
-      shorts: false,
-      live: false,
-      channels: { block: [], allowOnly: [] },
-      title: { keywords: [], regex: [], caseSensitive: false },
-      duration: { minSec: null, maxSec: null },
-      age: { maxDays: null },
-      watched: { hide: false, minPercent: 90 }
-    };
-  }
-  function emptySection(def) {
-    const out = {
-      display: {},
-      vars: { theme: "" },
-      layout: { presets: {}, order: {}, topbar: "", zones: null },
-      behavior: {},
-      features: {}
-    };
-    if (def?.filters) out.filters = defaultFilters();
-    return out;
-  }
-  var isObj = (x) => x && typeof x === "object" && !Array.isArray(x);
-  var strList = (x) => Array.isArray(x) ? x.map((s) => String(s).trim()).filter(Boolean) : [];
-  var numOrNull = (x) => x === "" || x === null || x === void 0 || !isFinite(Number(x)) ? null : Number(x);
-  function splitLegacy(raw) {
-    if (!isObj(raw)) return {};
-    if (SITE_KEYS.some((k) => isObj(raw[k]))) return raw;
-    if (["display", "vars", "layout", "behavior", "filters", "features"].some((k) => k in raw)) return { youtube: raw };
-    return {};
-  }
-  function normalize(raw, def) {
-    const src2 = isObj(raw) ? raw : {};
-    const cfg = emptySection(def);
-    const look = def.look;
-    const presets = def.presets;
-    if (isObj(src2.display)) {
-      for (const [id, mode] of Object.entries(src2.display)) {
-        const t = def.targetById[id];
-        if (t && t.modes.includes(mode) && mode !== "show") cfg.display[id] = mode;
-      }
-    }
-    if (isObj(src2.vars)) {
-      if (look.themes.some((t) => t.id === src2.vars.theme)) cfg.vars.theme = src2.vars.theme;
-      for (const [id, v] of Object.entries(src2.vars)) {
-        if (id === "theme") continue;
-        const c = look.controlById[id];
-        if (!c || v === "" || v === null || v === void 0) continue;
-        if (c.type === "range") {
-          const n = Number(v);
-          if (isFinite(n)) cfg.vars[id] = Math.min(c.max, Math.max(c.min, n));
-        } else if (c.type === "color") {
-          if (/^#[0-9a-f]{3,8}$/i.test(v)) cfg.vars[id] = v;
-        } else if (c.type === "select") {
-          if (c.options.some(([val]) => val === v)) cfg.vars[id] = v;
-        }
-      }
-    }
-    if (isObj(src2.layout)) {
-      if (isObj(src2.layout.presets)) {
-        for (const [page, id] of Object.entries(src2.layout.presets)) {
-          const p = presets.presetById[id];
-          if (p && p.pages.includes(page)) cfg.layout.presets[page] = id;
-        }
-      }
-      if (isObj(src2.layout.order)) {
-        for (const [gid, list] of Object.entries(src2.layout.order)) {
-          const g = presets.orderGroups[gid];
-          if (!g) continue;
-          const known3 = new Set(g.items.map(([id]) => id));
-          const clean = strList(list).filter((id) => known3.has(id));
-          if (clean.length) cfg.layout.order[gid] = [...new Set(clean)];
-        }
-      }
-      if (presets.topbarModes.some(([v]) => v === src2.layout.topbar)) cfg.layout.topbar = src2.layout.topbar;
-      if (isObj(src2.layout.zones)) cfg.layout.zones = src2.layout.zones;
-    }
-    if (isObj(src2.behavior)) {
-      for (const [id, v] of Object.entries(src2.behavior)) {
-        const b = def.behaviorById[id];
-        if (!b) continue;
-        if (b.type === "toggle") cfg.behavior[id] = !!v;
-        else if (b.type === "select" && b.options.some(([val]) => val === v)) cfg.behavior[id] = v;
-        else if (b.type === "textarea") cfg.behavior[id] = String(v ?? "");
-      }
-    }
-    if (def.filters && isObj(src2.filters)) {
-      const f = src2.filters;
-      const d = cfg.filters;
-      d.enabled = !!f.enabled;
-      if (["dim", "collapse", "hide"].includes(f.mode)) d.mode = f.mode;
-      if (Array.isArray(f.pages)) d.pages = strList(f.pages);
-      d.shorts = !!f.shorts;
-      d.live = !!f.live;
-      d.channels.block = strList(f.channels?.block);
-      d.channels.allowOnly = strList(f.channels?.allowOnly);
-      d.title.keywords = strList(f.title?.keywords);
-      d.title.regex = strList(f.title?.regex);
-      d.title.caseSensitive = !!f.title?.caseSensitive;
-      d.duration.minSec = numOrNull(f.duration?.minSec);
-      d.duration.maxSec = numOrNull(f.duration?.maxSec);
-      d.age.maxDays = numOrNull(f.age?.maxDays);
-      d.watched.hide = !!f.watched?.hide;
-      d.watched.minPercent = numOrNull(f.watched?.minPercent) ?? 90;
-    }
-    const srcFeatures = isObj(src2.features) ? src2.features : {};
-    for (const m of def.features) {
-      const s = isObj(srcFeatures[m.id]) ? srcFeatures[m.id] : {};
-      const out = { enabled: !!s.enabled };
-      for (const [key, sd] of Object.entries(m.settings || {})) out[key] = normalizeSetting(sd, s[key]);
-      cfg.features[m.id] = out;
-    }
-    return cfg;
-  }
-  function normalizeProfile(raw, sites2) {
-    const split = splitLegacy(raw);
-    const out = { schema: SCHEMA };
-    for (const key of SITE_KEYS) out[key] = normalize(split[key], sites2[key]);
-    return out;
-  }
-  function normalizeSetting(def, v) {
-    switch (def.type) {
-      case "toggle":
-        return v === void 0 ? !!def.default : !!v;
-      case "select":
-        return def.options.some(([val]) => val === v) ? v : def.default;
-      case "multi": {
-        const allowed = new Set(def.options.map(([val]) => val));
-        return Array.isArray(v) ? v.filter((x) => allowed.has(x)) : def.default.slice();
-      }
-      case "range": {
-        const n = Number(v);
-        return isFinite(n) && v !== null && v !== "" ? Math.min(def.max, Math.max(def.min, n)) : def.default;
-      }
-      case "text":
-        return typeof v === "string" ? v : def.default;
-      default:
-        return v ?? def.default;
-    }
-  }
-
-  // src/profiles/youtube.js
-  var H = "hide";
-  var C = "collapse";
-  var tidyDisplay = {
-    "guide.shorts": H,
-    "guide.explore": H,
-    "guide.moreYT": H,
-    "guide.footer": H,
-    "top.create": H,
-    "top.voice": H,
-    "home.shortsShelf": H,
-    "home.chips": H,
-    "home.shelves": H,
-    "home.banner": H,
-    "home.posts": H,
-    "watch.sidebar": C,
-    "watch.comments": C,
-    "watch.shortsShelf": H,
-    "watch.merch": H,
-    "watch.ads": H,
-    "watch.ambient": H,
-    "watch.infoCards": H,
-    "watch.btn.download": H,
-    "watch.btn.clip": H,
-    "watch.btn.thanks": H,
-    "watch.btn.ask": H,
-    "watch.btn.join": H,
-    "player.endscreen": H,
-    "player.cards": H,
-    "player.pauseOverlay": H,
-    "player.paidPromo": H,
-    "player.watermark": H,
-    "player.btn.cast": H,
-    "thumb.hoverPreview": H,
-    "search.shorts": H,
-    "search.peopleAlsoSearch": H,
-    "search.shelves": H,
-    "search.ads": H,
-    "channel.shortsTab": H,
-    "channel.shortsShelf": H,
-    "subs.shorts": H
-  };
-  var tidyFeatures = {
-    "transcript.copy": { enabled: true },
-    "watch.copyInfo": { enabled: true },
-    "playlist.duration": { enabled: true },
-    "playlist.search": { enabled: true },
-    "subs.groups": { enabled: true },
-    "watch.time": { enabled: true },
-    "playlist.dimWatched": { enabled: false },
-    "playlist.sort": { enabled: true },
-    "player.endsAt": { enabled: true },
-    "watch.publishDate": { enabled: true },
-    "thumb.progressBadge": { enabled: true },
-    "ui.proxyButtons": { enabled: false }
-  };
-  var templates = [
-    {
-      id: "youtube",
-      name: "YouTube (Original)",
-      description: "Nichts verändert. Zum Vergleichen und als Notausgang",
-      config: () => ({})
-    },
-    {
-      id: "aufgeraeumt",
-      name: "Aufgeräumt",
-      description: "Shorts und Ablenkungen weg, nützliche Features an",
-      config: () => ({
-        display: { ...tidyDisplay },
-        behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true },
-        filters: { enabled: true, mode: "dim", shorts: true, pages: ["home", "subscriptions", "search", "watch"] },
-        features: structuredClone(tidyFeatures)
-      })
-    },
-    {
-      id: "fokus",
-      name: "Fokus",
-      description: "Radikal: keine Startseite, keine Empfehlungen, keine Thumbnails",
-      config: () => ({
-        display: {
-          ...tidyDisplay,
-          "guide.subs": C,
-          "top.notifications": H,
-          "home.feedAll": H,
-          "watch.sidebar": H,
-          "watch.comments": H,
-          "watch.chat": C,
-          "watch.btn.likeCount": H,
-          "player.btn.autoplay": H,
-          "thumb.image": H
-        },
-        layout: { presets: { watch: "focus", subscriptions: "list" } },
-        behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, homeRedirect: "/feed/subscriptions" },
-        filters: { enabled: true, mode: "hide", shorts: true, pages: ["home", "subscriptions", "search", "watch", "channel"] },
-        features: structuredClone(tidyFeatures)
-      })
-    }
-  ];
-  var templateById = Object.fromEntries(templates.map((t) => [t.id, t]));
-  var DEFAULT_ACTIVE = "aufgeraeumt";
-
-  // src/profiles/music.js
-  var H2 = "hide";
-  var C2 = "collapse";
-  var tidyDisplay2 = {
-    "m.guide.samples": H2,
-    "m.guide.upgrade": H2,
-    "m.guide.signin": H2,
-    "m.promo.mealbar": H2,
-    "m.promo.background": H2,
-    "m.promo.upsell": H2,
-    "m.home.podcastChip": H2,
-    "m.home.podcasts": H2,
-    "m.home.samplesShelf": H2,
-    "m.explore.podcasts": H2,
-    "m.search.podcasts": C2,
-    "m.search.profiles": H2,
-    "m.nav.openApp": H2
-  };
-  var tidyFeatures2 = {
-    "m.history": { enabled: true },
-    "m.favorites": { enabled: true },
-    "m.hub": { enabled: true },
-    "m.releases": { enabled: true },
-    "m.weekly": { enabled: true },
-    "m.smartQueue": { enabled: true },
-    "m.queueInfo": { enabled: true },
-    "m.lyrics": { enabled: true },
-    "m.sleepTimer": { enabled: true },
-    "m.audio": { enabled: false }
-  };
-  var musicTemplates = {
-    youtube: () => ({}),
-    aufgeraeumt: () => ({
-      display: { ...tidyDisplay2 },
-      behavior: { "m.stillThere": true },
-      features: structuredClone(tidyFeatures2)
-    }),
-    fokus: () => ({
-      display: {
-        ...tidyDisplay2,
-        "m.guide.explore": H2,
-        "m.home.chips": H2,
-        "m.home.videos": H2,
-        "m.home.playlists": C2,
-        "m.home.background": H2,
-        "m.player.comments": H2,
-        "m.player.related": H2,
-        "m.search.videos": C2
-      },
-      behavior: { "m.stillThere": true, "m.closePromoDialogs": true },
-      features: { ...structuredClone(tidyFeatures2), "m.audio": { enabled: true, preferAudio: true } }
-    })
-  };
-
-  // src/profiles/mobile.js
-  var H3 = "hide";
-  var C3 = "collapse";
-  var tidyDisplay3 = {
-    "mb.pivot.shorts": H3,
-    "mb.pivot.create": H3,
-    "mb.top.openApp": H3,
-    "mb.home.shorts": H3,
-    "mb.games": H3,
-    "mb.home.posts": H3,
-    "mb.home.nudge": H3,
-    "mb.watch.shorts": H3,
-    "mb.watch.carousel": H3,
-    "mb.watch.endscreen": H3,
-    "mb.search.shorts": H3,
-    "mb.infoPanel": H3,
-    "mb.search.shelves": C3,
-    "mb.channel.shortsTab": H3,
-    "mb.channel.shorts": H3,
-    "mb.subs.shorts": H3,
-    "mb.ads": H3,
-    "mb.premiumPromo": H3
-  };
-  var tidyFeatures3 = {
-    "transcript.copy": { enabled: true },
-    "watch.copyInfo": { enabled: true },
-    "playlist.duration": { enabled: true },
-    "playlist.search": { enabled: true },
-    "playlist.sort": { enabled: true },
-    "playlist.dimWatched": { enabled: false },
-    "subs.groups": { enabled: true },
-    "watch.time": { enabled: true },
-    "player.endsAt": { enabled: true },
-    "watch.publishDate": { enabled: true },
-    "thumb.progressBadge": { enabled: true }
-  };
-  var mobileTemplates = {
-    youtube: () => ({ display: { "mb.pivot.shorts": H3 } }),
-    aufgeraeumt: () => ({
-      display: { ...tidyDisplay3 },
-      behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, swipeDownBack: true },
-      filters: { enabled: true, mode: "dim", shorts: true, pages: ["home", "subscriptions", "search", "watch"] },
-      features: structuredClone(tidyFeatures3)
-    }),
-    fokus: () => ({
-      display: { ...tidyDisplay3, "mb.home.feed": H3, "mb.home.sections": H3, "mb.home.chips": H3, "mb.watch.related": C3, "mb.watch.comments": C3 },
-      behavior: { shortsRedirect: true, autoplayOff: true, channelTrailerPause: true, swipeDownBack: true, homeRedirect: "/feed/subscriptions" },
-      filters: { enabled: true, mode: "hide", shorts: true, pages: ["home", "subscriptions", "search", "watch", "channel"] },
-      features: structuredClone(tidyFeatures3)
-    })
-  };
-
-  // src/profiles/index.js
-  var templates2 = templates.map((t) => ({
-    ...t,
-    config: () => ({ schema: SCHEMA, youtube: t.config(), music: musicTemplates[t.id]?.() || {}, mobile: mobileTemplates[t.id]?.() || {} })
-  }));
-  var templateById2 = Object.fromEntries(templates2.map((t) => [t.id, t]));
-
-  // src/core/merge.js
-  var isObj2 = (x) => x !== null && typeof x === "object" && !Array.isArray(x);
-  var same = (a, b) => a === b || JSON.stringify(a) === JSON.stringify(b);
-  function merge3(base2, ours, theirs) {
-    if (same(ours, base2)) return theirs;
-    if (same(theirs, base2)) return ours;
-    if (isObj2(ours) && isObj2(theirs)) {
-      const b = isObj2(base2) ? base2 : {};
-      const out = {};
-      for (const k of /* @__PURE__ */ new Set([...Object.keys(ours), ...Object.keys(theirs)])) {
-        const v = merge3(b[k], ours[k], theirs[k]);
-        if (v !== void 0) out[k] = v;
-      }
-      return out;
-    }
-    return ours;
-  }
-
-  // src/core/store.js
-  var KEY2 = "ytx.store";
-  var STATE_KEY = "ytx.state";
-  var hasGM = () => typeof GM_getValue === "function" && typeof GM_setValue === "function";
-  function readRaw(key) {
-    try {
-      if (hasGM()) {
-        const v = GM_getValue(key, null);
-        if (v != null) return typeof v === "string" ? JSON.parse(v) : v;
-      }
-    } catch (e) {
-      log.warn("GM_getValue", e);
-    }
-    try {
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : null;
-    } catch {
-      return null;
-    }
-  }
-  function writeRaw(key, value) {
-    const json = JSON.stringify(value);
-    try {
-      if (hasGM()) {
-        GM_setValue(key, json);
-        return;
-      }
-    } catch (e) {
-      log.warn("GM_setValue", e);
-    }
-    try {
-      localStorage.setItem(key, json);
-    } catch (e) {
-      log.warn("localStorage", e);
-    }
-  }
-  function slug(name) {
-    return String(name).toLowerCase().replace(/[äöü]/g, (c) => ({ ä: "ae", ö: "oe", ü: "ue" })[c]).replace(/ß/g, "ss").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "profil";
-  }
-  var defaultSettings = () => ({ hotkeys: {}, panelButton: true, panelTab: "display", linkLook: true });
-  function freshData() {
-    const profiles = {};
-    for (const t of templates2) profiles[t.id] = { name: t.name, template: t.id, config: t.config() };
-    return { schema: SCHEMA, active: DEFAULT_ACTIVE, profiles, settings: defaultSettings(), buckets: {}, migrations: MIGRATIONS.map(([id]) => id) };
-  }
-  var MIGRATIONS = [
-    [
-      "schema-3-sites",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          const split = splitLegacy(p.config);
-          p.config = { schema: SCHEMA, ...split };
-          const t = templateById2[p.template];
-          if (!p.config.music && t) p.config.music = t.config().music;
-        }
-        d.schema = SCHEMA;
-      }
-    ],
-    [
-      "thumbs-color-default",
-      (d) => {
-        const p = d.profiles.aufgeraeumt;
-        const disp = p?.config?.youtube?.display;
-        if (p?.template === "aufgeraeumt" && disp?.["thumb.image"] === "dim") delete disp["thumb.image"];
-      }
-    ],
-    [
-      // neue features in bestehenden profilen einschalten, ausser im original profil
-      "playlist-search-on",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          if (p.template === "youtube" || !p.config?.youtube) continue;
-          const f = p.config.youtube.features ||= {};
-          if (!f["playlist.search"]) f["playlist.search"] = { enabled: true };
-        }
-      }
-    ],
-    [
-      "groups-watchtime-weekly-on",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          if (p.template === "youtube") continue;
-          if (p.config?.youtube) {
-            const f = p.config.youtube.features ||= {};
-            f["subs.groups"] ||= { enabled: true };
-            f["watch.time"] ||= { enabled: true };
-          }
-          if (p.config?.music) {
-            const f = p.config.music.features ||= {};
-            f["m.weekly"] ||= { enabled: true };
-          }
-        }
-      }
-    ],
-    [
-      // mobil abschnitt fuer bestehende profile aus der vorlage
-      "mobile-section",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          if (!p.config || p.config.mobile) continue;
-          const t = templateById2[p.template] || templateById2.aufgeraeumt;
-          p.config.mobile = p.template === "youtube" ? {} : t.config().mobile;
-        }
-      }
-    ],
-    [
-      "mobile-open-app-hidden",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          const m = p.config?.mobile;
-          if (!m || p.template === "youtube") continue;
-          m.display ||= {};
-          if (!("mb.top.openApp" in m.display)) m.display["mb.top.openApp"] = "hide";
-        }
-      }
-    ],
-    [
-      "transcript-menu-item",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          const f = p.config?.youtube?.features?.["transcript.copy"];
-          if (Array.isArray(f?.placement) && !f.placement.includes("menu")) f.placement.push("menu");
-        }
-      }
-    ],
-    [
-      // handy bekommt die features vom rechner, bestehende profile schalten sie wie die vorlage ein
-      "mobile-desktop-features",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          const m = p.config?.mobile;
-          if (!m || p.template === "youtube") continue;
-          const f = m.features ||= {};
-          for (const [id, v] of Object.entries(tidyFeatures3)) if (!f[id]) f[id] = { ...v };
-          const b = m.behavior ||= {};
-          if (!("autoplayOff" in b)) b.autoplayOff = true;
-          if (!("channelTrailerPause" in b)) b.channelTrailerPause = true;
-        }
-      }
-    ],
-    [
-      "mobile-swipe-down-back",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          const m = p.config?.mobile;
-          if (!m || p.template === "youtube") continue;
-          const b = m.behavior ||= {};
-          if (!("swipeDownBack" in b)) b.swipeDownBack = true;
-        }
-      }
-    ],
-    [
-      "music-open-app-hidden",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          const m = p.config?.music;
-          if (!m || p.template === "youtube") continue;
-          m.display ||= {};
-          if (!("m.nav.openApp" in m.display)) m.display["m.nav.openApp"] = "hide";
-        }
-      }
-    ],
-    [
-      "music-sleep-timer-on",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          if (p.template === "youtube" || !p.config?.music) continue;
-          const f = p.config.music.features ||= {};
-          f["m.sleepTimer"] ||= { enabled: true };
-        }
-      }
-    ],
-    [
-      // theme und farben gelten fuer youtube und music gemeinsam, wer es ausdruecklich ausgeschaltet hat behaelt das
-      "link-look-default-on",
-      (d) => {
-        d.settings ||= {};
-        if (!("linkLook" in d.settings)) d.settings.linkLook = true;
-      }
-    ],
-    [
-      "mobile-app-fullscreen",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          const m = p.config?.mobile;
-          if (!m || p.template === "youtube") continue;
-          const b = m.behavior ||= {};
-          if (!("appFullscreen" in b)) b.appFullscreen = true;
-          if (!("keepPlaying" in b) && !("m.keepPlaying" in (p.config?.music?.behavior || {}))) (p.config.music ||= {}).behavior = { ...p.config.music.behavior || {}, "m.keepPlaying": true };
-        }
-      }
-    ],
-    [
-      "mobile-info-panel-shorts-pivot",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          const m = p.config?.mobile;
-          if (!m || p.template === "youtube") continue;
-          m.display ||= {};
-          if (!("mb.infoPanel" in m.display)) m.display["mb.infoPanel"] = "hide";
-          if (!("mb.pivot.shorts" in m.display)) m.display["mb.pivot.shorts"] = "hide";
-        }
-      }
-    ],
-    [
-      "mobile-original-shorts-pivot-off",
-      (d) => {
-        const p = d.profiles?.youtube;
-        const m = p?.config?.mobile;
-        if (!m) return;
-        m.display ||= {};
-        if (!("mb.pivot.shorts" in m.display)) m.display["mb.pivot.shorts"] = "hide";
-      }
-    ],
-    [
-      "music-bottom-nav-on",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          const m = p.config?.music;
-          if (!m) continue;
-          const b = m.behavior ||= {};
-          if (!("m.bottomNav" in b)) b["m.bottomNav"] = true;
-        }
-      }
-    ],
-    [
-      // eigene profile ohne vorlage hatten werbung und spiele regale am handy nie ausgeblendet
-      "mobile-ads-games-hidden",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          const m = p.config?.mobile;
-          if (!m || p.template === "youtube") continue;
-          m.display ||= {};
-          for (const id of ["mb.ads", "mb.games", "mb.premiumPromo"]) if (!(id in m.display)) m.display[id] = "hide";
-        }
-      }
-    ],
-    [
-      // community beitraege im feed ausblenden, ausser im original profil
-      "home-posts-hidden",
-      (d) => {
-        for (const p of Object.values(d.profiles || {})) {
-          if (p.template === "youtube") continue;
-          for (const [key, id] of [["mobile", "mb.home.posts"], ["youtube", "home.posts"]]) {
-            const c = p.config?.[key];
-            if (!c) continue;
-            c.display ||= {};
-            if (!(id in c.display)) c.display[id] = "hide";
-          }
-        }
-      }
-    ]
-  ];
-  var data = null;
-  var syncMode = "none";
-  var config = null;
-  var subs = /* @__PURE__ */ new Set();
-  var base = null;
-  var pending = false;
-  function persist() {
-    pending = false;
-    const stored = readRaw(KEY2);
-    if (stored && base && JSON.stringify(stored) !== base) {
-      const merged = structuredClone(merge3(JSON.parse(base), data, stored));
-      const changed = !same(merged, data);
-      data = merged;
-      if (changed) {
-        recompute();
-        emit("sync");
-      }
-    }
-    writeRaw(KEY2, data);
-    base = JSON.stringify(data);
-  }
-  var saveSoon = debounce(persist, 250, 1500);
-  var markDirty = () => {
-    pending = true;
-    saveSoon();
-  };
-  function onRemote(raw) {
-    let remote;
-    try {
-      remote = typeof raw === "string" ? JSON.parse(raw) : raw;
-    } catch {
-      return;
-    }
-    if (!remote?.profiles || !Object.keys(remote.profiles).length) return;
-    const json = JSON.stringify(remote);
-    if (json === base) return;
-    data = structuredClone(pending ? merge3(JSON.parse(base), data, remote) : remote);
-    base = json;
-    data.settings ||= defaultSettings();
-    data.buckets ||= {};
-    if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0];
-    recompute();
-    emit("sync");
-  }
-  function watchRemote() {
-    try {
-      if (typeof GM_addValueChangeListener === "function") {
-        GM_addValueChangeListener(KEY2, (name, oldValue, newValue, remote) => remote && onRemote(newValue));
-        return "gm";
-      }
-    } catch (e) {
-      log.warn("GM_addValueChangeListener", e);
-    }
-    window.addEventListener("storage", (e) => e.key === KEY2 && e.newValue && onRemote(e.newValue));
-    return "storage";
-  }
-  var runtime = readRaw(STATE_KEY) || {};
-  var saveState = debounce(() => writeRaw(STATE_KEY, runtime), 500, 3e3);
-  function migrate() {
-    data.migrations ||= [];
-    let changed = false;
-    for (const [id, fn] of MIGRATIONS) {
-      if (data.migrations.includes(id)) continue;
-      try {
-        fn(data);
-      } catch (e) {
-        log.warn(`migration ${id}`, e);
-      }
-      data.migrations.push(id);
-      changed = true;
-    }
-    if (changed) writeRaw(KEY2, data);
-    base = JSON.stringify(data);
-  }
-  function activeProfile() {
-    return data.profiles[data.active] || data.profiles[Object.keys(data.profiles)[0]];
-  }
-  function recompute() {
-    config = normalize(activeProfile()?.config?.[site2.id], site2);
-  }
-  function emit(reason) {
-    for (const fn of subs) {
-      try {
-        fn(config, reason);
-      } catch (e) {
-        log.error("store subscriber", e);
-      }
-    }
-  }
-  function linkVars(p, oldVars, newVars) {
-    for (const id of SITE_KEYS) {
-      if (id === site2.id) continue;
-      const other = normalize(p.config?.[id], sites[id]);
-      let touched = false;
-      for (const k of /* @__PURE__ */ new Set([...Object.keys(oldVars), ...Object.keys(newVars)])) {
-        if (same(oldVars[k], newVars[k])) continue;
-        if (newVars[k] === void 0) delete other.vars[k];
-        else other.vars[k] = newVars[k];
-        touched = true;
-      }
-      if (touched) p.config = { ...p.config || {}, schema: SCHEMA, [id]: normalize(other, sites[id]) };
-    }
-  }
-  function commit(reason) {
-    recompute();
-    markDirty();
-    emit(reason);
-  }
-  var store = {
-    init() {
-      data = readRaw(KEY2);
-      if (!data || typeof data !== "object" || !data.profiles || !Object.keys(data.profiles).length) {
-        data = freshData();
-        writeRaw(KEY2, data);
-      }
-      data.settings ||= defaultSettings();
-      data.buckets ||= {};
-      base = JSON.stringify(data);
-      migrate();
-      for (const t of templates2) {
-        if (!data.profiles[t.id] && !data.deletedTemplates?.includes(t.id)) data.profiles[t.id] = { name: t.name, template: t.id, config: t.config() };
-      }
-      if (!data.profiles[data.active]) data.active = Object.keys(data.profiles)[0];
-      recompute();
-      syncMode = watchRemote();
-      const flush = () => this.flush();
-      window.addEventListener("pagehide", flush);
-      document.addEventListener("visibilitychange", () => document.hidden && flush());
-    },
-    flush() {
-      saveSoon.flush();
-      saveState.flush();
-    },
-    get config() {
-      return config;
-    },
-    get data() {
-      return data;
-    },
-    get settings() {
-      return data.settings;
-    },
-    get activeId() {
-      return data.active;
-    },
-    get siteId() {
-      return site2.id;
-    },
-    get syncMode() {
-      return syncMode;
-    },
-    profiles() {
-      return Object.entries(data.profiles).map(([id, p]) => ({ id, name: p.name, template: p.template, active: id === data.active }));
-    },
-    subscribe(fn) {
-      subs.add(fn);
-      return () => subs.delete(fn);
-    },
-    // mutator bekommt den abschnitt der aktuellen seite
-    update(mutator, reason = "update") {
-      const p = activeProfile();
-      const draft = normalize(p.config?.[site2.id], site2);
-      const oldVars = { ...draft.vars };
-      mutator(draft);
-      const next = normalize(draft, site2);
-      p.config = { ...p.config || {}, schema: SCHEMA, [site2.id]: next };
-      if (data.settings.linkLook) linkVars(p, oldVars, next.vars);
-      commit(reason);
-    },
-    get linkLook() {
-      return !!data.settings.linkLook;
-    },
-    // look beider seiten koppeln, beim einschalten einmal alle profile angleichen
-    setLinkLook(on) {
-      data.settings.linkLook = !!on;
-      if (on) for (const p of Object.values(data.profiles)) linkVars(p, {}, normalize(p.config?.[site2.id], site2).vars);
-      commit("profile");
-    },
-    // look (theme/farben/dichte/typografie) der jeweils anderen seite im selben profil
-    // dient dazu, den style zwischen youtube und music zu uebertragen
-    otherLooks() {
-      const p = activeProfile();
-      return SITE_KEYS.filter((id) => id !== site2.id).map((id) => ({
-        id,
-        label: sites[id].label,
-        vars: normalize(p.config?.[id], sites[id]).vars
-      }));
-    },
-    updateSettings(mutator) {
-      mutator(data.settings);
-      markDirty();
-      emit("settings");
-    },
-    // seitenweite einstellungen, normalisiert vom besitzer des buckets
-    bucket(name, normalizeFn) {
-      const b = normalizeFn ? normalizeFn(data.buckets[name]) : data.buckets[name];
-      return b;
-    },
-    updateBucket(name, mutator, normalizeFn) {
-      const draft = normalizeFn ? normalizeFn(data.buckets[name]) : structuredClone(data.buckets[name] || {});
-      mutator(draft);
-      data.buckets[name] = normalizeFn ? normalizeFn(draft) : draft;
-      markDirty();
-      emit(`bucket:${name}`);
-      return data.buckets[name];
-    },
-    setActive(id) {
-      if (!data.profiles[id] || id === data.active) return;
-      data.active = id;
-      commit("profile");
-    },
-    cycleProfile() {
-      const ids = Object.keys(data.profiles);
-      const i = ids.indexOf(data.active);
-      this.setActive(ids[(i + 1) % ids.length]);
-      return data.profiles[data.active].name;
-    },
-    createProfile(name, fromId = data.active) {
-      let id = slug(name);
-      while (data.profiles[id]) id += "-2";
-      const src2 = data.profiles[fromId];
-      data.profiles[id] = { name: String(name).trim() || "Profil", template: null, config: structuredClone(src2 ? src2.config : {}) };
-      data.active = id;
-      commit("profile");
-      return id;
-    },
-    renameProfile(id, name) {
-      if (!data.profiles[id] || !String(name).trim()) return;
-      data.profiles[id].name = String(name).trim();
-      markDirty();
-      emit("profile");
-    },
-    deleteProfile(id) {
-      if (!data.profiles[id] || Object.keys(data.profiles).length <= 1) return false;
-      if (data.profiles[id].template) (data.deletedTemplates ||= []).push(data.profiles[id].template);
-      delete data.profiles[id];
-      if (data.active === id) data.active = Object.keys(data.profiles)[0];
-      commit("profile");
-      return true;
-    },
-    // setzt nur den abschnitt der aktuellen seite zurueck
-    resetProfile(id, allSites = false) {
-      const p = data.profiles[id];
-      if (!p) return;
-      const t = templateById2[p.template];
-      const fresh = t ? t.config() : {};
-      p.config = allSites ? fresh : { ...p.config || {}, schema: SCHEMA, [site2.id]: fresh[site2.id] || {} };
-      commit("profile");
-    },
-    exportJson(all = false) {
-      const p = activeProfile();
-      const out = all ? { ...data, buckets: void 0, settings: { ...data.settings, cloud: void 0 } } : { schema: SCHEMA, profile: { name: p.name, config: normalizeProfile(p.config, sites) } };
-      return JSON.stringify(out, null, 2);
-    },
-    importJson(text) {
-      const obj = JSON.parse(text);
-      if (obj.profiles && typeof obj.profiles === "object") {
-        for (const [id2, p] of Object.entries(obj.profiles)) {
-          if (!p || typeof p !== "object") continue;
-          data.profiles[id2] = { name: String(p.name || id2), template: p.template ?? null, config: normalizeProfile(p.config, sites) };
-        }
-        if (obj.active && data.profiles[obj.active]) data.active = obj.active;
-        if (obj.settings) data.settings = { ...data.settings, ...obj.settings };
-        commit("import");
-        return "Alle Profile importiert";
-      }
-      const cfg = obj.profile?.config || obj.config || obj;
-      const name = obj.profile?.name || "Importiert";
-      const id = this.createProfile(name);
-      data.profiles[id].config = normalizeProfile(cfg, sites);
-      commit("import");
-      return `Profil „${name}“ importiert`;
-    },
-    resetAll() {
-      const buckets = data.buckets;
-      data = freshData();
-      data.buckets = buckets;
-      commit("reset");
-    },
-    state: {
-      get(key, def) {
-        return key in runtime ? runtime[key] : def;
-      },
-      set(key, value) {
-        runtime[key] = value;
-        saveState();
-      }
-    }
-  };
-
-  // src/features/youtube/subGroups/logic.js
-  var GROUPS_BUCKET = "youtube.subGroups";
-  var NONE = "__none";
-  var isObj3 = (x) => x && typeof x === "object" && !Array.isArray(x);
-  var lower = (s) => String(s || "").trim().toLowerCase();
-  function channelKey(ch) {
-    return ch?.id || (ch?.handle ? lower(ch.handle) : null) || (ch?.name ? `name:${lower(ch.name)}` : null);
-  }
-  function cleanChannel(c) {
-    if (!isObj3(c)) return null;
-    const ch = { id: typeof c.id === "string" && c.id ? c.id : null, handle: c.handle ? lower(c.handle) : null, name: String(c.name || "").trim() };
-    return channelKey(ch) ? ch : null;
-  }
-  function normalizeGroups(raw) {
-    const out = { groups: [] };
-    const seen3 = /* @__PURE__ */ new Set();
-    for (const g of isObj3(raw) && Array.isArray(raw.groups) ? raw.groups : []) {
-      if (!isObj3(g) || !String(g.name || "").trim()) continue;
-      let id = String(g.id || "").trim() || `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-      while (seen3.has(id)) id += "x";
-      seen3.add(id);
-      const chans = /* @__PURE__ */ new Map();
-      for (const c of Array.isArray(g.channels) ? g.channels : []) {
-        const ch = cleanChannel(c);
-        if (ch && !chans.has(channelKey(ch))) chans.set(channelKey(ch), ch);
-      }
-      out.groups.push({ id, name: String(g.name).trim().slice(0, 40), channels: [...chans.values()] });
-    }
-    return out;
-  }
-  function sameChannel(a, b) {
-    if (!a || !b) return false;
-    if (a.id && b.id) return a.id === b.id;
-    if (a.handle && b.handle) return lower(a.handle) === lower(b.handle);
-    return !!a.name && !!b.name && lower(a.name) === lower(b.name);
-  }
-  function groupsOf(ch, data2) {
-    return data2.groups.filter((g) => g.channels.some((c) => sameChannel(c, ch)));
-  }
-  function visibleIn(ch, groupId, data2) {
-    if (!groupId) return true;
-    if (groupId === NONE) return !groupsOf(ch, data2).length;
-    const g = data2.groups.find((x) => x.id === groupId);
-    return g ? g.channels.some((c) => sameChannel(c, ch)) : true;
-  }
-  function toggleChannel(data2, groupId, ch) {
-    const g = data2.groups.find((x) => x.id === groupId);
-    if (!g) return false;
-    const i = g.channels.findIndex((c) => sameChannel(c, ch));
-    if (i >= 0) {
-      g.channels.splice(i, 1);
-      return false;
-    }
-    g.channels.push({ id: ch.id || null, handle: ch.handle || null, name: ch.name || "" });
-    return true;
-  }
-  function enrich(data2, ch) {
-    let changed = false;
-    for (const g of data2.groups) {
-      for (const c of g.channels) {
-        if (!sameChannel(c, ch)) continue;
-        if (!c.id && ch.id) c.id = ch.id, changed = true;
-        if (!c.handle && ch.handle) c.handle = lower(ch.handle), changed = true;
-        if (!c.name && ch.name) c.name = ch.name, changed = true;
-      }
-    }
-    return changed;
-  }
-
-  // src/features/youtube/subGroups/index.js
-  var cards = () => site2.filters;
-  var channelRefOf2 = (card2) => site2.channels.channelRefOf(card2);
-  var channelPageInfo3 = () => site2.channels.channelPageInfo();
-  var subscribedChannels3 = () => site2.channels.subscribedChannels();
-  var readCard4 = (el) => cards().readCard(el);
-  var ATTR3 = "data-ytx-sg-hide";
-  var groupsData = () => store.bucket(GROUPS_BUCKET, normalizeGroups);
-  var updateGroups = (fn) => store.updateBucket(GROUPS_BUCKET, fn, normalizeGroups);
-  function addGroup(name) {
-    const n = String(name || "").trim();
-    if (!n) return null;
-    let id = null;
-    updateGroups((d) => {
-      id = `g${Date.now().toString(36)}`;
-      d.groups.push({ id, name: n, channels: [] });
-    });
-    return id;
-  }
-  function knownChannels() {
-    const out = /* @__PURE__ */ new Map();
-    const add2 = (c) => {
-      if (!c?.name && !c?.id) return;
-      const key = c.id || c.handle || `name:${c.name.toLowerCase()}`;
-      const prev2 = out.get(key);
-      out.set(key, { id: c.id || prev2?.id || null, handle: c.handle || prev2?.handle || null, name: c.name || prev2?.name || "" });
-    };
-    for (const c of subscribedChannels3()) add2(c);
-    for (const el of outerCards()) add2(channelRefOf2(readCard4(el)));
-    for (const g of groupsData().groups) for (const c of g.channels) add2(c);
-    return [...out.values()].sort((a, b) => a.name.localeCompare(b.name, "de"));
-  }
-  function outerCards() {
-    const out = [];
-    const f = cards();
-    for (const root of f.activePageRoots()) {
-      for (const el of qsa(f.CARD_SELECTORS.join(", "), root)) if (!el.parentElement?.closest(f.CARD_PARENT)) out.push(el);
-    }
-    return out;
-  }
-  function openPanelTab() {
-    const panel = pageWindow.__ytx?.panel;
-    if (!panel) return;
-    panel.open();
-    panel.select("subGroups");
-  }
-  var subGroups_default = {
-    id: "subs.groups",
-    label: "Abo-Gruppen",
-    group: "Abos",
-    description: "Eigene Gruppen wie „Tech“ oder „Musik“ für deine Abos. Filterleiste über dem Abo-Feed, Zuordnen auf der Kanalseite und im Tab „Abo-Gruppen“",
-    pages: ["subscriptions", "channel"],
-    stability: "mittel",
-    anchors: ["subs.feedTop", "channel.headerButtons"],
-    settings: {
-      showNone: { type: "toggle", label: "Chip „Ohne Gruppe“ anzeigen", default: true },
-      rememberGroup: { type: "toggle", label: "Zuletzt gewählte Gruppe merken", default: false }
-    },
-    setup(ctx) {
-      let s = ctx.settings;
-      let active = s.rememberGroup ? ctx.state.get("subs.activeGroup", null) : null;
-      const stats2 = { checked: 0, hidden: 0 };
-      ctx.css(`[${ATTR3}] { display: none !important; }
-.ytx-sg-bar { all: initial; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 8px; font: 500 14px Roboto, Arial, sans-serif; }
-.ytx-sg-chip { all: initial; cursor: pointer; padding: 6px 12px; border-radius: 8px; font: 500 14px/20px Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary, #f1f1f1); background: var(--yt-sys-color-baseline--additive-background, rgba(255,255,255,.1)); }
-.ytx-sg-chip:hover { background: var(--yt-sys-color-baseline--mono-tonal-hover, rgba(255,255,255,.2)); }
-.ytx-sg-chip[aria-pressed="true"] { color: var(--yt-sys-color-baseline--text-primary-inverse, #0f0f0f); background: var(--yt-sys-color-baseline--text-primary, #f1f1f1); }
-.ytx-sg-chip small { opacity: .65; margin-left: 4px; font-size: 12px; }
-.ytx-sg-edit { all: initial; cursor: pointer; font: 500 13px Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--call-to-action, #3ea6ff); margin-left: 4px; }
-.ytx-sg-info { font: 400 12px Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-secondary, #aaa); margin-left: auto; }`);
-      function apply() {
-        const data2 = groupsData();
-        let checked = 0;
-        let hidden = 0;
-        let learned = false;
-        for (const el of outerCards()) {
-          const card2 = readCard4(el);
-          if (!card2) continue;
-          const ch = channelRefOf2(card2);
-          checked++;
-          if (groupsOf(ch, data2).length && enrich(data2, ch)) learned = true;
-          const show = ctx.nav.page !== "subscriptions" || visibleIn(ch, active, data2);
-          if (show) el.removeAttribute(ATTR3);
-          else {
-            el.setAttribute(ATTR3, "");
-            hidden++;
-          }
-        }
-        if (learned) updateGroups((d) => Object.assign(d, data2));
-        stats2.checked = checked;
-        stats2.hidden = hidden;
-      }
-      function drawBar(node) {
-        const data2 = groupsData();
-        const chip = (id, label, count) => {
-          const b = h("button", { type: "button", class: "ytx-sg-chip", "aria-pressed": String((active || null) === id) }, label, count != null && h("small", { text: String(count) }));
-          b.addEventListener("click", () => {
-            active = id;
-            if (s.rememberGroup) ctx.state.set("subs.activeGroup", id);
-            apply();
-            drawBar(node);
-            window.scrollTo({ top: 0 });
-          });
-          return b;
-        };
-        const edit = h("button", { type: "button", class: "ytx-sg-edit", text: data2.groups.length ? "✎ Gruppen bearbeiten" : "+ Abo-Gruppe anlegen" });
-        edit.addEventListener("click", openPanelTab);
-        const kids = [chip(null, "Alle")];
-        for (const g of data2.groups) kids.push(chip(g.id, g.name, g.channels.length));
-        if (s.showNone && data2.groups.length) kids.push(chip(NONE, "Ohne Gruppe"));
-        kids.push(edit);
-        if (active) kids.push(h("span", { class: "ytx-sg-info", text: `${stats2.checked - stats2.hidden} von ${stats2.checked} Videos` }));
-        node.replaceChildren(...kids);
-      }
-      const bar = ctx.mount({
-        id: "subs.groups.bar",
-        anchor: "subs.feedTop",
-        position: "before",
-        when: () => ctx.nav.page === "subscriptions",
-        create: () => h("div", { class: "ytx-sg-bar" }),
-        update: (node) => drawBar(node)
-      });
-      const chan = ctx.mount({
-        id: "subs.groups.channel",
-        anchor: "channel.headerButtons",
-        position: "append",
-        when: () => ctx.nav.page === "channel" && !!channelPageInfo3(),
-        create: () => {
-          const b = button({
-            label: "Gruppen",
-            icon: "☰",
-            title: "Kanal einer Abo-Gruppe zuordnen",
-            onClick: () => {
-              const ch = channelPageInfo3();
-              if (!ch) return toast("Kanal noch nicht erkannt");
-              const data2 = groupsData();
-              const items = [{ title: ch.name }];
-              for (const g of data2.groups) {
-                const on = groupsOf(ch, data2).some((x) => x.id === g.id);
-                items.push({ label: g.name, checked: on, run: () => {
-                  updateGroups((d) => toggleChannel(d, g.id, ch));
-                  toast(`${ch.name} ${on ? "aus" : "in"} „${g.name}“`);
-                  chan.refresh();
-                } });
-              }
-              items.push({ sep: true }, { label: "Neue Gruppe …", run: () => {
-                const name = pageWindow.prompt("Name der neuen Abo-Gruppe");
-                const id = addGroup(name);
-                if (!id) return;
-                updateGroups((d) => toggleChannel(d, id, ch));
-                toast(`${ch.name} in „${name.trim()}“`);
-                chan.refresh();
-              } }, { label: "Alle Gruppen verwalten", run: openPanelTab });
-              showMenu(chan.node, items);
-            }
-          });
-          b.style.marginLeft = "8px";
-          return b;
-        },
-        update: (node) => {
-          const ch = channelPageInfo3();
-          const names = ch ? groupsOf(ch, groupsData()).map((g) => g.name) : [];
-          const label = node.querySelector(".ytx-label");
-          const text = names.length ? names.join(", ") : "Gruppen";
-          if (label && label.textContent !== text) label.textContent = text;
-        }
-      });
-      const off = ctx.onSweep(() => {
-        if (ctx.nav.page === "subscriptions") {
-          apply();
-          if (bar.node && active) drawBar(bar.node);
-        }
-      });
-      return {
-        onPage(page) {
-          if (page !== "subscriptions") for (const el of qsa(`[${ATTR3}]`)) el.removeAttribute(ATTR3);
-          bar.refresh();
-          chan.refresh();
-        },
-        update(next) {
-          s = next;
-          bar.refresh();
-        },
-        dispose() {
-          off();
-          for (const el of qsa(`[${ATTR3}]`)) el.removeAttribute(ATTR3);
-          bar.destroy();
-          chan.destroy();
-        },
-        health() {
-          const n = groupsData().groups.length;
-          if (ctx.nav.page === "subscriptions") return bar.ok ? { status: "ok", detail: `${n} Gruppen · ${active ? `Filter aktiv, ${stats2.hidden}/${stats2.checked} ausgeblendet` : "kein Filter"}` } : { status: "warn", detail: "Abo-Feed nicht gefunden (Anmeldung nötig)" };
-          if (ctx.nav.page === "channel") return chan.ok ? { status: "ok", detail: "Gruppen-Button auf der Kanalseite" } : { status: "warn", detail: "Kanal-Kopf nicht gefunden" };
-          return { status: "skip", detail: `${n} Gruppen` };
-        },
-        debug: { apply, setActive: (id) => (active = id, apply()), stats: stats2 }
-      };
-    }
-  };
-
-  // src/core/idb.js
-  var req = (r) => new Promise((ok, fail2) => {
-    r.onsuccess = () => ok(r.result);
-    r.onerror = () => fail2(r.error);
-  });
-  var done = (tx) => new Promise((ok, fail2) => {
-    tx.oncomplete = () => ok();
-    tx.onerror = () => fail2(tx.error);
-    tx.onabort = () => fail2(tx.error || new Error("transaction abgebrochen"));
-  });
-  function openDatabase(name, migrations) {
-    const status = { name, version: migrations.length, open: false, error: null, openedAt: 0, upgradedFrom: null, blocked: false };
-    let dbp = null;
-    const open = () => {
-      if (dbp) return dbp;
-      dbp = new Promise((ok, fail2) => {
-        if (typeof indexedDB === "undefined") return fail2(new Error("IndexedDB nicht verfügbar"));
-        const r = indexedDB.open(name, migrations.length);
-        r.onupgradeneeded = (e) => {
-          const db3 = r.result;
-          const tx = r.transaction;
-          status.upgradedFrom = e.oldVersion;
-          for (let v = e.oldVersion; v < migrations.length; v++) {
-            try {
-              migrations[v](db3, tx);
-            } catch (err) {
-              log.error(`idb migration ${name} v${v + 1}`, err);
-              tx.abort();
-              return;
-            }
-          }
-        };
-        r.onblocked = () => {
-          status.blocked = true;
-          log.warn(`idb ${name} blockiert durch anderen tab`);
-        };
-        r.onsuccess = () => {
-          const db3 = r.result;
-          db3.onversionchange = () => {
-            db3.close();
-            dbp = null;
-            status.open = false;
-          };
-          status.open = true;
-          status.openedAt = Date.now();
-          ok(db3);
-        };
-        r.onerror = () => {
-          status.error = r.error?.message || "unbekannt";
-          dbp = null;
-          fail2(r.error);
-        };
-      });
-      return dbp;
-    };
-    const withStore = async (store2, mode, fn) => {
-      const db3 = await open();
-      const tx = db3.transaction(store2, mode);
-      const result = fn(tx.objectStore(store2), tx);
-      const value = result instanceof IDBRequest ? await req(result) : await result;
-      await done(tx);
-      return value;
-    };
-    return {
-      status,
-      open,
-      get: (store2, key) => withStore(store2, "readonly", (s) => s.get(key)),
-      put: (store2, value) => withStore(store2, "readwrite", (s) => s.put(value)),
-      delete: (store2, key) => withStore(store2, "readwrite", (s) => s.delete(key)),
-      clear: (store2) => withStore(store2, "readwrite", (s) => s.clear()),
-      count: (store2) => withStore(store2, "readonly", (s) => s.count()),
-      getAll: (store2, query, count) => withStore(store2, "readonly", (s) => s.getAll(query, count)),
-      putMany: (store2, values) => withStore(store2, "readwrite", (s) => {
-        for (const v of values) s.put(v);
-      }),
-      deleteMany: (store2, keys) => withStore(store2, "readwrite", (s) => {
-        for (const k of keys) s.delete(k);
-      }),
-      byIndex: (store2, index, query, count) => withStore(store2, "readonly", (s) => s.index(index).getAll(query, count)),
-      // neueste zuerst ueber einen index mit cursor
-      latest: (store2, index, limit = 50) => withStore(
-        store2,
-        "readonly",
-        (s) => new Promise((ok, fail2) => {
-          const out = [];
-          const c = s.index(index).openCursor(null, "prev");
-          c.onsuccess = () => {
-            const cur = c.result;
-            if (!cur || out.length >= limit) return ok(out);
-            out.push(cur.value);
-            cur.continue();
-          };
-          c.onerror = () => fail2(c.error);
-        })
-      ),
-      deleteWhere: (store2, index, range2) => withStore(
-        store2,
-        "readwrite",
-        (s) => new Promise((ok, fail2) => {
-          let n = 0;
-          const c = s.index(index).openCursor(range2);
-          c.onsuccess = () => {
-            const cur = c.result;
-            if (!cur) return ok(n);
-            cur.delete();
-            n++;
-            cur.continue();
-          };
-          c.onerror = () => fail2(c.error);
-        })
-      ),
-      async exportAll(stores) {
-        const db3 = await open();
-        const out = { database: name, version: db3.version, exportedAt: (/* @__PURE__ */ new Date()).toISOString(), stores: {} };
-        for (const st of stores || [...db3.objectStoreNames]) out.stores[st] = await withStore(st, "readonly", (s) => s.getAll());
-        return out;
-      },
-      async importAll(dump, { replace = false, stores } = {}) {
-        const db3 = await open();
-        const names = stores || Object.keys(dump.stores || {}).filter((n) => db3.objectStoreNames.contains(n));
-        for (const st of names) {
-          await withStore(st, "readwrite", (s) => {
-            if (replace) s.clear();
-            for (const v of dump.stores[st] || []) s.put(v);
-          });
-        }
-        return names;
-      },
-      async sizes() {
-        const db3 = await open();
-        const out = {};
-        for (const st of db3.objectStoreNames) out[st] = await withStore(st, "readonly", (s) => s.count());
-        return out;
-      },
-      close() {
-        dbp?.then((db3) => db3.close()).catch(() => {
-        });
-        dbp = null;
-        status.open = false;
-      }
-    };
-  }
-
-  // src/features/youtube/watchtime/db.js
-  var YT_DB = "ytx-youtube";
-  var MIGRATIONS2 = [
-    // v1 schauzeit pro video sitzung
-    (db3) => {
-      const views = db3.createObjectStore("views", { keyPath: "id" });
-      views.createIndex("startedAt", "startedAt");
-      views.createIndex("day", "day");
-      db3.createObjectStore("meta", { keyPath: "key" });
-    }
-  ];
-  var db = null;
-  function ytDb() {
-    db ||= openDatabase(YT_DB, MIGRATIONS2);
-    return db;
-  }
-
   // src/features/youtube/watchtime/logic.js
-  var DAY = 24 * 3600 * 1e3;
-  function dayKey(ts) {
+  var DAY3 = 24 * 3600 * 1e3;
+  function dayKey2(ts) {
     const d = new Date(ts);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }
@@ -6316,18 +8078,18 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     return d.getTime();
   }
   function createSession(p, now, device = null) {
-    return { id: `${now}-${p.videoId}`, videoId: p.videoId, kind: p.kind, title: p.title, channel: p.channel, category: p.category || null, device, startedAt: now, endedAt: now, day: dayKey(now), wallSec: 0, maxPos: 0, durationSec: Math.round(p.dur || 0) };
+    return { id: `${now}-${p.videoId}`, videoId: p.videoId, kind: p.kind, title: p.title, channel: p.channel, category: p.category || null, device, startedAt: now, endedAt: now, day: dayKey2(now), wallSec: 0, maxPos: 0, durationSec: Math.round(p.dur || 0) };
   }
-  function tickSession(s, p, dtSec, now) {
-    if (p.playing && !p.ad) s.wallSec += dtSec;
-    s.maxPos = Math.max(s.maxPos, p.pos || 0);
-    if (p.dur) s.durationSec = Math.round(p.dur);
-    if (!s.title && p.title) s.title = p.title;
-    if (!s.channel?.name && p.channel?.name) s.channel = p.channel;
-    if (!s.category && p.category) s.category = p.category;
-    s.endedAt = now;
-    s.percent = s.durationSec ? Math.min(1, s.maxPos / s.durationSec) : null;
-    return s;
+  function tickSession(s2, p, dtSec, now) {
+    if (p.playing && !p.ad) s2.wallSec += dtSec;
+    s2.maxPos = Math.max(s2.maxPos, p.pos || 0);
+    if (p.dur) s2.durationSec = Math.round(p.dur);
+    if (!s2.title && p.title) s2.title = p.title;
+    if (!s2.channel?.name && p.channel?.name) s2.channel = p.channel;
+    if (!s2.category && p.category) s2.category = p.category;
+    s2.endedAt = now;
+    s2.percent = s2.durationSec ? Math.min(1, s2.maxPos / s2.durationSec) : null;
+    return s2;
   }
   function reminderDue({ todaySec, streakSec, limitMin, breakMin, remindEveryMin, state: state2 }) {
     if (limitMin > 0 && todaySec >= limitMin * 60) {
@@ -6337,16 +8099,16 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     if (breakMin > 0 && streakSec >= breakMin * 60 && (state2.breakAt == null || streakSec >= state2.breakAt + breakMin * 60)) return { kind: "break", mark: streakSec };
     return null;
   }
-  function add(map, key, init2, sec) {
-    const v = map.get(key) || { ...init2, sec: 0, count: 0 };
+  function add(map, key2, init2, sec) {
+    const v = map.get(key2) || { ...init2, sec: 0, count: 0 };
     v.sec += sec;
     v.count++;
-    map.set(key, v);
+    map.set(key2, v);
   }
   function watchStats(views, { from, to, now = Date.now(), days = 7, limit = 10 }) {
     const list = views.filter((v) => v.startedAt >= from && v.startedAt < to && v.wallSec > 0);
     const byDay = /* @__PURE__ */ new Map();
-    for (let i = days - 1; i >= 0; i--) byDay.set(dayKey(startOfDay(now) - i * DAY), 0);
+    for (let i = days - 1; i >= 0; i--) byDay.set(dayKey2(startOfDay(now) - i * DAY3), 0);
     const channels = /* @__PURE__ */ new Map();
     const videos = /* @__PURE__ */ new Map();
     let total = 0;
@@ -6371,41 +8133,6 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       topChannels: top2(channels),
       topVideos: top2(videos)
     };
-  }
-
-  // src/core/device.js
-  var KEY3 = "ytx.device";
-  var cached = null;
-  function read() {
-    try {
-      if (typeof GM_getValue === "function") return GM_getValue(KEY3, null);
-    } catch {
-    }
-    try {
-      return localStorage.getItem(KEY3);
-    } catch {
-      return null;
-    }
-  }
-  function write(v) {
-    try {
-      if (typeof GM_setValue === "function") return GM_setValue(KEY3, v);
-    } catch {
-    }
-    try {
-      localStorage.setItem(KEY3, v);
-    } catch {
-    }
-  }
-  function deviceId() {
-    if (cached) return cached;
-    let v = read();
-    if (typeof v !== "string" || !/^d-[a-z0-9]{8,}$/.test(v)) {
-      v = `d-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
-      write(v);
-    }
-    cached = v;
-    return v;
   }
 
   // src/features/youtube/watchtime/index.js
@@ -6435,9 +8162,9 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       retentionDays: { type: "range", label: "Aufbewahren (Tage)", min: 30, max: 730, step: 30, default: 365 }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       const db3 = ytDb();
-      const st = { session: null, day: dayKey(Date.now()), todayBase: 0, lastTick: Date.now(), lastSave: 0, streak: 0, lastPlayAt: 0, remind: { limitAt: null, breakAt: null }, error: null, saved: 0 };
+      const st = { session: null, day: dayKey2(Date.now()), todayBase: 0, lastTick: Date.now(), lastSave: 0, streak: 0, lastPlayAt: 0, remind: { limitAt: null, breakAt: null }, error: null, saved: 0 };
       const loadToday = async () => {
         try {
           const list = await db3.byIndex("views", "day", st.day);
@@ -6456,7 +8183,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         id: "top.watchtime",
         anchor: "top.buttons",
         position: "prepend",
-        when: () => s.showToday && s.record,
+        when: () => s2.showToday && s2.record,
         create: () => {
           const b = button({ label: "Heute –", small: true, title: "Schauzeit heute (ytx)", onClick: () => {
             const panel = pageWindow.__ytx?.panel;
@@ -6472,7 +8199,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           const text = innerWidth < 520 ? `⏱ ${t}` : `Heute ${t}`;
           const label = node.querySelector(".ytx-label");
           if (label && label.textContent !== text) label.textContent = text;
-          const over = s.limitMinutes > 0 && sec >= s.limitMinutes * 60;
+          const over = s2.limitMinutes > 0 && sec >= s2.limitMinutes * 60;
           node.style.color = over ? "var(--yt-sys-color-baseline--call-to-action, #3ea6ff)" : "";
         }
       });
@@ -6484,17 +8211,17 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       const remind = (kind) => {
         closeCard();
         const sec = todaySec();
-        const paused = kind === "limit" && s.pauseAtLimit;
+        const paused = kind === "limit" && s2.pauseAtLimit;
         if (paused) pauseActive3();
-        const title = kind === "limit" ? "Tageslimit erreicht" : "Zeit für eine kurze Pause?";
-        const text = kind === "limit" ? `Du hast heute schon ${formatDuration(sec)} geschaut (Limit ${formatDuration(s.limitMinutes * 60)}).${paused ? " Das Video ist angehalten." : ""}` : `Du schaust seit ${formatDuration(st.streak)} am Stück.`;
+        const title2 = kind === "limit" ? "Tageslimit erreicht" : "Zeit für eine kurze Pause?";
+        const text = kind === "limit" ? `Du hast heute schon ${formatDuration(sec)} geschaut (Limit ${formatDuration(s2.limitMinutes * 60)}).${paused ? " Das Video ist angehalten." : ""}` : `Du schaust seit ${formatDuration(st.streak)} am Stück.`;
         const actions2 = h("div", { class: "ytx-row" });
         if (!paused) actions2.append(button({ label: "Video anhalten", small: true, onClick: () => {
           pauseActive3();
           closeCard();
         } }));
         actions2.append(button({ label: kind === "limit" ? "Weiter schauen" : "Weiter", small: true, onClick: closeCard }));
-        card2 = h("div", { class: "ytx-wt-card", role: "status", "data-ytx-own": "" }, h("b", { text: title }), h("div", { text }), actions2);
+        card2 = h("div", { class: "ytx-wt-card", role: "status", "data-ytx-own": "" }, h("b", { text: title2 }), h("div", { text }), actions2);
         document.body.append(card2);
       };
       ctx.css(`.ytx-wt-card { position: fixed; z-index: 2400; left: 50%; bottom: 28px; transform: translateX(-50%); width: min(420px, 92vw); box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: 12px;
@@ -6505,7 +8232,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         const now = Date.now();
         const dt = Math.min(2, Math.max(0, (now - st.lastTick) / 1e3));
         st.lastTick = now;
-        const day = dayKey(now);
+        const day = dayKey2(now);
         if (day !== st.day) {
           if (st.session) save3(st.session);
           st.session = null;
@@ -6513,9 +8240,9 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           st.todayBase = 0;
           st.remind = { limitAt: null, breakAt: null };
         }
-        if (!s.record) return;
+        if (!s2.record) return;
         let p = activePlayback3();
-        if (p && p.kind === "short" && !s.countShorts) p = null;
+        if (p && p.kind === "short" && !s2.countShorts) p = null;
         if (st.session && (!p || p.videoId !== st.session.videoId)) {
           save3(st.session);
           st.todayBase += st.session.wallSec;
@@ -6536,7 +8263,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           st.streak = 0;
           st.remind.breakAt = null;
         }
-        const due = reminderDue({ todaySec: todaySec(), streakSec: st.streak, limitMin: s.limitMinutes, breakMin: s.breakMinutes, remindEveryMin: s.remindEveryMinutes, state: st.remind });
+        const due = reminderDue({ todaySec: todaySec(), streakSec: st.streak, limitMin: s2.limitMinutes, breakMin: s2.breakMinutes, remindEveryMin: s2.remindEveryMinutes, state: st.remind });
         if (due) {
           if (due.kind === "limit") st.remind.limitAt = due.mark;
           else st.remind.breakAt = due.mark;
@@ -6546,7 +8273,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       const timer3 = setInterval(tick2, 1e3);
       const badgeTimer = setInterval(() => badge2.refresh(), 1e4);
       const offHide = listen(window, "pagehide", () => save3(st.session));
-      const prune = () => db3.deleteWhere("views", "startedAt", IDBKeyRange.upperBound(Date.now() - s.retentionDays * DAY)).catch(() => {
+      const prune = () => db3.deleteWhere("views", "startedAt", IDBKeyRange.upperBound(Date.now() - s2.retentionDays * DAY3)).catch(() => {
       });
       const pruneTimer = setTimeout(prune, 2e4);
       const inst = {
@@ -6557,7 +8284,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         state: st,
         remind,
         update(next) {
-          s = next;
+          s2 = next;
           badge2.refresh();
         },
         dispose() {
@@ -6571,10 +8298,10 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           if (current === inst) current = null;
         },
         health() {
-          if (!s.record) return { status: "skip", detail: "Aufzeichnung aus" };
+          if (!s2.record) return { status: "skip", detail: "Aufzeichnung aus" };
           if (st.error) return { status: "fail", detail: `Speichern: ${st.error}` };
           const p = st.session;
-          return { status: "ok", detail: `heute ${formatDuration(todaySec())}${p ? ` · läuft: ${p.title || p.videoId} (${Math.round(p.wallSec)} s)` : ""} · am Stück ${Math.round(st.streak / 60)} min${s.limitMinutes ? ` · Limit ${s.limitMinutes} min` : ""}` };
+          return { status: "ok", detail: `heute ${formatDuration(todaySec())}${p ? ` · läuft: ${p.title || p.videoId} (${Math.round(p.wallSec)} s)` : ""} · am Stück ${Math.round(st.streak / 60)} min${s2.limitMinutes ? ` · Limit ${s2.limitMinutes} min` : ""}` };
         }
       };
       current = inst;
@@ -6596,7 +8323,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       speedAdjusted: { type: "toggle", label: "Geschwindigkeit berücksichtigen", default: true }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       let lastText = "";
       const text = () => {
         const p = player();
@@ -6606,10 +8333,10 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         const dur = p.getDuration?.() || 0;
         const cur = p.getCurrentTime?.() || 0;
         if (!dur) return "";
-        const r = s.speedAdjusted ? p.getPlaybackRate?.() || 1 : 1;
+        const r = s2.speedAdjusted ? p.getPlaybackRate?.() || 1 : 1;
         const left = Math.max(0, (dur - cur) / r);
         const end = formatTimeOfDay(new Date(Date.now() + left * 1e3));
-        return `${s.showRemaining ? ` · −${clock(left)}` : ""} · endet ${end}`;
+        return `${s2.showRemaining ? ` · −${clock(left)}` : ""} · endet ${end}`;
       };
       const m = ctx.mount({
         id: "player.endsAt",
@@ -6633,7 +8360,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       const off2 = listen(document, "ratechange", () => m.refresh(), true);
       return {
         update(next) {
-          s = next;
+          s2 = next;
           lastText = "";
           m.refresh();
         },
@@ -6658,7 +8385,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       withTime: { type: "toggle", label: "Mit Uhrzeit", default: false }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       let shown = "";
       const m = ctx.mount({
         id: "watch.publishDate",
@@ -6670,14 +8397,14 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           const pr = watch3.playerResponse();
           if (pr?.videoDetails?.videoId !== ctx.nav.videoId) return;
           const iso = watch3.publishDate(pr);
-          const t = iso ? `Veröffentlicht am ${formatDate(iso, s.withTime && /T/.test(iso))}` : "";
+          const t = iso ? `Veröffentlicht am ${formatDate(iso, s2.withTime && /T/.test(iso))}` : "";
           if (t !== shown) node.textContent = shown = t;
         }
       });
       return {
         onVideo: () => m.refresh(),
         update(next) {
-          s = next;
+          s2 = next;
           shown = "";
           m.refresh();
         },
@@ -6699,7 +8426,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     },
     hotkeys: [["info.linkHere", "Link an aktueller Stelle kopieren", "Alt+L"]],
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       const meta = () => {
         const pr = watch3.playerResponse();
         const vd = pr?.videoDetails || {};
@@ -6710,7 +8437,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         if (await ctx.copyText(text)) toast(`${what} kopiert`);
         else textDialog(what, text);
       };
-      const link = (title, sec) => s.linkFormat === "markdown" ? `[${title}](${videoLink(meta().id, sec)})` : videoLink(meta().id, sec);
+      const link = (title2, sec) => s2.linkFormat === "markdown" ? `[${title2}](${videoLink(meta().id, sec)})` : videoLink(meta().id, sec);
       const chaptersText = (md) => {
         const m = meta();
         const ch = watch3.chapters();
@@ -6750,7 +8477,7 @@ ${chaptersText(true)}
       });
       return {
         update(next) {
-          s = next;
+          s2 = next;
         },
         dispose: () => mt.destroy(),
         health: () => mt.ok ? { status: "ok", detail: `${watch3.chapters().length} Kapitel erkannt` } : { status: "warn", detail: "Aktionsleiste nicht gefunden" }
@@ -6771,20 +8498,20 @@ ${chaptersText(true)}
       doneLabel: { type: "toggle", label: "Ab 95 % „✓ gesehen“ zeigen", default: true }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       let count = 0;
       const run2 = () => {
         count = 0;
         for (const bar of qsa(BARS.join(", "))) {
-          const pct = firstInt(bar.style.width);
+          const pct2 = firstInt(bar.style.width);
           const thumb = bar.closest("ytd-thumbnail, yt-thumbnail-view-model, ytm-thumbnail-cover, ytm-compact-thumbnail");
           if (!thumb) continue;
           let badge2 = thumb.querySelector(":scope > .ytx-badge");
-          if (pct == null || pct < s.min) {
+          if (pct2 == null || pct2 < s2.min) {
             badge2?.remove();
             continue;
           }
-          const text = s.doneLabel && pct >= 95 ? "✓ gesehen" : `${pct} %`;
+          const text = s2.doneLabel && pct2 >= 95 ? "✓ gesehen" : `${pct2} %`;
           if (!badge2) {
             badge2 = h("span", { class: "ytx-badge", "data-ytx-own": "" });
             if (getComputedStyle(thumb).position === "static") thumb.style.position = "relative";
@@ -6797,7 +8524,7 @@ ${chaptersText(true)}
       return {
         onSweep: run2,
         update(next) {
-          s = next;
+          s2 = next;
           run2();
         },
         dispose() {
@@ -6829,7 +8556,7 @@ ${chaptersText(true)}
       labels: { type: "toggle", label: "Beschriftung zeigen", default: true }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       let missing = [];
       let m = null;
       const clickOriginal = (id) => {
@@ -6842,14 +8569,14 @@ ${chaptersText(true)}
         m?.destroy();
         m = ctx.mount({
           id: "proxy.buttons",
-          anchor: s.placement,
-          position: s.placement === "player.rightControls" ? "prepend" : "append",
+          anchor: s2.placement,
+          position: s2.placement === "player.rightControls" ? "prepend" : "append",
           when: () => ctx.nav.page === "watch",
           create: () => {
-            const row2 = h("div", { style: { display: "inline-flex", gap: "6px", alignItems: "center", margin: s.placement === "watch.titleRow" ? "8px 0" : "0 6px" } });
+            const row2 = h("div", { style: { display: "inline-flex", gap: "6px", alignItems: "center", margin: s2.placement === "watch.titleRow" ? "8px 0" : "0 6px" } });
             for (const [id, label, icon] of PROXY) {
-              if (!s.buttons.includes(id)) continue;
-              const b = button({ label: s.labels ? label : "", icon, small: true, title: label, onClick: () => clickOriginal(id) });
+              if (!s2.buttons.includes(id)) continue;
+              const b = button({ label: s2.labels ? label : "", icon, small: true, title: label, onClick: () => clickOriginal(id) });
               b.dataset.proxy = id;
               row2.append(b);
             }
@@ -6868,7 +8595,7 @@ ${chaptersText(true)}
       build();
       return {
         update(next) {
-          s = next;
+          s2 = next;
           build();
         },
         dispose: () => m?.destroy(),
@@ -6953,7 +8680,7 @@ ${chaptersText(true)}
     filters: { pages: FILTER_PAGES, CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots },
     channels: { channelRefOf, channelPageInfo, subscribedChannels },
     playback: { activePlayback, pauseActive },
-    panelTabs: ["display", "look", "layout", "behavior", "filters", "features", "subGroups", "watchStats", "profiles", "diagnose"],
+    panelTabs: ["display", "look", "layout", "behavior", "filters", "features", "subGroups", "watchStats", "stats", "profiles", "diagnose"],
     boot() {
       initTimedtextCapture();
       bootHashTokens(() => document.documentElement.hasAttribute("dark"), "youtube");
@@ -7320,7 +9047,7 @@ ${chaptersText(true)}
     return { artists, album, year, owner };
   }
   function splitArtistNames(text) {
-    return String(text || "").split(/\s*(?:,|&| und | and | x | feat\.? | ft\.? )\s*/i).map((s) => s.trim()).filter(Boolean);
+    return String(text || "").split(/\s*(?:,|&| und | and | x | feat\.? | ft\.? )\s*/i).map((s2) => s2.trim()).filter(Boolean);
   }
   var flexRuns = (r, i) => r.flexColumns?.[i]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs || [];
   var fixedText = (r) => (r.fixedColumns || []).map((c) => runsText2(c.musicResponsiveListItemFixedColumnRenderer?.text)).join(" ");
@@ -7330,7 +9057,7 @@ ${chaptersText(true)}
   }
   function parseListItem(r) {
     if (!r) return null;
-    const title = runsText2({ runs: flexRuns(r, 0) });
+    const title2 = runsText2({ runs: flexRuns(r, 0) });
     const videoId = r.playlistItemData?.videoId || flexRuns(r, 0)[0]?.navigationEndpoint?.watchEndpoint?.videoId || null;
     const playEp = r.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint;
     const vType = videoTypeOf(playEp) || videoTypeOf(flexRuns(r, 0)[0]?.navigationEndpoint);
@@ -7338,7 +9065,7 @@ ${chaptersText(true)}
     const by = parseByline(allRuns);
     const thumbnail = thumbOf(r);
     if (videoId) {
-      if (vType === "PODCAST_EPISODE") return { type: "episode", videoId, title, thumbnail };
+      if (vType === "PODCAST_EPISODE") return { type: "episode", videoId, title: title2, thumbnail };
       const durationSec = parseDuration(fixedText(r)) ?? parseDuration(runsText2({ runs: allRuns.filter((x) => /^\d+:\d{2}/.test(x.text || "")) }));
       if (!by.artists.length) {
         const plain = runsText2({ runs: flexRuns(r, 1) });
@@ -7347,7 +9074,7 @@ ${chaptersText(true)}
       return {
         type: vType === "OMV" || vType === "UGC" ? "video" : "song",
         videoId,
-        title,
+        title: title2,
         artists: by.artists,
         album: by.album,
         year: by.year,
@@ -7361,36 +9088,36 @@ ${chaptersText(true)}
     const id = ep?.browseEndpoint?.browseId;
     const pt = pageTypeOf(ep);
     if (!id) return null;
-    if (pt === "ARTIST") return { type: "artist", id, name: title, thumbnail };
-    if (pt === "ALBUM") return { type: "album", id, title, artists: by.artists, year: by.year, thumbnail };
-    if (pt === "PLAYLIST") return { type: "playlist", id: id.replace(/^VL/, ""), title, owner: by.owner, editorial: !by.owner, thumbnail };
-    if (pt === "PODCAST_SHOW_DETAIL_PAGE") return { type: "podcast", id, title, thumbnail };
-    if (pt === "USER_CHANNEL") return { type: "profile", id, name: title, thumbnail };
-    return { type: "other", id, title, pageType: pt };
+    if (pt === "ARTIST") return { type: "artist", id, name: title2, thumbnail };
+    if (pt === "ALBUM") return { type: "album", id, title: title2, artists: by.artists, year: by.year, thumbnail };
+    if (pt === "PLAYLIST") return { type: "playlist", id: id.replace(/^VL/, ""), title: title2, owner: by.owner, editorial: !by.owner, thumbnail };
+    if (pt === "PODCAST_SHOW_DETAIL_PAGE") return { type: "podcast", id, title: title2, thumbnail };
+    if (pt === "USER_CHANNEL") return { type: "profile", id, name: title2, thumbnail };
+    return { type: "other", id, title: title2, pageType: pt };
   }
   function parseTwoRow(r) {
     if (!r) return null;
     const ep = r.navigationEndpoint;
-    const title = runsText2(r.title);
+    const title2 = runsText2(r.title);
     const subRuns = r.subtitle?.runs || [];
     const by = parseByline(subRuns);
     const thumbnail = thumbOf(r);
     if (ep?.watchEndpoint?.videoId) {
       const vType = videoTypeOf(ep);
-      return { type: vType === "ATV" ? "song" : "video", videoId: ep.watchEndpoint.videoId, title, artists: by.artists, album: by.album, year: by.year, videoType: vType || null, thumbnail };
+      return { type: vType === "ATV" ? "song" : "video", videoId: ep.watchEndpoint.videoId, title: title2, artists: by.artists, album: by.album, year: by.year, videoType: vType || null, thumbnail };
     }
     const id = ep?.browseEndpoint?.browseId;
     const pt = pageTypeOf(ep);
     if (!id) return null;
-    if (pt === "ARTIST") return { type: "artist", id, name: title, subtitle: runsText2(r.subtitle), thumbnail };
+    if (pt === "ARTIST") return { type: "artist", id, name: title2, subtitle: runsText2(r.subtitle), thumbnail };
     if (pt === "ALBUM") {
-      const parts = runsText2(r.subtitle).split("•").map((s) => s.trim()).filter(Boolean);
+      const parts = runsText2(r.subtitle).split("•").map((s2) => s2.trim()).filter(Boolean);
       const kind = parts.length > 1 && !YEAR.test(parts[0]) ? parts[0] : "Album";
-      return { type: "album", id, title, kind, year: by.year ?? firstYear(parts), artists: by.artists, thumbnail };
+      return { type: "album", id, title: title2, kind, year: by.year ?? firstYear(parts), artists: by.artists, thumbnail };
     }
-    if (pt === "PLAYLIST") return { type: "playlist", id: id.replace(/^VL/, ""), title, owner: by.owner, editorial: !by.owner && !subRuns.some((x) => x.navigationEndpoint), subtitle: runsText2(r.subtitle), thumbnail };
-    if (pt === "PODCAST_SHOW_DETAIL_PAGE") return { type: "podcast", id, title, thumbnail };
-    return { type: "other", id, title, pageType: pt };
+    if (pt === "PLAYLIST") return { type: "playlist", id: id.replace(/^VL/, ""), title: title2, owner: by.owner, editorial: !by.owner && !subRuns.some((x) => x.navigationEndpoint), subtitle: runsText2(r.subtitle), thumbnail };
+    if (pt === "PODCAST_SHOW_DETAIL_PAGE") return { type: "podcast", id, title: title2, thumbnail };
+    return { type: "other", id, title: title2, pageType: pt };
   }
   var firstYear = (parts) => {
     const y = parts.find((p) => YEAR.test(p));
@@ -7408,13 +9135,13 @@ ${chaptersText(true)}
   }
   function parseShelves(data2) {
     const out = [];
-    for (const s of sectionsOf(data2)) {
-      const key = Object.keys(s)[0];
-      const v = s[key];
+    for (const s2 of sectionsOf(data2)) {
+      const key2 = Object.keys(s2)[0];
+      const v = s2[key2];
       const head = v?.header?.musicCarouselShelfBasicHeaderRenderer;
       const items = (v?.contents || []).map(parseItem).filter(Boolean);
       out.push({
-        kind: key,
+        kind: key2,
         title: runsText2(head?.title) || runsText2(v?.title),
         more: head?.moreContentButton?.buttonRenderer?.navigationEndpoint?.browseEndpoint?.browseId || null,
         items
@@ -7435,7 +9162,7 @@ ${chaptersText(true)}
         else if (it.type === "artist") artist.similar.push(it);
       }
     }
-    if (!artist.id) artist.id = artist.topSongs.flatMap((s) => s.artists).find((a) => a.name === artist.name)?.id || null;
+    if (!artist.id) artist.id = artist.topSongs.flatMap((s2) => s2.artists).find((a) => a.name === artist.name)?.id || null;
     for (const r of artist.releases) if (!r.artists.length && artist.id) r.artists = [{ id: artist.id, name: artist.name }];
     return artist;
   }
@@ -7448,16 +9175,16 @@ ${chaptersText(true)}
     const h2 = responsiveHeader(data2) || {};
     const pageType = (params.browseEndpointContextSupportedConfigs ? JSON.parse(params.browseEndpointContextSupportedConfigs)?.browseEndpointContextMusicConfig?.pageType : "")?.replace("MUSIC_PAGE_TYPE_", "") || "";
     const straps = parseByline(h2.straplineTextOne?.runs || []);
-    const subParts = runsText2(h2.subtitle).split("•").map((s) => s.trim());
+    const subParts = runsText2(h2.subtitle).split("•").map((s2) => s2.trim());
     const tracks = [];
     const related = [];
-    for (const s of sectionsOf(data2)) {
-      const v = s.musicShelfRenderer || s.musicPlaylistShelfRenderer;
+    for (const s2 of sectionsOf(data2)) {
+      const v = s2.musicShelfRenderer || s2.musicPlaylistShelfRenderer;
       if (v) for (const it of v.contents || []) {
         const p = parseItem(it);
         if (p && (p.type === "song" || p.type === "video")) tracks.push(p);
       }
-      if (s.musicCarouselShelfRenderer) related.push(...(s.musicCarouselShelfRenderer.contents || []).map(parseItem).filter(Boolean));
+      if (s2.musicCarouselShelfRenderer) related.push(...(s2.musicCarouselShelfRenderer.contents || []).map(parseItem).filter(Boolean));
     }
     const artists = straps.artists;
     const year = firstYear(subParts) ?? straps.year;
@@ -7485,14 +9212,14 @@ ${chaptersText(true)}
   }
   function parseSearchPage(data2) {
     const out = { songs: [], videos: [], artists: [], albums: [], playlists: [], podcasts: [], top: null };
-    for (const s of sectionsOf(data2)) {
-      if (s.musicCardShelfRenderer) {
-        const c = s.musicCardShelfRenderer;
+    for (const s2 of sectionsOf(data2)) {
+      if (s2.musicCardShelfRenderer) {
+        const c = s2.musicCardShelfRenderer;
         const ep = c.title?.runs?.[0]?.navigationEndpoint;
         out.top = { title: runsText2(c.title), subtitle: runsText2(c.subtitle), id: ep?.browseEndpoint?.browseId || ep?.watchEndpoint?.videoId || null, pageType: pageTypeOf(ep) };
         continue;
       }
-      const v = s.itemSectionRenderer || s.musicShelfRenderer;
+      const v = s2.itemSectionRenderer || s2.musicShelfRenderer;
       for (const it of v?.contents || []) {
         const p = parseItem(it);
         if (!p) continue;
@@ -7574,8 +9301,8 @@ ${chaptersText(true)}
     const items = d?.contents || [];
     const counts2 = {};
     for (const it of items.slice(0, 12)) {
-      const key = Object.keys(it || {})[0];
-      if (key === "musicMultiRowListItemRenderer") {
+      const key2 = Object.keys(it || {})[0];
+      if (key2 === "musicMultiRowListItemRenderer") {
         counts2.podcast = (counts2.podcast || 0) + 1;
         continue;
       }
@@ -7899,40 +9626,40 @@ ${chaptersText(true)}
       id: "compact",
       label: "Kompakt",
       pages: ["home", "explore", "artist", "library"],
-      css: (s) => `
-${s} ytmusic-carousel ytmusic-two-row-item-renderer:not([aspect-ratio*="16_9"]) { width: 140px !important; }
-${s} ytmusic-carousel ytmusic-two-row-item-renderer #item-thumbnail, ${s} ytmusic-carousel ytmusic-two-row-item-renderer ytmusic-thumbnail-renderer { width: 140px !important; height: 140px !important; }
-${s} ytmusic-carousel-shelf-renderer { margin-bottom: 20px !important; }
-${s} ytmusic-responsive-list-item-renderer { min-height: 44px !important; }`
+      css: (s2) => `
+${s2} ytmusic-carousel ytmusic-two-row-item-renderer:not([aspect-ratio*="16_9"]) { width: 140px !important; }
+${s2} ytmusic-carousel ytmusic-two-row-item-renderer #item-thumbnail, ${s2} ytmusic-carousel ytmusic-two-row-item-renderer ytmusic-thumbnail-renderer { width: 140px !important; height: 140px !important; }
+${s2} ytmusic-carousel-shelf-renderer { margin-bottom: 20px !important; }
+${s2} ytmusic-responsive-list-item-renderer { min-height: 44px !important; }`
     },
     {
       id: "list",
       label: "Listen statt Karussells",
       pages: ["home", "explore"],
-      css: (s) => `
-${s} ytmusic-carousel-shelf-renderer ytmusic-carousel #items { display: flex !important; flex-wrap: wrap !important; gap: 12px !important; transform: none !important; }
-${s} ytmusic-carousel-shelf-renderer ytmusic-carousel { overflow: visible !important; }
-${s} ytmusic-carousel-shelf-renderer #next-items-button, ${s} ytmusic-carousel-shelf-renderer #previous-items-button { display: none !important; }`
+      css: (s2) => `
+${s2} ytmusic-carousel-shelf-renderer ytmusic-carousel #items { display: flex !important; flex-wrap: wrap !important; gap: 12px !important; transform: none !important; }
+${s2} ytmusic-carousel-shelf-renderer ytmusic-carousel { overflow: visible !important; }
+${s2} ytmusic-carousel-shelf-renderer #next-items-button, ${s2} ytmusic-carousel-shelf-renderer #previous-items-button { display: none !important; }`
     },
     {
       id: "lyricsFocus",
       label: "Songtext groß",
       pages: ["watch"],
-      css: (s) => `
-${s} ytmusic-player-page #side-panel { flex: 1 1 60% !important; max-width: none !important; }
-${s} ytmusic-player-page #main-panel { flex: 1 1 40% !important; }
-${s} ytmusic-player-page ytmusic-description-shelf-renderer .description { font-size: 22px !important; line-height: 1.6 !important; }`
+      css: (s2) => `
+${s2} ytmusic-player-page #side-panel { flex: 1 1 60% !important; max-width: none !important; }
+${s2} ytmusic-player-page #main-panel { flex: 1 1 40% !important; }
+${s2} ytmusic-player-page ytmusic-description-shelf-renderer .description { font-size: 22px !important; line-height: 1.6 !important; }`
     },
     {
       id: "queueWide",
       label: "Warteschlange breit",
       pages: ["watch"],
-      css: (s) => `
-${s} ytmusic-player-page #side-panel { flex: 1 1 55% !important; max-width: none !important; }
-${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
+      css: (s2) => `
+${s2} ytmusic-player-page #side-panel { flex: 1 1 55% !important; max-width: none !important; }
+${s2} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     }
   ];
-  var presetById2 = Object.fromEntries(layoutPresets2.map((p) => [p.id, p]));
+  var presetById3 = Object.fromEntries(layoutPresets2.map((p) => [p.id, p]));
   var LAYOUT_PAGES2 = [
     ["home", "Startseite"],
     ["explore", "Entdecken"],
@@ -8029,8 +9756,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   var appEl = () => document.querySelector("ytmusic-app");
   function appStore() {
     try {
-      const s = appEl()?.polymerController?.store;
-      return s && typeof s.getState === "function" ? s : null;
+      const s2 = appEl()?.polymerController?.store;
+      return s2 && typeof s2.getState === "function" ? s2 : null;
     } catch {
       return null;
     }
@@ -8160,8 +9887,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     const content = st?.playerPage?.playerPageTabsContent?.[id];
     if (!content) return null;
     const sections = content?.contents?.sectionListRenderer?.contents || [];
-    for (const s of sections) {
-      const timed = s.musicTimedLyricsRenderer || s.timedLyricsRenderer;
+    for (const s2 of sections) {
+      const timed = s2.musicTimedLyricsRenderer || s2.timedLyricsRenderer;
       if (timed?.timedLyricsData) {
         return {
           available: true,
@@ -8170,13 +9897,13 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
           source: runsText2(timed.footer || timed.sourceMessage)
         };
       }
-      const d = s.musicDescriptionShelfRenderer;
+      const d = s2.musicDescriptionShelfRenderer;
       if (d?.description) {
         const text = runsText2(d.description);
         return { available: true, timed: false, lines: text.split("\n").map((t) => ({ text: t })), source: runsText2(d.footer) };
       }
     }
-    const msg = sections.map((s) => runsText2(s.messageRenderer?.text || s.musicMessageRenderer?.text)).find(Boolean);
+    const msg = sections.map((s2) => runsText2(s2.messageRenderer?.text || s2.musicMessageRenderer?.text)).find(Boolean);
     return { available: false, reason: msg || "kein Songtext" };
   }
   var lastTouchAt = 0;
@@ -8231,8 +9958,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   // src/behaviors/musicBack.js
   var CLOSED = ["", "PLAYER_BAR_ONLY", "INACTIVE", "MINIPLAYER"];
   var isOpen = () => {
-    const s = document.querySelector("ytmusic-app-layout")?.getAttribute("player-ui-state") || "";
-    return !CLOSED.includes(s);
+    const s2 = document.querySelector("ytmusic-app-layout")?.getAttribute("player-ui-state") || "";
+    return !CLOSED.includes(s2);
   };
   var tap = (el) => el.dispatchEvent(new CustomEvent("tap", { bubbles: true, composed: true, detail: { x: 0, y: 0 } }));
   var INTERACTIVE = "button, a, tp-yt-paper-slider, tp-yt-paper-icon-button, yt-icon-button, ytmusic-like-button-renderer, #progress-bar, .right-controls, .left-controls, input";
@@ -8326,7 +10053,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     start() {
       if (!window.__ytxNative) return () => {
       };
-      let last2 = 0;
+      let last3 = 0;
       const onClick = (e) => {
         if (!e.isTrusted) return;
         const t = e.target;
@@ -8336,8 +10063,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         const ep = (row2.data || row2.__data?.data)?.navigationEndpoint;
         if (!ep) return;
         const now = Date.now();
-        if (now - last2 < 800) return;
-        last2 = now;
+        if (now - last3 < 800) return;
+        last3 = now;
         e.stopPropagation();
         e.preventDefault();
         navigateEndpoint(ep);
@@ -8386,9 +10113,9 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     return out;
   }
   function summarize2(results) {
-    const s = { ok: 0, warn: 0, fail: 0, skip: 0 };
-    for (const r of results) s[r.status] = (s[r.status] || 0) + 1;
-    return s;
+    const s2 = { ok: 0, warn: 0, fail: 0, skip: 0 };
+    for (const r of results) s2[r.status] = (s2[r.status] || 0) + 1;
+    return s2;
   }
   function reportText(results, meta) {
     const lines2 = [`ytx Diagnose ${(/* @__PURE__ */ new Date()).toISOString()}`, ...Object.entries(meta).map(([k, v]) => `${k}: ${v}`), ""];
@@ -8410,11 +10137,11 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
 
   // src/behaviors/heatmap.js
   var maps = /* @__PURE__ */ new Map();
-  function find(o, key, d = 0) {
+  function find(o, key2, d = 0) {
     if (!o || typeof o !== "object" || d > 40) return void 0;
-    if (!Array.isArray(o) && o[key] !== void 0) return o[key];
+    if (!Array.isArray(o) && o[key2] !== void 0) return o[key2];
     for (const k in o) {
-      const hit = find(o[k], key, d + 1);
+      const hit = find(o[k], key2, d + 1);
       if (hit !== void 0) return hit;
     }
     return void 0;
@@ -8475,7 +10202,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     if (maps.size > 30) maps.delete(maps.keys().next().value);
   }
   var H4 = 40;
-  var heatmap = {
+  var heatmap2 = {
     id: "heatmap",
     label: "Graph der meistgesehenen Stellen beim Spulen",
     description: "Zeigt beim Berühren der Zeitleiste über der Leiste, welche Stellen des Videos am häufigsten angesehen wurden. Die Werte kommen aus den Seitendaten von YouTube, nicht jedes Video hat welche",
@@ -8636,8 +10363,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       };
       const draw = () => {
         if (!box2) return;
-        const s = secondsLeft(deadline, Date.now());
-        box2.querySelector("b").textContent = s > 0 ? `${s} s` : "gleich";
+        const s2 = secondsLeft(deadline, Date.now());
+        box2.querySelector("b").textContent = s2 > 0 ? `${s2} s` : "gleich";
       };
       const show = () => {
         if (pageFromUrl(location.href) !== "watch") return;
@@ -8828,8 +10555,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     el.dispatchEvent(new CustomEvent("tap", { bubbles: true, composed: true, detail: { x: 0, y: 0 } }));
     el.click();
   }
-  function openNavTarget(key) {
-    if (key === "search") {
+  function openNavTarget(key2) {
+    if (key2 === "search") {
       const sb = document.querySelector("ytmusic-nav-bar yt-icon-button.search-button");
       tapEl(sb?.querySelector("button") || sb);
       const box2 = document.querySelector("ytmusic-nav-bar ytmusic-search-box");
@@ -8841,7 +10568,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       setTimeout(() => document.querySelector("ytmusic-search-box input#input, ytmusic-search-box input")?.focus(), 250);
       return;
     }
-    const entries2 = () => Array.from(document.querySelectorAll(`ytmusic-guide-entry-renderer[data-ytx-mguide="${key}"]`));
+    const entries2 = () => Array.from(document.querySelectorAll(`ytmusic-guide-entry-renderer[data-ytx-mguide="${key2}"]`));
     const pick2 = () => {
       const list = entries2();
       const entry = list.find((e) => e.offsetParent !== null) || list[list.length - 1];
@@ -8866,11 +10593,11 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         if (!window.__ytxNative) return () => {
         };
         setCss("m.bottomNav", NAV_CSS);
-        const buttons = NAV_ITEMS.map(([key, label, path]) => {
-          const b = h("button", { type: "button", "data-key": key }, navIcon(path), label);
+        const buttons = NAV_ITEMS.map(([key2, label, path]) => {
+          const b = h("button", { type: "button", "data-key": key2 }, navIcon(path), label);
           b.addEventListener("click", (e) => {
             e.preventDefault();
-            openNavTarget(key);
+            openNavTarget(key2);
           });
           return b;
         });
@@ -8879,9 +10606,9 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         const sync = () => {
           const layout = document.querySelector("ytmusic-app-layout");
           const state2 = layout?.getAttribute("player-ui-state") || "";
-          const full = !!state2 && state2 !== "PLAYER_BAR_ONLY" && state2 !== "INACTIVE";
-          nav2.hidden = !!full;
-          document.documentElement.toggleAttribute("data-ytx-mnav", !full);
+          const full2 = !!state2 && state2 !== "PLAYER_BAR_ONLY" && state2 !== "INACTIVE";
+          nav2.hidden = !!full2;
+          document.documentElement.toggleAttribute("data-ytx-mnav", !full2);
           const page = document.documentElement.getAttribute("data-ytx-page");
           for (const b of buttons) b.toggleAttribute("aria-current", b.dataset.key === page);
         };
@@ -8905,9 +10632,9 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         if (!window.__ytxNative) return () => {
         };
         const d = document;
-        const redefine = (key, value) => {
+        const redefine = (key2, value) => {
           try {
-            Object.defineProperty(d, key, { configurable: true, get: () => value });
+            Object.defineProperty(d, key2, { configurable: true, get: () => value });
           } catch {
           }
         };
@@ -9019,39 +10746,10 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
     musicByline,
     musicRows,
     typeRadar,
+    statsSync,
     appCheck
   ];
   var behaviorById2 = Object.fromEntries(behaviors2.map((b) => [b.id, b]));
-
-  // src/features/music/logic/versions.js
-  var VERSION_TAGS = [
-    ["live", /\blive\b|\(live|\blive at\b|\bunplugged\b/i, "Live"],
-    ["remix", /\bremix\b|\brmx\b|\bmix\)|\bedit\)|\bbootleg\b|\bflip\b/i, "Remix"],
-    ["spedup", /sped[\s-]*up|speed[\s-]*up|\bnightcore\b|\bfast(er)? version\b/i, "Sped up"],
-    ["slowed", /\bslowed\b|\breverb\b|\bslow(ed)? version\b/i, "Slowed"],
-    ["karaoke", /\bkaraoke\b|\binstrumental\b|\bbacking track\b/i, "Karaoke"],
-    ["acoustic", /\bacoustic\b|\bakustik\b/i, "Akustik"],
-    ["cover", /\bcover\b/i, "Cover"],
-    ["remaster", /\bremaster(ed)?\b/i, "Remaster"],
-    ["radio", /\bradio edit\b|\bradio version\b/i, "Radio Edit"],
-    ["extended", /\bextended\b/i, "Extended"]
-  ];
-  function versionTags(title) {
-    const t = String(title || "");
-    return VERSION_TAGS.filter(([, re]) => re.test(t)).map(([id]) => id);
-  }
-  function baseTitle(title) {
-    return String(title || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "").replace(/\((?:[^()]*)\)|\[(?:[^\[\]]*)\]/g, " ").replace(/\s[-–—|]\s.*(live|remix|version|edit|sped|slowed|nightcore|karaoke|instrumental|acoustic|remaster|mix).*$/i, " ").replace(/\b(feat|ft|featuring|prod)\.?\s.*$/i, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
-  }
-  function artistKey(a) {
-    if (!a) return "";
-    return a.id || `name:${String(a.name || "").trim().toLowerCase()}`;
-  }
-  function trackKey(track) {
-    const first = track?.artists?.[0];
-    const who = first ? String(first.name || first.id || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "") : "";
-    return `${baseTitle(track?.title)}|${who}`;
-  }
 
   // src/features/music/logic/tracker.js
   var TRACKER_DEFAULTS = {
@@ -9064,21 +10762,21 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   function createTracker(options = {}) {
     const o = { ...TRACKER_DEFAULTS, ...options };
     let cur = null;
-    let last2 = null;
-    function start(s) {
+    let last3 = null;
+    function start(s2) {
       cur = {
-        videoId: s.videoId,
-        meta: s.meta || null,
-        startedAt: s.ts,
-        lastTs: s.ts,
-        lastPos: s.pos || 0,
-        maxPos: s.pos || 0,
+        videoId: s2.videoId,
+        meta: s2.meta || null,
+        startedAt: s2.ts,
+        lastTs: s2.ts,
+        lastPos: s2.pos || 0,
+        maxPos: s2.pos || 0,
         listened: 0,
-        duration: s.dur || 0,
+        duration: s2.dur || 0,
         samples: 1,
-        liked: !!s.liked,
-        repeat: !!(last2 && last2.videoId === s.videoId && s.ts - last2.endedAt < o.repeatWindowMs),
-        context: s.context || null
+        liked: !!s2.liked,
+        repeat: !!(last3 && last3.videoId === s2.videoId && s2.ts - last3.endedAt < o.repeatWindowMs),
+        context: s2.context || null
       };
     }
     function finalize(reason, ts) {
@@ -9087,9 +10785,9 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       cur = null;
       const dur = c.duration || c.meta?.durationSec || 0;
       if (c.samples < o.minSamples && c.listened < 1) return null;
-      const pct = dur ? Math.min(1, c.listened / dur) : 0;
+      const pct2 = dur ? Math.min(1, c.listened / dur) : 0;
       const reachedEnd = dur ? c.maxPos >= dur - o.endSlackSec : false;
-      const completed = pct >= o.completePct || reachedEnd && pct >= 0.5 || reason === "ended";
+      const completed = pct2 >= o.completePct || reachedEnd && pct2 >= 0.5 || reason === "ended";
       const skipped = !completed && (reason === "change" || reason === "skip");
       const meta = c.meta || {};
       const rec = {
@@ -9104,7 +10802,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         endedAt: ts,
         listenedSec: Math.round(c.listened * 10) / 10,
         durationSec: dur ? Math.round(dur) : null,
-        percent: Math.round(pct * 1e3) / 1e3,
+        percent: Math.round(pct2 * 1e3) / 1e3,
         completed,
         skipped,
         quickSkip: skipped && c.listened < o.quickSkipSec,
@@ -9115,7 +10813,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         reason,
         context: c.context
       };
-      last2 = { videoId: rec.videoId, endedAt: ts };
+      last3 = { videoId: rec.videoId, endedAt: ts };
       return rec;
     }
     return {
@@ -9123,35 +10821,35 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
         return cur;
       },
       // s = { ts, videoId, pos, dur, playing, ad, liked, rate, meta, context }
-      sample(s) {
+      sample(s2) {
         const out = [];
-        if (!s || !s.videoId || s.ad) return out;
-        if (cur && cur.videoId !== s.videoId) {
-          const r = finalize("change", s.ts);
+        if (!s2 || !s2.videoId || s2.ad) return out;
+        if (cur && cur.videoId !== s2.videoId) {
+          const r = finalize("change", s2.ts);
           if (r) out.push(r);
         }
         if (!cur) {
-          start(s);
+          start(s2);
           return out;
         }
-        if (cur.duration && s.pos < 3 && cur.maxPos >= cur.duration - o.endSlackSec && s.playing) {
-          const r = finalize("ended", s.ts);
+        if (cur.duration && s2.pos < 3 && cur.maxPos >= cur.duration - o.endSlackSec && s2.playing) {
+          const r = finalize("ended", s2.ts);
           if (r) out.push(r);
-          last2 = { videoId: s.videoId, endedAt: s.ts };
-          start(s);
+          last3 = { videoId: s2.videoId, endedAt: s2.ts };
+          start(s2);
           return out;
         }
-        const wall = Math.max(0, (s.ts - cur.lastTs) / 1e3);
-        const allowed = wall * (s.rate || 1) + 2;
-        const delta = s.pos - cur.lastPos;
-        if (s.playing && delta > 0 && delta <= allowed) cur.listened += delta;
-        cur.lastPos = s.pos;
-        cur.lastTs = s.ts;
-        cur.maxPos = Math.max(cur.maxPos, s.pos);
+        const wall = Math.max(0, (s2.ts - cur.lastTs) / 1e3);
+        const allowed = wall * (s2.rate || 1) + 2;
+        const delta = s2.pos - cur.lastPos;
+        if (s2.playing && delta > 0 && delta <= allowed) cur.listened += delta;
+        cur.lastPos = s2.pos;
+        cur.lastTs = s2.ts;
+        cur.maxPos = Math.max(cur.maxPos, s2.pos);
         cur.samples++;
-        if (s.dur) cur.duration = s.dur;
-        if (s.liked) cur.liked = true;
-        if (s.meta && (!cur.meta || !cur.meta.artists?.length)) cur.meta = s.meta;
+        if (s2.dur) cur.duration = s2.dur;
+        if (s2.liked) cur.liked = true;
+        if (s2.meta && (!cur.meta || !cur.meta.artists?.length)) cur.meta = s2.meta;
         return out;
       },
       // ende des songs laut player, seitenwechsel oder schliessen
@@ -9161,642 +10859,6 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       }
     };
   }
-
-  // src/features/music/data/db.js
-  var MUSIC_DB = "ytx-music";
-  var MIGRATIONS3 = [
-    // v1 grundschema
-    (db3) => {
-      const plays = db3.createObjectStore("plays", { keyPath: "id" });
-      plays.createIndex("startedAt", "startedAt");
-      plays.createIndex("videoId", "videoId");
-      plays.createIndex("artistKeys", "artistKeys", { multiEntry: true });
-      const tracks = db3.createObjectStore("tracks", { keyPath: "videoId" });
-      tracks.createIndex("seenAt", "seenAt");
-      const artists = db3.createObjectStore("artists", { keyPath: "id" });
-      artists.createIndex("checkedAt", "checkedAt");
-      const favorites = db3.createObjectStore("favorites", { keyPath: "key" });
-      favorites.createIndex("type", "type");
-      const releases = db3.createObjectStore("releases", { keyPath: "id" });
-      releases.createIndex("artistId", "artistId");
-      releases.createIndex("firstSeen", "firstSeen");
-      db3.createObjectStore("feedback", { keyPath: "key" });
-      const cache4 = db3.createObjectStore("cache", { keyPath: "key" });
-      cache4.createIndex("ts", "ts");
-      db3.createObjectStore("meta", { keyPath: "key" });
-    },
-    // v2 genre zuordnungen aus genre seiten und suche
-    (db3) => {
-      const genres = db3.createObjectStore("genres", { keyPath: "key" });
-      genres.createIndex("checkedAt", "checkedAt");
-    }
-  ];
-  var USER_STORES = ["plays", "favorites", "feedback", "releases", "meta", "genres"];
-  var db2 = null;
-  function musicDb() {
-    db2 ||= openDatabase(MUSIC_DB, MIGRATIONS3);
-    return db2;
-  }
-  async function getMeta(key, def = null) {
-    const r = await musicDb().get("meta", key);
-    return r ? r.value : def;
-  }
-  function setMeta(key, value) {
-    return musicDb().put("meta", { key, value, ts: Date.now() });
-  }
-
-  // src/features/music/logic/rules.js
-  var DEFAULT_TERMS = ["live", "sped up", "nightcore", "remix", "slowed", "karaoke"];
-  var escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  function termRegex(term) {
-    const t = String(term || "").trim();
-    if (!t) return null;
-    const body = t.split(/[\s-]+/).map(escapeRe).join("[\\s-]*");
-    return new RegExp(`(^|[^\\p{L}\\p{N}])${body}($|[^\\p{L}\\p{N}])`, "iu");
-  }
-  function compileRules(blocklist = {}) {
-    const artists = blocklist.artists || [];
-    return {
-      artistIds: new Set(artists.map((a) => a.id).filter(Boolean)),
-      artistNames: new Set(artists.map((a) => String(a.name || "").trim().toLowerCase()).filter(Boolean)),
-      songIds: new Set((blocklist.songs || []).map((s) => s.videoId).filter(Boolean)),
-      terms: (blocklist.terms || []).map((t) => [t, termRegex(t)]).filter(([, re]) => re)
-    };
-  }
-  function blockReason(track, rules2) {
-    if (!track || !rules2) return null;
-    if (track.videoId && rules2.songIds.has(track.videoId)) return { kind: "song", label: "Song blockiert" };
-    for (const a of track.artists || []) {
-      if (a.id && rules2.artistIds.has(a.id) || rules2.artistNames.has(String(a.name || "").trim().toLowerCase())) return { kind: "artist", label: `Künstler blockiert: ${a.name}` };
-    }
-    const title = `${track.title || ""} ${track.album?.name || ""}`;
-    for (const [term, re] of rules2.terms) if (re.test(title)) return { kind: "term", label: `Titelbegriff: ${term}` };
-    return null;
-  }
-  function isExcluded(track, excluded = {}) {
-    if (!track) return false;
-    if ((excluded.songs || []).some((s) => s.videoId === track.videoId)) return true;
-    const keys = new Set((excluded.artists || []).map(artistKey));
-    return (track.artists || []).some((a) => keys.has(artistKey(a)));
-  }
-
-  // src/features/music/logic/taste.js
-  var DEFAULT_WEIGHTS = {
-    complete: 1,
-    repeat: 0.6,
-    like: 2,
-    partial: 0.4,
-    skip: -1.6,
-    favoriteArtist: 4,
-    favoriteSong: 3,
-    favoriteAlbum: 2,
-    favoritePlaylist: 1,
-    feedback: 1.5
-  };
-  var DAY2 = 24 * 3600 * 1e3;
-  function playScore(p, w = DEFAULT_WEIGHTS) {
-    const pct = Math.max(0, Math.min(1, p.percent ?? 0));
-    let s = 0;
-    if (p.completed) s = w.complete + (p.repeat ? w.repeat : 0);
-    else if (p.skipped) s = w.skip * Math.pow(1 - pct, 1.5);
-    else s = w.partial * pct;
-    if (p.liked) s += w.like;
-    return s;
-  }
-  var decay = (ageMs, halfLifeDays = 120) => Math.pow(0.5, Math.max(0, ageMs) / (halfLifeDays * DAY2));
-  function bump(map, key, init2) {
-    let v = map.get(key);
-    if (!v) {
-      v = init2();
-      map.set(key, v);
-    }
-    return v;
-  }
-  var emptyStats = () => ({ score: 0, plays: 0, completes: 0, skips: 0, quickSkips: 0, listenedSec: 0, lastPlayed: 0, firstPlayed: 0, liked: false });
-  function buildProfile(plays = [], { favorites = [], feedback = [], excluded = {}, now = Date.now(), weights = DEFAULT_WEIGHTS, halfLifeDays = 120 } = {}) {
-    const artists = /* @__PURE__ */ new Map();
-    const songs = /* @__PURE__ */ new Map();
-    const albums = /* @__PURE__ */ new Map();
-    let total = 0;
-    let listened = 0;
-    for (const p of plays) {
-      if (isExcluded(p, excluded)) continue;
-      const d = decay(now - (p.startedAt || now), halfLifeDays);
-      const sc = playScore(p, weights) * d;
-      total++;
-      listened += p.listenedSec || 0;
-      const touch = (st, name) => {
-        st.score += sc;
-        st.plays++;
-        if (p.completed) st.completes++;
-        if (p.skipped) st.skips++;
-        if (p.quickSkip) st.quickSkips++;
-        if (p.liked) st.liked = true;
-        st.listenedSec += p.listenedSec || 0;
-        st.lastPlayed = Math.max(st.lastPlayed, p.startedAt || 0);
-        st.firstPlayed = st.firstPlayed ? Math.min(st.firstPlayed, p.startedAt || now) : p.startedAt || now;
-        if (name && !st.name) st.name = name;
-      };
-      const song = bump(songs, p.videoId, () => ({ ...emptyStats(), videoId: p.videoId, title: p.title, artists: p.artists || [], album: p.album || null }));
-      touch(song, null);
-      const list = (p.artists || []).slice(0, 4);
-      list.forEach((a, i) => {
-        const st = bump(artists, artistKey(a), () => ({ ...emptyStats(), key: artistKey(a), id: a.id || null, name: a.name }));
-        const share = i === 0 ? 1 : 0.5;
-        const before = st.score;
-        touch(st, a.name);
-        st.score = before + sc * share;
-      });
-      if (p.album?.id) touch(bump(albums, p.album.id, () => ({ ...emptyStats(), id: p.album.id, name: p.album.name })), p.album.name);
-    }
-    for (const f of favorites) {
-      if (f.type === "artist") {
-        const st = bump(artists, f.id ? f.id : `name:${(f.name || "").toLowerCase()}`, () => ({ ...emptyStats(), key: f.id, id: f.id, name: f.name }));
-        st.score += weights.favoriteArtist * (f.weight ?? 1);
-        st.favorite = true;
-      } else if (f.type === "song") {
-        const st = bump(songs, f.id, () => ({ ...emptyStats(), videoId: f.id, title: f.name, artists: f.artists || [] }));
-        st.score += weights.favoriteSong * (f.weight ?? 1);
-        st.favorite = true;
-        for (const a of f.artists || []) {
-          const as = bump(artists, artistKey(a), () => ({ ...emptyStats(), key: artistKey(a), id: a.id, name: a.name }));
-          as.score += weights.favoriteSong * 0.4;
-        }
-      } else if (f.type === "album") {
-        const st = bump(albums, f.id, () => ({ ...emptyStats(), id: f.id, name: f.name }));
-        st.score += weights.favoriteAlbum * (f.weight ?? 1);
-        st.favorite = true;
-        for (const a of f.artists || []) {
-          const as = bump(artists, artistKey(a), () => ({ ...emptyStats(), key: artistKey(a), id: a.id, name: a.name }));
-          as.score += weights.favoriteAlbum * 0.5;
-        }
-      }
-    }
-    const ignored = /* @__PURE__ */ new Set();
-    for (const fb of feedback) {
-      if (fb.type === "artist") {
-        const st = bump(artists, fb.id, () => ({ ...emptyStats(), key: fb.id, id: fb.id?.startsWith("name:") ? null : fb.id, name: fb.name }));
-        st.score += weights.feedback * (fb.value || 0);
-        st.feedback = fb.value || 0;
-      } else if (fb.type === "song") {
-        if (fb.ignore) ignored.add(fb.id);
-        const st = bump(songs, fb.id, () => ({ ...emptyStats(), videoId: fb.id, title: fb.name, artists: fb.artists || [] }));
-        st.score += weights.feedback * (fb.value || 0);
-      }
-    }
-    const maxArtist = Math.max(1, ...[...artists.values()].map((a) => Math.abs(a.score)));
-    const maxSong = Math.max(1, ...[...songs.values()].map((s) => Math.abs(s.score)));
-    return {
-      artists,
-      songs,
-      albums,
-      ignored,
-      totals: { plays: total, listenedSec: listened },
-      artistAffinity(a) {
-        const st = artists.get(typeof a === "string" ? a : artistKey(a));
-        return st ? Math.max(-1, Math.min(1, st.score / maxArtist)) : 0;
-      },
-      songAffinity(videoId) {
-        const st = songs.get(videoId);
-        return st ? Math.max(-1, Math.min(1, st.score / maxSong)) : 0;
-      },
-      artistPlays(a) {
-        return artists.get(typeof a === "string" ? a : artistKey(a))?.plays || 0;
-      },
-      songPlays(videoId) {
-        return songs.get(videoId)?.plays || 0;
-      },
-      isHighSkip(videoId, { minSkips = 3, rate = 0.6 } = {}) {
-        const st = songs.get(videoId);
-        return !!st && st.skips >= minSkips && st.skips / Math.max(1, st.plays) >= rate;
-      },
-      topArtists(n = 20, { minScore = 0.01 } = {}) {
-        return [...artists.values()].filter((a) => a.score > minScore).sort((a, b) => b.score - a.score).slice(0, n);
-      },
-      topSongs(n = 20) {
-        return [...songs.values()].filter((s) => s.score > 0).sort((a, b) => b.score - a.score).slice(0, n);
-      }
-    };
-  }
-
-  // src/features/music/data/prefs.js
-  var PREFS_BUCKET = "music";
-  var isObj4 = (x) => x && typeof x === "object" && !Array.isArray(x);
-  var num = (v, def, min, max) => {
-    const n = Number(v);
-    return v === null || v === void 0 || v === "" || !isFinite(n) ? def : Math.min(max, Math.max(min, n));
-  };
-  var strList2 = (x) => Array.isArray(x) ? [...new Set(x.map((s) => String(s).trim()).filter(Boolean))] : null;
-  var artistList = (x) => Array.isArray(x) ? x.filter((a) => isObj4(a) && (a.id || a.name)).map((a) => ({ id: a.id || null, name: String(a.name || a.id) })) : [];
-  var songList = (x) => Array.isArray(x) ? x.filter((s) => isObj4(s) && s.videoId).map((s) => ({ videoId: s.videoId, title: String(s.title || ""), artists: artistList(s.artists) })) : [];
-  var PROVIDER_IDS = ["local", "musicbrainz", "lastfm", "ollama"];
-  function defaultPrefs() {
-    return {
-      discovery: 0.5,
-      explain: true,
-      history: { paused: false, retentionDays: null, minListenSec: 5, recordContext: true },
-      blocklist: { artists: [], songs: [], terms: DEFAULT_TERMS.slice() },
-      excluded: { artists: [], songs: [] },
-      hideVersions: [],
-      weights: { ...DEFAULT_WEIGHTS },
-      halfLifeDays: 120,
-      releases: { enabled: true, intervalHours: 24, maxArtists: 25, includeTopArtists: true, maxAgeDays: 60 },
-      smartQueue: { autoSkip: false, skipBlocked: true, skipHighSkip: false, skipDuplicates: true, skipRecentlyPlayed: false, markOnly: false },
-      providers: { local: { enabled: true }, musicbrainz: { enabled: false }, lastfm: { enabled: false, apiKey: "" }, ollama: { enabled: false, url: "http://localhost:11434", model: "" } },
-      genres: { favorites: [], inForYou: true }
-    };
-  }
-  function normalizePrefs(raw) {
-    const d = defaultPrefs();
-    if (!isObj4(raw)) return d;
-    d.discovery = num(raw.discovery, d.discovery, 0, 1);
-    d.explain = raw.explain !== false;
-    if (isObj4(raw.history)) {
-      d.history.paused = !!raw.history.paused;
-      d.history.retentionDays = raw.history.retentionDays == null || raw.history.retentionDays === "" ? null : num(raw.history.retentionDays, null, 1, 3650);
-      d.history.minListenSec = num(raw.history.minListenSec, d.history.minListenSec, 0, 120);
-      d.history.recordContext = raw.history.recordContext !== false;
-    }
-    if (isObj4(raw.blocklist)) {
-      d.blocklist.artists = artistList(raw.blocklist.artists);
-      d.blocklist.songs = songList(raw.blocklist.songs);
-      d.blocklist.terms = strList2(raw.blocklist.terms) ?? d.blocklist.terms;
-    }
-    if (isObj4(raw.excluded)) {
-      d.excluded.artists = artistList(raw.excluded.artists);
-      d.excluded.songs = songList(raw.excluded.songs);
-    }
-    d.hideVersions = strList2(raw.hideVersions) || [];
-    if (isObj4(raw.weights)) for (const k of Object.keys(d.weights)) d.weights[k] = num(raw.weights[k], d.weights[k], -10, 10);
-    d.halfLifeDays = num(raw.halfLifeDays, d.halfLifeDays, 7, 3650);
-    if (isObj4(raw.releases)) {
-      d.releases.enabled = raw.releases.enabled !== false;
-      d.releases.intervalHours = num(raw.releases.intervalHours, d.releases.intervalHours, 6, 24 * 14);
-      d.releases.maxArtists = num(raw.releases.maxArtists, d.releases.maxArtists, 1, 100);
-      d.releases.includeTopArtists = raw.releases.includeTopArtists !== false;
-      d.releases.maxAgeDays = num(raw.releases.maxAgeDays, d.releases.maxAgeDays, 7, 730);
-    }
-    if (isObj4(raw.smartQueue)) {
-      for (const k of Object.keys(d.smartQueue)) if (k in raw.smartQueue) d.smartQueue[k] = !!raw.smartQueue[k];
-    }
-    if (isObj4(raw.providers)) {
-      for (const id of PROVIDER_IDS) {
-        const p = raw.providers[id];
-        if (!isObj4(p)) continue;
-        d.providers[id].enabled = id === "local" ? p.enabled !== false : !!p.enabled;
-        for (const k of Object.keys(d.providers[id])) if (k !== "enabled" && typeof p[k] === "string") d.providers[id][k] = p[k];
-      }
-    }
-    if (isObj4(raw.genres)) {
-      d.genres.favorites = strList2(raw.genres.favorites) || [];
-      d.genres.inForYou = raw.genres.inForYou !== false;
-    }
-    return d;
-  }
-  var SESSION_KEY = "ytx.music.session";
-  function readSession() {
-    try {
-      const v = JSON.parse(sessionStorage.getItem(SESSION_KEY) || "null");
-      return v && typeof v === "object" ? v : null;
-    } catch {
-      return null;
-    }
-  }
-  function writeSession(session) {
-    try {
-      if (session) sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-      else sessionStorage.removeItem(SESSION_KEY);
-    } catch {
-    }
-  }
-
-  // src/features/music/logic/sessions.js
-  var SESSION_PRESETS = [
-    {
-      id: "focus",
-      label: "Fokus",
-      description: "Ruhig und vertraut, keine Live- oder Remix-Versionen",
-      discovery: 0.25,
-      extraTerms: ["live", "remix", "sped up", "nightcore"],
-      moods: ["konzentration", "focus", "chill", "entspann"],
-      skipHighSkip: true
-    },
-    {
-      id: "gym",
-      label: "Gym",
-      description: "Energie, gerne auch neue Songs",
-      discovery: 0.45,
-      extraTerms: ["slowed", "acoustic", "akustik", "karaoke"],
-      moods: ["workout", "power", "party", "sport"],
-      skipHighSkip: true
-    },
-    {
-      id: "evening",
-      label: "Abends",
-      description: "Entspannt, eher Bekanntes",
-      discovery: 0.3,
-      extraTerms: ["sped up", "nightcore"],
-      moods: ["chill", "entspann", "romantik", "einschlafen", "sleep", "relax"],
-      skipHighSkip: true
-    },
-    {
-      id: "explore",
-      label: "Entdecken",
-      description: "Passende Künstler, die du kaum gehört hast",
-      discovery: 0.9,
-      extraTerms: [],
-      moods: [],
-      skipHighSkip: true,
-      skipRecentlyPlayed: true
-    },
-    {
-      id: "known",
-      label: "Nur bekannte Musik",
-      description: "Nur Künstler, die du schon gehört oder favorisiert hast",
-      discovery: 0,
-      extraTerms: [],
-      moods: [],
-      onlyKnownArtists: true,
-      skipHighSkip: true
-    }
-  ];
-  var presetById3 = Object.fromEntries(SESSION_PRESETS.map((p) => [p.id, p]));
-  function effectiveSettings(prefs, session) {
-    const p = session?.presetId ? presetById3[session.presetId] : null;
-    const terms = [.../* @__PURE__ */ new Set([...prefs.blocklist?.terms || [], ...p?.extraTerms || []])];
-    return {
-      discovery: p ? p.discovery : prefs.discovery,
-      blocklist: { ...prefs.blocklist || {}, terms },
-      onlyKnownArtists: !!p?.onlyKnownArtists,
-      skipHighSkip: p ? !!p.skipHighSkip : !!prefs.smartQueue?.skipHighSkip,
-      skipRecentlyPlayed: p ? !!p.skipRecentlyPlayed : !!prefs.smartQueue?.skipRecentlyPlayed,
-      moods: p?.moods || [],
-      preset: p
-    };
-  }
-  function matchMood(moods, keywords) {
-    if (!keywords?.length) return null;
-    const lower2 = keywords.map((k) => k.toLowerCase());
-    return moods.find((m) => lower2.some((k) => m.name.toLowerCase().includes(k))) || null;
-  }
-
-  // src/features/music/runtime.js
-  var handlers = /* @__PURE__ */ new Map();
-  function emit2(type, payload) {
-    for (const fn of handlers.get(type) || []) {
-      try {
-        fn(payload);
-      } catch (e) {
-        log.error(`music event ${type}`, e);
-      }
-    }
-  }
-  var profileCache = null;
-  var profilePromise = null;
-  var invalidate = () => {
-    profileCache = null;
-    profilePromise = null;
-  };
-  var music = {
-    on(type, fn) {
-      if (!handlers.has(type)) handlers.set(type, /* @__PURE__ */ new Set());
-      handlers.get(type).add(fn);
-      return () => handlers.get(type)?.delete(fn);
-    },
-    emit: emit2,
-    // ---------- vorlieben ----------
-    prefs() {
-      return store.bucket(PREFS_BUCKET, normalizePrefs);
-    },
-    updatePrefs(mutator) {
-      const next = store.updateBucket(PREFS_BUCKET, mutator, normalizePrefs);
-      invalidate();
-      emit2("prefs", next);
-      return next;
-    },
-    session() {
-      return readSession();
-    },
-    setSession(presetId) {
-      writeSession(presetId ? { presetId, startedAt: Date.now() } : null);
-      emit2("session", readSession());
-    },
-    effective() {
-      return effectiveSettings(this.prefs(), readSession());
-    },
-    rules() {
-      return compileRules(this.effective().blocklist);
-    },
-    // ---------- verlauf ----------
-    history: {
-      async add(rec) {
-        const p = music.prefs();
-        if (p.history.paused) return false;
-        if ((rec.listenedSec || 0) < p.history.minListenSec && !rec.completed) return false;
-        if (!p.history.recordContext) delete rec.context;
-        await musicDb().put("plays", rec);
-        await musicDb().put("tracks", { videoId: rec.videoId, title: rec.title, artists: rec.artists, album: rec.album, year: rec.year, durationSec: rec.durationSec, seenAt: rec.endedAt }).catch(() => {
-        });
-        await setMeta("lastPlayAt", rec.endedAt);
-        invalidate();
-        emit2("plays", rec);
-        return true;
-      },
-      list({ from = 0, to = Date.now() + DAY2 } = {}) {
-        return musicDb().byIndex("plays", "startedAt", IDBKeyRange.bound(from, to));
-      },
-      recent(limit = 50) {
-        return musicDb().latest("plays", "startedAt", limit);
-      },
-      count() {
-        return musicDb().count("plays");
-      },
-      async remove(id) {
-        await musicDb().delete("plays", id);
-        invalidate();
-        emit2("plays", null);
-      },
-      async removeMany(ids) {
-        await musicDb().deleteMany("plays", ids);
-        invalidate();
-        emit2("plays", null);
-      },
-      async clear() {
-        await musicDb().clear("plays");
-        await musicDb().clear("tracks");
-        invalidate();
-        emit2("plays", null);
-      },
-      async applyRetention() {
-        const days = music.prefs().history.retentionDays;
-        if (!days) return 0;
-        const n = await musicDb().deleteWhere("plays", "startedAt", IDBKeyRange.upperBound(Date.now() - days * DAY2));
-        if (n) {
-          invalidate();
-          emit2("plays", null);
-        }
-        return n;
-      }
-    },
-    // ---------- favoriten ----------
-    favorites: {
-      all() {
-        return musicDb().getAll("favorites");
-      },
-      byType(type) {
-        return musicDb().byIndex("favorites", "type", type);
-      },
-      async has(type, id) {
-        return !!await musicDb().get("favorites", `${type}:${id}`);
-      },
-      async toggle(item) {
-        const key = `${item.type}:${item.id}`;
-        const db3 = musicDb();
-        const prev2 = await db3.get("favorites", key);
-        if (prev2) await db3.delete("favorites", key);
-        else await db3.put("favorites", { key, type: item.type, id: item.id, name: item.name || item.title || "", artists: item.artists || [], thumbnail: item.thumbnail || "", weight: item.weight ?? 1, addedAt: Date.now() });
-        invalidate();
-        emit2("favorites", { key, on: !prev2 });
-        return !prev2;
-      },
-      async setWeight(key, weight) {
-        const db3 = musicDb();
-        const prev2 = await db3.get("favorites", key);
-        if (!prev2) return;
-        await db3.put("favorites", { ...prev2, weight });
-        invalidate();
-        emit2("favorites", { key, on: true });
-      },
-      async remove(key) {
-        await musicDb().delete("favorites", key);
-        invalidate();
-        emit2("favorites", { key, on: false });
-      }
-    },
-    // ---------- feedback ----------
-    feedback: {
-      all() {
-        return musicDb().getAll("feedback");
-      },
-      async adjust({ type, id, name, artists, delta = 0, ignore }) {
-        const key = `${type}:${id}`;
-        const db3 = musicDb();
-        const prev2 = await db3.get("feedback", key) || { key, type, id, name, artists: artists || [], value: 0 };
-        const next = { ...prev2, name: name || prev2.name, value: Math.max(-3, Math.min(3, (prev2.value || 0) + delta)), ts: Date.now() };
-        if (ignore !== void 0) next.ignore = !!ignore;
-        await db3.put("feedback", next);
-        invalidate();
-        emit2("feedback", next);
-        return next;
-      },
-      async remove(key) {
-        await musicDb().delete("feedback", key);
-        invalidate();
-        emit2("feedback", null);
-      }
-    },
-    // aktionen aus empfehlungen und player
-    async act(kind, track) {
-      const first = track?.artists?.[0];
-      const aKey = first ? artistKey(first) : null;
-      switch (kind) {
-        case "more":
-          await music.feedback.adjust({ type: "song", id: track.videoId, name: track.title, artists: track.artists, delta: 1 });
-          if (aKey) await music.feedback.adjust({ type: "artist", id: aKey, name: first.name, delta: 0.5 });
-          return "Mehr davon gemerkt";
-        case "less":
-          await music.feedback.adjust({ type: "song", id: track.videoId, name: track.title, artists: track.artists, delta: -1 });
-          if (aKey) await music.feedback.adjust({ type: "artist", id: aKey, name: first.name, delta: -0.5 });
-          return "Weniger davon gemerkt";
-        case "preferArtist":
-          if (!aKey) return "Kein Künstler erkannt";
-          await music.feedback.adjust({ type: "artist", id: aKey, name: first.name, delta: 2 });
-          return `${first.name} wird bevorzugt`;
-        case "blockArtist":
-          if (!first) return "Kein Künstler erkannt";
-          music.updatePrefs((p) => {
-            if (!p.blocklist.artists.some((a) => artistKey(a) === aKey)) p.blocklist.artists.push({ id: first.id || null, name: first.name });
-          });
-          return `${first.name} blockiert`;
-        case "ignoreSong":
-          await music.feedback.adjust({ type: "song", id: track.videoId, name: track.title, artists: track.artists, delta: -1, ignore: true });
-          return "Song wird ignoriert";
-        case "excludeArtist":
-          if (!first) return "Kein Künstler erkannt";
-          music.updatePrefs((p) => {
-            if (!p.excluded.artists.some((a) => artistKey(a) === aKey)) p.excluded.artists.push({ id: first.id || null, name: first.name });
-          });
-          return `${first.name} zählt nicht mehr zum Profil`;
-        case "excludeSong":
-          music.updatePrefs((p) => {
-            if (!p.excluded.songs.some((s) => s.videoId === track.videoId)) p.excluded.songs.push({ videoId: track.videoId, title: track.title, artists: track.artists || [] });
-          });
-          return "Song zählt nicht mehr zum Profil";
-        default:
-          return "";
-      }
-    },
-    // ---------- neuerscheinungen ----------
-    releases: {
-      all() {
-        return musicDb().getAll("releases");
-      },
-      latest(limit = 50) {
-        return musicDb().latest("releases", "firstSeen", limit);
-      },
-      async markSeen() {
-        await setMeta("releasesSeenAt", Date.now());
-        emit2("releases", null);
-      },
-      async unseenCount() {
-        const seen3 = await getMeta("releasesSeenAt", 0) || 0;
-        const list = await musicDb().byIndex("releases", "firstSeen", IDBKeyRange.lowerBound(seen3 + 1));
-        return list.filter((r) => r.fresh).length;
-      }
-    },
-    // ---------- profil ----------
-    async profile({ now = Date.now() } = {}) {
-      if (profileCache && now - profileCache.at < 60 * 1e3) return profileCache.value;
-      if (profilePromise) return profilePromise;
-      profilePromise = (async () => {
-        const p = music.prefs();
-        const [plays, favorites, feedback] = await Promise.all([musicDb().getAll("plays"), musicDb().getAll("favorites"), musicDb().getAll("feedback")]);
-        const value = buildProfile(plays, { favorites, feedback, excluded: p.excluded, now, weights: p.weights, halfLifeDays: p.halfLifeDays });
-        value.playsList = plays;
-        profileCache = { at: Date.now(), value };
-        profilePromise = null;
-        return value;
-      })().catch((e) => {
-        profilePromise = null;
-        throw e;
-      });
-      return profilePromise;
-    },
-    invalidate,
-    // ---------- export und import ----------
-    async exportData() {
-      const dump = await musicDb().exportAll(USER_STORES);
-      dump.prefs = music.prefs();
-      dump.app = "ytx-music";
-      return dump;
-    },
-    async importData(dump, { replace = false } = {}) {
-      if (!dump || dump.database !== MUSIC_DB || typeof dump.stores !== "object") throw new Error("keine ytx Music Sicherung");
-      const names = await musicDb().importAll(dump, { replace, stores: USER_STORES.filter((s) => Array.isArray(dump.stores[s])) });
-      if (dump.prefs) store.updateBucket(PREFS_BUCKET, (p) => Object.assign(p, normalizePrefs(dump.prefs)), normalizePrefs);
-      invalidate();
-      emit2("plays", null);
-      emit2("favorites", null);
-      emit2("prefs", music.prefs());
-      return names;
-    },
-    db: musicDb,
-    getMeta,
-    setMeta
-  };
-  var scheduleRetention = debounce(() => {
-    music.history.applyRetention().catch((e) => log.warn("music retention", e));
-  }, 5e3);
 
   // src/features/music/history.js
   var autoSkipped = /* @__PURE__ */ new Map();
@@ -9812,8 +10874,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       const tracker = createTracker();
       const stats2 = { samples: 0, saved: 0, dropped: 0, lastSampleAt: 0, lastSaved: null, lastError: null, lastVideo: null };
       let pausedSince = 0;
-      const save3 = async (records) => {
-        for (const rec of records) {
+      const save3 = async (records2) => {
+        for (const rec of records2) {
           const auto = autoSkipped.get(rec.videoId);
           if (auto && Date.now() - auto < 10 * 60 * 1e3) {
             autoSkipped.delete(rec.videoId);
@@ -9879,7 +10941,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   };
 
   // src/core/pageData.js
-  function createPageLoader({ extract, cache: cache4, minIntervalMs = 1800, maxAgeMs = 24 * 3600 * 1e3 }) {
+  function createPageLoader({ extract, cache: cache5, minIntervalMs = 1800, maxAgeMs = 24 * 3600 * 1e3 }) {
     const stats2 = { requests: 0, cacheHits: 0, errors: 0, lastError: null, lastUrl: null, lastAt: 0, lastMs: 0, queued: 0, disabled: false };
     const inflight = /* @__PURE__ */ new Map();
     let chain = Promise.resolve();
@@ -9903,10 +10965,10 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       return parsed;
     }
     async function load5(path, { maxAge = maxAgeMs, force = false, cacheOnly = false, transform = (x) => x } = {}) {
-      const key = `page:${path}`;
-      if (!force && cache4) {
+      const key2 = `page:${path}`;
+      if (!force && cache5) {
         try {
-          const hit = await cache4.get(key);
+          const hit = await cache5.get(key2);
           if (hit && (cacheOnly || Date.now() - hit.ts < maxAge)) {
             stats2.cacheHits++;
             return hit.value;
@@ -9916,12 +10978,12 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       }
       if (cacheOnly) throw new Error("nicht im cache");
       if (stats2.disabled) throw new Error("hintergrund laden deaktiviert");
-      if (inflight.has(key)) return inflight.get(key);
+      if (inflight.has(key2)) return inflight.get(key2);
       stats2.queued++;
       const p = chain = chain.then(async () => {
         try {
           const value = transform(await fetchParsed(path));
-          if (cache4) await cache4.set(key, value).catch(() => {
+          if (cache5) await cache5.set(key2, value).catch(() => {
           });
           return value;
         } catch (e) {
@@ -9931,10 +10993,10 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
           throw e;
         } finally {
           stats2.queued--;
-          inflight.delete(key);
+          inflight.delete(key2);
         }
       });
-      inflight.set(key, p);
+      inflight.set(key2, p);
       chain = p.catch(() => {
       });
       return p;
@@ -9950,16 +11012,16 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
 
   // src/features/music/data/catalog.js
   var HOUR = 3600 * 1e3;
-  var cache2 = {
-    async get(key) {
-      const r = await musicDb().get("cache", key);
+  var cache3 = {
+    async get(key2) {
+      const r = await musicDb().get("cache", key2);
       return r ? { value: r.value, ts: r.ts } : null;
     },
-    set(key, value) {
-      return musicDb().put("cache", { key, value, ts: Date.now() });
+    set(key2, value) {
+      return musicDb().put("cache", { key: key2, value, ts: Date.now() });
     }
   };
-  var loader = createPageLoader({ extract: mainData, cache: cache2, minIntervalMs: 2e3, maxAgeMs: 12 * HOUR });
+  var loader = createPageLoader({ extract: mainData, cache: cache3, minIntervalMs: 2e3, maxAgeMs: 12 * HOUR });
   var catalog = {
     stats: loader.stats,
     artist(id, opts = {}) {
@@ -10080,8 +11142,8 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       listeners2.add(fn);
       return () => listeners2.delete(fn);
     },
-    async play(items, { start = 0, title = "" } = {}) {
-      q = { items: items.map((x) => ({ videoId: x.videoId, title: x.title, artists: x.artists || [], album: x.album || null, durationSec: x.durationSec || null, thumbnail: x.thumbnail || "", reasons: x.reasons || [] })), index: -1, active: true, title, note: "" };
+    async play(items, { start = 0, title: title2 = "" } = {}) {
+      q = { items: items.map((x) => ({ videoId: x.videoId, title: x.title, artists: x.artists || [], album: x.album || null, durationSec: x.durationSec || null, thumbnail: x.thumbnail || "", reasons: x.reasons || [] })), index: -1, active: true, title: title2, note: "" };
       prev = null;
       startTimer();
       return jump(start);
@@ -10110,7 +11172,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       stopTimer();
     },
     remaining() {
-      return q.items.slice(q.index + 1).reduce((s, x) => s + (x.durationSec || 0), 0);
+      return q.items.slice(q.index + 1).reduce((s2, x) => s2 + (x.durationSec || 0), 0);
     }
   };
   if (q.active) startTimer();
@@ -10236,8 +11298,8 @@ ytmusic-responsive-header-renderer .action-buttons { flex-wrap: wrap !important;
     onDispose(() => clearInterval(ti));
     onDispose(() => clearInterval(t));
   }
-  function iconButton({ icon, label, title, pressed, onClick }) {
-    const b = h("button", { type: "button", class: "ytx-m-iconbtn", title: title || label || "", "aria-pressed": pressed == null ? void 0 : String(!!pressed) }, h("span", { text: icon }), label && h("span", { class: "ytx-m-lbl", text: label }));
+  function iconButton({ icon, label, title: title2, pressed, onClick }) {
+    const b = h("button", { type: "button", class: "ytx-m-iconbtn", title: title2 || label || "", "aria-pressed": pressed == null ? void 0 : String(!!pressed) }, h("span", { text: icon }), label && h("span", { class: "ytx-m-lbl", text: label }));
     b.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -10245,8 +11307,8 @@ ytmusic-responsive-header-renderer .action-buttons { flex-wrap: wrap !important;
     });
     return b;
   }
-  function pill({ label, title, onClick }) {
-    const b = h("button", { type: "button", class: "ytx-m-pill", title: title || label, text: label });
+  function pill({ label, title: title2, onClick }) {
+    const b = h("button", { type: "button", class: "ytx-m-pill", title: title2 || label, text: label });
     b.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -10301,12 +11363,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
 .card .sub { font-size: 11px; color: var(--ytmusic-text-secondary, #aaa); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .new { color: #ffc83d; }
 `;
-  function createDrawer({ title, onClose }) {
+  function createDrawer({ title: title2, onClose }) {
     const host2 = h("ytx-music-drawer", { "data-ytx-own": "" });
     const shadow = host2.attachShadow({ mode: "closed" });
     const style = document.createElement("style");
     style.textContent = DRAWER_CSS;
-    const heading = h("h2", { text: title });
+    const heading = h("h2", { text: title2 });
     const close = h("button", { class: "ib", title: "Schließen", text: "✕" });
     const tabs = h("div", { class: "tabs" });
     const tools = h("div", { class: "tools" });
@@ -10461,10 +11523,10 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     const all = (await music.favorites.all().catch(() => [])).sort((a, b) => (b.weight ?? 1) - (a.weight ?? 1) || (b.addedAt || 0) - (a.addedAt || 0));
     const type = ctx.state.get("m.fav.libType", "all");
     const list = all.filter((f) => type === "all" || f.type === type);
-    const title = h("div", { style: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px", margin: "8px 0 12px" } }, h("div", { text: "Deine Favoriten (ytx)", style: { font: "700 24px/1.3 Roboto, Arial, sans-serif", color: C4.primary, marginRight: "8px" } }));
+    const title2 = h("div", { style: { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "8px", margin: "8px 0 12px" } }, h("div", { text: "Deine Favoriten (ytx)", style: { font: "700 24px/1.3 Roboto, Arial, sans-serif", color: C4.primary, marginRight: "8px" } }));
     const songs = all.filter((f) => f.type === "song");
-    if (songs.length) title.append(pill({ label: songs.length === 1 ? "▶ Lieblingssong abspielen" : `▶ ${songs.length} Lieblingssongs abspielen`, onClick: () => ytxQueue.play(songs.map((f) => ({ videoId: f.id, title: f.name, artists: f.artists || [], thumbnail: f.thumbnail || "" })), { title: "Lieblingssongs" }) }));
-    title.append(pill({ label: "Verwalten", title: "Gewichte ändern und Favoriten entfernen im ytx-Panel", onClick: () => {
+    if (songs.length) title2.append(pill({ label: songs.length === 1 ? "▶ Lieblingssong abspielen" : `▶ ${songs.length} Lieblingssongs abspielen`, onClick: () => ytxQueue.play(songs.map((f) => ({ videoId: f.id, title: f.name, artists: f.artists || [], thumbnail: f.thumbnail || "" })), { title: "Lieblingssongs" }) }));
+    title2.append(pill({ label: "Verwalten", title: "Gewichte ändern und Favoriten entfernen im ytx-Panel", onClick: () => {
       const panel = pageWindow.__ytx?.panel;
       panel?.open();
       panel?.select("music");
@@ -10481,11 +11543,11 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       return c;
     }));
     if (!all.length) {
-      node.replaceChildren(title, h("div", { text: "Noch keine Favoriten. ★ in der Playerleiste oder auf Künstler-, Album- und Playlist-Seiten antippen, dann stehen sie hier.", style: { color: C4.secondary, font: "400 14px Roboto, Arial, sans-serif" } }));
+      node.replaceChildren(title2, h("div", { text: "Noch keine Favoriten. ★ in der Playerleiste oder auf Künstler-, Album- und Playlist-Seiten antippen, dann stehen sie hier.", style: { color: C4.secondary, font: "400 14px Roboto, Arial, sans-serif" } }));
       return;
     }
     const row2 = h("div", { style: { display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "6px" } }, ...list.map(favCard));
-    node.replaceChildren(title, chips2, list.length ? row2 : h("div", { text: "Keine Favoriten dieser Art.", style: { color: C4.secondary, font: "400 14px Roboto, Arial, sans-serif" } }));
+    node.replaceChildren(title2, chips2, list.length ? row2 : h("div", { text: "Keine Favoriten dieser Art.", style: { color: C4.secondary, font: "400 14px Roboto, Arial, sans-serif" } }));
     if (list.some((f) => f.type === "artist" && !f.thumbnail && !triedImages.has(f.id))) {
       await fillArtistImages(list, node);
       if (node.__dirty) {
@@ -10510,7 +11572,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       libraryShelf: { type: "toggle", label: "Regal „Deine Favoriten (ytx)“ in der Mediathek", default: true }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       const state2 = { bar: null, page: null };
       const refreshBar = async (node) => {
         const t = currentTrack();
@@ -10554,7 +11616,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         id: "m.fav.bar",
         anchor: "m.bar.middleButtons",
         position: "prepend",
-        when: () => s.barButton,
+        when: () => s2.barButton,
         create: () => iconButton({ icon: "★", title: "Favorisieren", pressed: false, onClick: (e, b) => barMenu(b) }),
         update: (node) => refreshBar(node)
       });
@@ -10562,7 +11624,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         id: "m.fav.page",
         anchor: "m.header.buttons",
         position: "append",
-        when: () => s.pageButton && ["artist", "album", "playlist"].includes(ctx.nav.page),
+        when: () => s2.pageButton && ["artist", "album", "playlist"].includes(ctx.nav.page),
         create: () => {
           const b = iconButton({
             icon: "★",
@@ -10580,9 +11642,9 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         update: async (node) => {
           const subj = pageSubject();
           if (!subj) return;
-          const key = `${subj.type}:${subj.id}`;
-          if (node.__key === key && Date.now() - (node.__at || 0) < 4e3) return;
-          node.__key = key;
+          const key2 = `${subj.type}:${subj.id}`;
+          if (node.__key === key2 && Date.now() - (node.__at || 0) < 4e3) return;
+          node.__key = key2;
           node.__at = Date.now();
           const on = await music.favorites.has(subj.type, subj.id);
           node.setAttribute("aria-pressed", String(on));
@@ -10593,7 +11655,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         id: "m.fav.library",
         anchor: "m.browse.top",
         position: "prepend",
-        when: () => s.libraryShelf && ctx.nav.page === "library",
+        when: () => s2.libraryShelf && ctx.nav.page === "library",
         create: () => h("div", { class: "ytx-m-shelf", style: { margin: "8px 0 28px" } }),
         update: (node) => drawLibrary(node, ctx)
       });
@@ -10611,7 +11673,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       });
       return {
         update(next) {
-          s = next;
+          s2 = next;
           state2.bar.refresh();
           state2.page.refresh();
           state2.lib.refresh();
@@ -10630,7 +11692,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           state2.lib.destroy();
         },
         health() {
-          if (s.barButton && !state2.bar.ok) return { status: currentTrack() ? "warn" : "skip", detail: currentTrack() ? "Playerleiste nicht gefunden" : "Kein Titel aktiv" };
+          if (s2.barButton && !state2.bar.ok) return { status: currentTrack() ? "warn" : "skip", detail: currentTrack() ? "Playerleiste nicht gefunden" : "Kein Titel aktiv" };
           return { status: "ok", detail: `Stern ${state2.bar.ok ? "in der Playerleiste" : ""}${state2.page.ok ? " und auf der Seite" : ""}` };
         }
       };
@@ -10700,11 +11762,11 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     let fit = 0;
     const reasons = [];
     const seen3 = /* @__PURE__ */ new Set();
-    for (const s of c.sources) {
-      const w = (SOURCE_WEIGHTS[s.kind] ?? 0.3) * (s.weight ?? 1);
+    for (const s2 of c.sources) {
+      const w = (SOURCE_WEIGHTS[s2.kind] ?? 0.3) * (s2.weight ?? 1);
       rel = Math.max(rel, w) + Math.min(w, rel) * 0.25;
-      if (s.viaKey) fit = Math.max(fit, profile.artistAffinity(s.viaKey) * (s.kind === "similar" ? 0.6 : 0.4));
-      const txt = reasonText(s);
+      if (s2.viaKey) fit = Math.max(fit, profile.artistAffinity(s2.viaKey) * (s2.kind === "similar" ? 0.6 : 0.4));
+      const txt = reasonText(s2);
       if (txt && !seen3.has(txt)) {
         seen3.add(txt);
         reasons.push(txt);
@@ -10724,14 +11786,14 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       score -= 1;
       reasons.push("Oft übersprungen");
     }
-    const last2 = profile.songs.get(c.videoId)?.lastPlayed || 0;
-    if (last2 && now - last2 < (opts.recentHours ?? 3) * 3600 * 1e3 && !c.sources.some((s) => s.kind === "history")) score -= 0.6;
+    const last3 = profile.songs.get(c.videoId)?.lastPlayed || 0;
+    if (last3 && now - last3 < (opts.recentHours ?? 3) * 3600 * 1e3 && !c.sources.some((s2) => s2.kind === "history")) score -= 0.6;
     const favoriteArtist = keys.some((k) => profile.artists.get(k)?.favorite);
     if (!songPlays && !artistPlays && !favoriteArtist) reasons.push("Noch nie gehört");
-    if (last2 && now - last2 > (opts.longAgoDays ?? 45) * DAY2 && profile.songs.get(c.videoId)?.score > 0 && !reasons.includes("Lange nicht gehört")) reasons.push("Lange nicht gehört");
+    if (last3 && now - last3 > (opts.longAgoDays ?? 45) * DAY && profile.songs.get(c.videoId)?.score > 0 && !reasons.includes("Lange nicht gehört")) reasons.push("Lange nicht gehört");
     return { score, reasons, familiarity: fam, affinity: aff };
   }
-  function rank(candidates, profile, options = {}) {
+  function rank2(candidates, profile, options = {}) {
     const opts = {
       discovery: discoveryValue(options.discovery ?? 0.5),
       now: options.now ?? Date.now(),
@@ -10819,13 +11881,13 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     note: "Braucht einen eigenen API-Key. Schickt Künstlernamen an last.fm",
     available: (prefs) => hasGmRequest() && !!prefs?.providers?.lastfm?.apiKey,
     async similarArtists(artist, prefs) {
-      const key = prefs.providers.lastfm.apiKey;
-      const r = await gmJson(`https://ws.audioscrobbler.com/2.0/?method=artist.getsimilar&artist=${encodeURIComponent(artist.name)}&limit=15&api_key=${encodeURIComponent(key)}&format=json`);
+      const key2 = prefs.providers.lastfm.apiKey;
+      const r = await gmJson(`https://ws.audioscrobbler.com/2.0/?method=artist.getsimilar&artist=${encodeURIComponent(artist.name)}&limit=15&api_key=${encodeURIComponent(key2)}&format=json`);
       return (r?.similarartists?.artist || []).map((a) => ({ id: null, name: a.name }));
     },
     async genresOf(artist, prefs) {
-      const key = prefs.providers.lastfm.apiKey;
-      const r = await gmJson(`https://ws.audioscrobbler.com/2.0/?method=artist.gettoptags&artist=${encodeURIComponent(artist.name)}&api_key=${encodeURIComponent(key)}&format=json`);
+      const key2 = prefs.providers.lastfm.apiKey;
+      const r = await gmJson(`https://ws.audioscrobbler.com/2.0/?method=artist.gettoptags&artist=${encodeURIComponent(artist.name)}&api_key=${encodeURIComponent(key2)}&format=json`);
       return (r?.toptags?.tag || []).slice(0, 5).map((t) => t.name);
     }
   };
@@ -10974,7 +12036,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
   }
   function recentIds(profile, hours) {
     const since = Date.now() - hours * 3600 * 1e3;
-    return new Set([...profile.songs.values()].filter((s) => s.lastPlayed > since).map((s) => s.videoId));
+    return new Set([...profile.songs.values()].filter((s2) => s2.lastPlayed > since).map((s2) => s2.videoId));
   }
   async function forYou(ctx) {
     const { profile, b } = ctx;
@@ -10985,7 +12047,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       for (const t of res?.songs.slice(0, 8) || []) cands.push(toCandidate(t, { kind: "genre", genre, weight: 0.8 }));
     }
     const seeds = await seedArtists(profile, 8);
-    const similarSeen = new Set(seeds.map((s) => s.id));
+    const similarSeen = new Set(seeds.map((s2) => s2.id));
     let similarCount = 0;
     for (const seed of seeds) {
       const page = await b.get((o) => catalog.artist(seed.id, o));
@@ -11006,9 +12068,9 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       const col = await b.get((o) => catalog.playlist(pl.id, o));
       for (const t of col?.tracks.slice(0, 12) || []) cands.push(toCandidate(t, { kind: "featured", via: seed.name, viaKey: seed.key }));
     }
-    for (const s of await music.favorites.byType("song")) cands.push(toCandidate({ videoId: s.id, title: s.name, artists: s.artists }, { kind: "seed", via: "deinen Lieblingssongs", weight: 0.9 }));
-    const old = Date.now() - 45 * DAY2;
-    for (const s of profile.topSongs(40)) if (s.lastPlayed && s.lastPlayed < old) cands.push(toCandidate(s, { kind: "history" }));
+    for (const s2 of await music.favorites.byType("song")) cands.push(toCandidate({ videoId: s2.id, title: s2.name, artists: s2.artists }, { kind: "seed", via: "deinen Lieblingssongs", weight: 0.9 }));
+    const old = Date.now() - 45 * DAY;
+    for (const s2 of profile.topSongs(40)) if (s2.lastPlayed && s2.lastPlayed < old) cands.push(toCandidate(s2, { kind: "history" }));
     return { candidates: cands.filter(Boolean), excludeIds: recentIds(profile, 2) };
   }
   async function releasesMix(ctx) {
@@ -11040,8 +12102,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     return { candidates: cands.filter(Boolean) };
   }
   async function longAgo(ctx) {
-    const old = Date.now() - 45 * DAY2;
-    const cands = ctx.profile.topSongs(300).filter((s) => s.lastPlayed && s.lastPlayed < old && s.completes > 0).map((s) => toCandidate(s, { kind: "history" }));
+    const old = Date.now() - 45 * DAY;
+    const cands = ctx.profile.topSongs(300).filter((s2) => s2.lastPlayed && s2.lastPlayed < old && s2.completes > 0).map((s2) => toCandidate(s2, { kind: "history" }));
     return { candidates: cands.filter(Boolean), overrides: { discovery: 0.1, maxPerArtist: 3 } };
   }
   async function neverHeard(ctx) {
@@ -11058,7 +12120,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     const similar = [...page?.similar || []];
     const prefs = music.prefs();
     for (const extra of await metadata.similarArtists(artist, prefs).catch(() => [])) {
-      if (extra.source === "local" || similar.some((s) => s.name.toLowerCase() === extra.name.toLowerCase())) continue;
+      if (extra.source === "local" || similar.some((s2) => s2.name.toLowerCase() === extra.name.toLowerCase())) continue;
       similar.push({ id: extra.id, name: extra.name, external: extra.source });
     }
     for (const sim of similar.slice(0, 8)) {
@@ -11090,7 +12152,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     let name = mood;
     if (!name && presetId) {
       const moods = await b.get((o) => catalog.moods(o));
-      name = matchMood([...moods?.moods || [], ...moods?.genres || []], presetById3[presetId]?.moods)?.name;
+      name = matchMood([...moods?.moods || [], ...moods?.genres || []], presetById2[presetId]?.moods)?.name;
     }
     if (!name) return { candidates: [] };
     const res = await b.get((o) => catalog.search(name, o));
@@ -11109,7 +12171,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     const cands = [];
     if (artist) {
       const own = await moreFrom(ctx, { artist });
-      for (const c of own.candidates.slice(0, 12)) cands.push({ ...c, sources: c.sources.map((s) => ({ ...s, weight: 0.7 })) });
+      for (const c of own.candidates.slice(0, 12)) cands.push({ ...c, sources: c.sources.map((s2) => ({ ...s2, weight: 0.7 })) });
       cands.push(...(await similarMix(ctx, { artist })).candidates);
     }
     if (seed.type === "song") cands.unshift(toCandidate(seed, { kind: "seed", via: seed.title, weight: 2 }));
@@ -11146,7 +12208,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     }
     const opts = rankOptions(prefs, eff, { limit, ...res.overrides || {}, excludeIds: res.excludeIds, ...args.overrides || {} });
     if (args.discovery != null) opts.discovery = discoveryValue(args.discovery);
-    const ranked = rank(res.candidates, profile, opts);
+    const ranked = rank2(res.candidates, profile, opts);
     const items = res.interleave ? spreadArtists(ranked) : ranked;
     return { kind, items, releases: res.releases, candidates: res.candidates.length, errors: b.errors, requests: b.used, ms: Date.now() - t0, discovery: opts.discovery };
   }
@@ -11188,7 +12250,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         checked++;
         onProgress?.(checked, due.length);
       }
-      const maxAge = prefs.releases.maxAgeDays * DAY2;
+      const maxAge = prefs.releases.maxAgeDays * DAY;
       for (const r of await music.releases.all()) {
         if (r.fresh && now - r.firstSeen > maxAge) await db3.put("releases", { ...r, fresh: false });
       }
@@ -11214,8 +12276,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       notify: { type: "toggle", label: "Hinweis bei neuen Veröffentlichungen", default: true }
     },
     setup(ctx) {
-      let s = ctx.settings;
-      let last2 = null;
+      let s2 = ctx.settings;
+      let last3 = null;
       let timer3 = null;
       let stopped = false;
       const run2 = async (force = false) => {
@@ -11224,26 +12286,26 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         if (releaseCheckRunning()) return null;
         try {
           const res = await checkReleases({ force });
-          last2 = res;
-          if (res.fresh && s.notify) toast(`${res.fresh} neue Veröffentlichung${res.fresh === 1 ? "" : "en"} deiner Künstler`);
+          last3 = res;
+          if (res.fresh && s2.notify) toast(`${res.fresh} neue Veröffentlichung${res.fresh === 1 ? "" : "en"} deiner Künstler`);
           return res;
         } catch (e) {
           ctx.log.warn("music releases", e);
-          last2 = { at: Date.now(), error: e.message };
-          return last2;
+          last3 = { at: Date.now(), error: e.message };
+          return last3;
         }
       };
       const first = setTimeout(() => !stopped && run2(false), 25 * 1e3);
       timer3 = setInterval(() => !stopped && !document.hidden && run2(false), 60 * 60 * 1e3);
-      music.getMeta("lastReleaseCheck").then((v) => last2 ||= v).catch(() => {
+      music.getMeta("lastReleaseCheck").then((v) => last3 ||= v).catch(() => {
       });
       return {
         run: run2,
         get last() {
-          return last2;
+          return last3;
         },
         update(next) {
-          s = next;
+          s2 = next;
         },
         dispose() {
           stopped = true;
@@ -11254,35 +12316,19 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           const p = music.prefs();
           if (!p.releases.enabled) return { status: "skip", detail: "Hintergrundprüfung im Tab „Musik“ ausgeschaltet" };
           if (releaseCheckRunning()) return { status: "ok", detail: "prüft gerade …" };
-          if (!last2) return { status: "skip", detail: "noch nicht geprüft (startet ~25 s nach dem Laden)" };
-          if (last2.error) return { status: "warn", detail: last2.error };
-          const when2 = new Date(last2.at).toLocaleString("de-DE");
-          return { status: last2.errors?.length ? "warn" : "ok", detail: `zuletzt ${when2} · ${last2.checked}/${last2.artists} Künstler geprüft · ${last2.fresh} neu${last2.errors?.length ? ` · Fehler: ${last2.errors.slice(0, 2).join("; ")}` : ""}` };
+          if (!last3) return { status: "skip", detail: "noch nicht geprüft (startet ~25 s nach dem Laden)" };
+          if (last3.error) return { status: "warn", detail: last3.error };
+          const when2 = new Date(last3.at).toLocaleString("de-DE");
+          return { status: last3.errors?.length ? "warn" : "ok", detail: `zuletzt ${when2} · ${last3.checked}/${last3.artists} Künstler geprüft · ${last3.fresh} neu${last3.errors?.length ? ` · Fehler: ${last3.errors.slice(0, 2).join("; ")}` : ""}` };
         }
       };
     }
   };
 
-  // src/features/music/logic/genres.js
-  var GENRE_GROUPS = [
-    ["Techno", ["Techno", "Hard Techno", "Melodic Techno", "Minimal Techno", "Peak Time Techno", "Acid Techno", "Industrial Techno", "Schranz", "Hypnotic Techno", "Rave"]],
-    ["Hardstyle & Hard Dance", ["Hardstyle", "Euphoric Hardstyle", "Rawstyle", "Hardcore", "Frenchcore", "Uptempo Hardcore", "Hard Dance", "Hardtekk", "Happy Hardcore"]],
-    ["Hip-Hop & Rap", ["Deutschrap", "Straßenrap", "Trap", "Deutsch Trap", "Drill", "UK Drill", "Boom Bap", "Cloud Rap", "Phonk", "Lo-Fi Hip-Hop", "Old School Hip-Hop", "Conscious Rap", "Afro Trap", "Melodic Rap", "R&B"]],
-    ["Elektronisch", ["House", "Tech House", "Deep House", "Afro House", "Drum & Bass", "Dubstep", "Trance", "Psytrance", "EDM", "Future Bass"]],
-    ["Weitere", ["Pop", "Deutschpop", "Indie", "Rock", "Metal", "Punk", "Reggaeton", "Afrobeats", "Schlager", "Jazz", "Klassik", "Soundtrack"]]
-  ];
-  var ALL_GENRES = GENRE_GROUPS.flatMap(([, list]) => list);
-  function suggestGenres(favorites = [], { extra = [], limit = 10 } = {}) {
-    const have = new Set(favorites.map((g) => g.toLowerCase()));
-    const near = GENRE_GROUPS.filter(([, list]) => list.some((g) => have.has(g.toLowerCase()))).flatMap(([, list]) => list);
-    const spread = GENRE_GROUPS.flatMap(([, list]) => list.slice(0, 2));
-    return [.../* @__PURE__ */ new Set([...extra, ...near, ...spread])].filter((g) => g && !have.has(g.toLowerCase())).slice(0, limit);
-  }
-
   // src/features/music/hub.js
   var SHORT = { forYou: "Für dich", releases: "Neu", genre: "Genre", longAgo: "Lange nicht gehört", neverHeard: "Noch nie gehört", similar: "Ähnlich", moreFrom: "Mehr von", radio: "Smart Radio" };
   var TABS = [...MIXES.map(([id, label]) => [id, SHORT[id] || label, label]), ["queue", "Reihenfolge", "ytx-Reihenfolge"]];
-  var cache3 = /* @__PURE__ */ new Map();
+  var cache4 = /* @__PURE__ */ new Map();
   function currentArtist() {
     const b = currentBrowse();
     if (b && /^UC[\w-]{22}$/.test(b.browseId)) {
@@ -11311,7 +12357,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       explain: { type: "toggle", label: "Begründungen anzeigen", default: true }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       const ui = { tab: ctx.state.get("m.hub.tab", "forYou"), discovery: null, genre: ctx.state.get("m.hub.genre", ""), seed: null, result: null, loading: false };
       let badge2 = 0;
       let renderToken = 0;
@@ -11328,7 +12374,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         id: "m.hub.button",
         anchor: "top.buttons",
         position: "prepend",
-        when: () => s.navButton,
+        when: () => s2.navButton,
         create: () => {
           const b = pill({ label: "Mix", title: "ytx Mix (Alt+M)", onClick: () => toggle2() });
           b.style.margin = "0 8px";
@@ -11478,12 +12524,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         if (ui.tab === "genre") return { ...base2, genre: ui.genre };
         if (ui.tab === "similar" || ui.tab === "moreFrom") return { ...base2, artist: currentArtist() };
         if (ui.tab === "radio") {
-          const key = ui.seed?.key || (currentTrack() ? "song" : currentArtist() ? "artist" : "mood:explore");
+          const key2 = ui.seed?.key || (currentTrack() ? "song" : currentArtist() ? "artist" : "mood:explore");
           const tr = currentTrack();
-          if (key === "song" && tr) return { ...base2, seed: { type: "song", ...tr } };
-          if (key === "artist") return { ...base2, seed: { type: "artist", ...currentArtist() } };
-          if (key === "genre") return { ...base2, seed: { type: "genre", name: ui.genre } };
-          if (key.startsWith("mood:")) return { ...base2, seed: { type: "mood", presetId: key.slice(5) } };
+          if (key2 === "song" && tr) return { ...base2, seed: { type: "song", ...tr } };
+          if (key2 === "artist") return { ...base2, seed: { type: "artist", ...currentArtist() } };
+          if (key2 === "genre") return { ...base2, seed: { type: "genre", name: ui.genre } };
+          if (key2.startsWith("mood:")) return { ...base2, seed: { type: "mood", presetId: key2.slice(5) } };
         }
         return base2;
       }
@@ -11496,8 +12542,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         const tab = ui.tab;
         if (tab === "queue") return render3();
         const args = mixArgs();
-        const key = cacheKey(args);
-        const hit = cache3.get(key);
+        const key2 = cacheKey(args);
+        const hit = cache4.get(key2);
         if (!force && hit && Date.now() - hit.at < 10 * 60 * 1e3) {
           ui.result = hit.result;
           return drawBody();
@@ -11513,11 +12559,11 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         ui.loading = true;
         ui.result = null;
         drawBody("lädt …");
-        const res = await buildMix(ui.tab === "radio" ? "radio" : ui.tab, args, { maxRequests: s.maxRequests, onProgress: (n, max) => token === renderToken && drawBody(`lädt Seiten … ${n}/${max}`) });
+        const res = await buildMix(ui.tab === "radio" ? "radio" : ui.tab, args, { maxRequests: s2.maxRequests, onProgress: (n, max) => token === renderToken && drawBody(`lädt Seiten … ${n}/${max}`) });
         if (token !== renderToken) return;
         ui.loading = false;
         ui.result = { ...res, tab };
-        if (!res.error) cache3.set(key, { at: Date.now(), result: res });
+        if (!res.error) cache4.set(key2, { at: Date.now(), result: res });
         drawBody();
         if (ui.tab === "releases") {
           music.releases.markSeen();
@@ -11528,7 +12574,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         const first = item.artists?.[0];
         const act = async (kind) => {
           toast(await music.act(kind, item));
-          cache3.clear();
+          cache4.clear();
         };
         drawer.menu(anchor, [
           ["▶ Abspielen mit Radio", () => navigateEndpoint(endpoints.radio(item.videoId))],
@@ -11585,7 +12631,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         }
         main.append(head);
         if (!items.length && ui.tab !== "releases") main.append(h("div", { class: "status", text: emptyHint() }));
-        for (const it of items) main.append(trackRow(it, { explain: s.explain && music.prefs().explain, onPlay: (x) => navigateEndpoint(endpoints.radio(x.videoId)), onMenu: menuFor }));
+        for (const it of items) main.append(trackRow(it, { explain: s2.explain && music.prefs().explain, onPlay: (x) => navigateEndpoint(endpoints.radio(x.videoId)), onMenu: menuFor }));
       }
       function emptyHint() {
         if (ui.tab === "longAgo") return "Noch nichts: hier landen Songs, die du früher gern gehört hast und seit über 45 Tagen nicht mehr.";
@@ -11625,7 +12671,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           const args = { artist: a, ...ui.discovery == null ? {} : { discovery: ui.discovery } };
           const token = ++renderToken;
           drawBody("lädt …");
-          buildMix(ui.tab, args, { maxRequests: s.maxRequests }).then((res) => {
+          buildMix(ui.tab, args, { maxRequests: s2.maxRequests }).then((res) => {
             if (token !== renderToken) return;
             ui.result = res;
             drawBody();
@@ -11645,12 +12691,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         if (!ok || location.href === before) location.href = `https://music.youtube.com/browse/${id}`;
       };
       const shelfRow = () => h("div", { style: { display: "flex", gap: "16px", overflowX: "auto", paddingBottom: "6px" } });
-      const shelfCard = ({ img, title, sub, highlight, onClick }) => {
+      const shelfCard = ({ img, title: title2, sub, highlight, onClick }) => {
         const card2 = h(
           "div",
           { style: { flex: "none", width: "150px", cursor: "pointer", color: T2.primary, font: "400 13px/1.35 Roboto, Arial, sans-serif" } },
           img ? h("img", { src: img, loading: "eager", decoding: "async", alt: "", style: { width: "150px", height: "150px", borderRadius: "4px", objectFit: "cover", background: "rgba(255,255,255,.08)" } }) : h("div", { style: { width: "150px", height: "150px", borderRadius: "4px", background: "rgba(255,255,255,.08)" } }),
-          h("div", { text: title, style: { marginTop: "6px", fontWeight: "500", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: highlight ? "#ffc83d" : "inherit" } }),
+          h("div", { text: title2, style: { marginTop: "6px", fontWeight: "500", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: highlight ? "#ffc83d" : "inherit" } }),
           h("div", { text: sub, title: sub, style: { color: T2.secondary, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" } })
         );
         card2.addEventListener("click", (e) => {
@@ -11700,19 +12746,19 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       }
       async function loadPool() {
         const base2 = music.effective().discovery;
-        const discovery = Math.min(1, base2 + [0, 0.25, 0.5][home.step % 3]);
+        const discovery2 = Math.min(1, base2 + [0, 0.25, 0.5][home.step % 3]);
         const mode = homeModes().some(([m]) => m === home.mode) ? home.mode : "forYou";
         home.note = "";
         let res;
-        if (mode.startsWith("genre:")) res = await buildMix("genre", { genre: mode.slice(6), discovery }, { maxRequests: 8, limit: 60 });
-        else res = await buildMix(mode, { discovery }, { maxRequests: 8, limit: 120 });
+        if (mode.startsWith("genre:")) res = await buildMix("genre", { genre: mode.slice(6), discovery: discovery2 }, { maxRequests: 8, limit: 60 });
+        else res = await buildMix(mode, { discovery: discovery2 }, { maxRequests: 8, limit: 120 });
         if (res.error) home.note = res.error;
         home.poolMode = home.mode;
         if (!res.items?.length && mode === "forYou") {
           const favs = music.prefs().genres.favorites;
           if (favs.length) {
             const genre = favs[Math.floor(Math.random() * favs.length)];
-            res = await buildMix("genre", { genre, discovery }, { maxRequests: 6, limit: 60 });
+            res = await buildMix("genre", { genre, discovery: discovery2 }, { maxRequests: 6, limit: 60 });
             home.note = `Aus deinem Lieblingsgenre ${genre}`;
           }
         }
@@ -11803,8 +12849,8 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
             shuffle(target);
           }
         };
-        const chip = (text, title, run2, ghost = false) => {
-          const c = h("button", { type: "button", class: ghost ? "ytx-m-chip ghost" : "ytx-m-chip", text, title });
+        const chip = (text, title2, run2, ghost = false) => {
+          const c = h("button", { type: "button", class: ghost ? "ytx-m-chip ghost" : "ytx-m-chip", text, title: title2 });
           c.addEventListener("click", (e) => {
             e.preventDefault();
             run2();
@@ -11817,12 +12863,12 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         });
         input.addEventListener("change", () => add2(input.value));
         const label = (text) => h("span", { class: "ytx-m-pick-label", text });
-        const last2 = ctx.state.get("m.hub.genre", "");
+        const last3 = ctx.state.get("m.hub.genre", "");
         return h(
           "div",
           { class: "ytx-m-pick" },
           favs.length ? h("div", { class: "ytx-m-chips" }, label("Deine Genres"), ...favs.map((g) => chip(`${g} ×`, "Entfernen", () => remove2(g)))) : null,
-          h("div", { class: "ytx-m-chips" }, label("Vorschläge"), ...suggestGenres(favs, { extra: last2 ? [last2] : [] }).map((g) => chip(`+ ${g}`, "Als Chip hinzufügen", () => add2(g), true)), input, dl)
+          h("div", { class: "ytx-m-chips" }, label("Vorschläge"), ...suggestGenres(favs, { extra: last3 ? [last3] : [] }).map((g) => chip(`+ ${g}`, "Als Chip hinzufügen", () => add2(g), true)), input, dl)
         );
       }
       function moreMenu(anchor, target) {
@@ -11841,7 +12887,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       }
       function drawForYou(target, force = false) {
         if (!target) return;
-        if (!s.forYouShelf) {
+        if (!s2.forYouShelf) {
           target.replaceChildren();
           return;
         }
@@ -11882,7 +12928,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       }
       async function drawReleases(node) {
         if (!node) return;
-        if (!s.homeShelf || s.forYouShelf && home.mode === "releases") {
+        if (!s2.homeShelf || s2.forYouShelf && home.mode === "releases") {
           node.replaceChildren();
           node.__at = 0;
           return;
@@ -11902,7 +12948,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         id: "m.hub.homeShelf",
         anchor: "m.browse.top",
         position: "prepend",
-        when: () => (s.homeShelf || s.forYouShelf) && ctx.nav.page === "home",
+        when: () => (s2.homeShelf || s2.forYouShelf) && ctx.nav.page === "home",
         create: () => {
           const forYou2 = h("div", { class: "ytx-m-shelf-foryou" });
           const rel = h("div", { class: "ytx-m-shelf-releases" });
@@ -11921,17 +12967,17 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           updateBadge();
           if (shelf.node?.__rel) shelf.node.__rel.__at = 0;
           shelf.refresh();
-          cache3.clear();
+          cache4.clear();
         }),
-        music.on("favorites", () => cache3.clear()),
+        music.on("favorites", () => cache4.clear()),
         music.on("prefs", () => {
-          cache3.clear();
+          cache4.clear();
           if (shelf.node?.__forYou && !home.loading) drawForYou(shelf.node.__forYou, true);
         }),
         music.on("session", () => drawer.isOpen && drawTools())
       ];
       updateBadge();
-      const chipsAttr = () => document.documentElement.toggleAttribute("data-ytx-mchips-off", !!(s.forYouShelf && s.hideYouTubeChips));
+      const chipsAttr = () => document.documentElement.toggleAttribute("data-ytx-mchips-off", !!(s2.forYouShelf && s2.hideYouTubeChips));
       chipsAttr();
       return {
         drawer,
@@ -11940,7 +12986,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           render3();
         },
         update(next) {
-          s = next;
+          s2 = next;
           chipsAttr();
           btn2.refresh();
           if (shelf.node?.__forYou) drawForYou(shelf.node.__forYou, true);
@@ -11959,7 +13005,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           drawer.host.remove();
         },
         health() {
-          if (s.navButton && !btn2.ok) return { status: "warn", detail: "Kopfzeile für den Mix-Button nicht gefunden" };
+          if (s2.navButton && !btn2.ok) return { status: "warn", detail: "Kopfzeile für den Mix-Button nicht gefunden" };
           const r = ui.result;
           return { status: r?.errors?.length ? "warn" : "ok", detail: `Button da${badge2 ? ` · ${badge2} neue Veröffentlichungen` : ""}${r ? ` · letzter Mix ${r.items?.length || 0} Titel, ${r.requests} Abrufe${r.errors?.length ? `, Fehler: ${r.errors[0]}` : ""}` : ""}` };
         }
@@ -12013,15 +13059,15 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     d.setDate(d.getDate() - (d.getDay() + 6) % 7);
     return d.getTime();
   }
-  var lastWeekStart = (now) => weekStart(weekStart(now) - DAY2);
+  var lastWeekStart = (now) => weekStart(weekStart(now) - DAY);
   function weekLabel(start) {
-    const end = new Date(start + 6 * DAY2);
+    const end = new Date(start + 6 * DAY);
     const a = new Date(start);
     const fmt = (d, withMonth) => `${d.getDate()}.${withMonth ? `${d.getMonth() + 1}.` : ""}`;
     return `${fmt(a, a.getMonth() !== end.getMonth())}–${fmt(end, true)}${end.getFullYear()}`;
   }
   function weeklyRecap(plays, start, { limit = 5 } = {}) {
-    const end = start + 7 * DAY2;
+    const end = start + 7 * DAY;
     const firstSeen = /* @__PURE__ */ new Map();
     for (const p of plays) {
       for (const a of p.artists || []) {
@@ -12040,10 +13086,10 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     for (const p of week) {
       listenedSec += p.listenedSec || 0;
       if (p.skipped) skips++;
-      const s = songs.get(p.videoId) || { videoId: p.videoId, title: p.title, artists: p.artists || [], plays: 0, listenedSec: 0 };
-      s.plays++;
-      s.listenedSec += p.listenedSec || 0;
-      songs.set(p.videoId, s);
+      const s2 = songs.get(p.videoId) || { videoId: p.videoId, title: p.title, artists: p.artists || [], plays: 0, listenedSec: 0 };
+      s2.plays++;
+      s2.listenedSec += p.listenedSec || 0;
+      songs.set(p.videoId, s2);
       const seen3 = /* @__PURE__ */ new Set();
       for (const a of p.artists || []) {
         const k = artistKey(a);
@@ -12082,7 +13128,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       ...r.topArtists.map((a, i) => `${i + 1}. ${a.name} (${fmt(a.listenedSec)})`),
       "",
       "Top-Songs",
-      ...r.topSongs.map((s, i) => `${i + 1}. ${s.title} – ${names(s.artists)} (${s.plays}×)`),
+      ...r.topSongs.map((s2, i) => `${i + 1}. ${s2.title} – ${names(s2.artists)} (${s2.plays}×)`),
       ...r.newArtists.length ? ["", `Neu entdeckt (${r.newArtistCount})`, names(r.newArtists)] : []
     ].join("\n");
   }
@@ -12112,7 +13158,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
   function render2(r) {
     closeRecap();
     const style = h("style", { text: CSS3 });
-    const who = (s) => s.artists.map((a) => a.name).join(", ");
+    const who = (s2) => s2.artists.map((a) => a.name).join(", ");
     const newBox = h("div", { class: "new" });
     for (const a of r.newArtists) {
       const b = h("button", { type: "button", title: a.id ? "Künstlerseite öffnen" : "", text: a.name });
@@ -12132,7 +13178,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       h("div", { class: "sec", text: "Top-Künstler" }),
       h("ol", null, ...r.topArtists.map((a) => h("li", null, a.name, h("span", { class: "muted", text: ` · ${formatDuration(a.listenedSec)}` })))),
       h("div", { class: "sec", text: "Top-Songs" }),
-      h("ol", null, ...r.topSongs.map((s) => h("li", null, s.title, h("span", { class: "muted", text: ` – ${who(s)} · ${s.plays}×` })))),
+      h("ol", null, ...r.topSongs.map((s2) => h("li", null, s2.title, h("span", { class: "muted", text: ` – ${who(s2)} · ${s2.plays}×` })))),
       h("div", { class: "sec", text: r.newArtistCount ? `Neu entdeckt · ${r.newArtistCount}` : "Neu entdeckt" }),
       r.newArtists.length ? newBox : h("div", { class: "muted", text: "Diese Woche keine neuen Künstler. Im Mix-Fenster unter „Noch nie gehört“ gibt es Vorschläge." }),
       h("div", { class: "acts" }, copy, close)
@@ -12155,17 +13201,17 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
     stability: "hoch",
     settings: {},
     setup(ctx) {
-      let last2 = null;
+      let last3 = null;
       const check = async () => {
         try {
           const start = lastWeekStart(Date.now());
           if (await music.getMeta(SEEN) === start) return;
           const shown = await showRecap(start);
           await music.setMeta(SEEN, start);
-          last2 = { at: Date.now(), start, shown };
+          last3 = { at: Date.now(), start, shown };
         } catch (e) {
           ctx.log.warn("music weekly", e);
-          last2 = { at: Date.now(), error: e.message };
+          last3 = { at: Date.now(), error: e.message };
         }
       };
       const t = setTimeout(check, 6e3);
@@ -12176,9 +13222,9 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           closeRecap();
         },
         health() {
-          if (!last2) return { status: "skip", detail: "prüft kurz nach dem Laden" };
-          if (last2.error) return { status: "warn", detail: last2.error };
-          return { status: "ok", detail: last2.shown ? "Rückblick dieser Woche gezeigt" : "keine Hördaten letzte Woche" };
+          if (!last3) return { status: "skip", detail: "prüft kurz nach dem Laden" };
+          if (last3.error) return { status: "warn", detail: last3.error };
+          return { status: "ok", detail: last3.shown ? "Rückblick dieser Woche gezeigt" : "keine Hördaten letzte Woche" };
         }
       };
     }
@@ -12204,7 +13250,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       button: { type: "toggle", label: "Knopf in der Playerleiste", default: true }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       const st = { until: 0, endOfTrack: false, timer: 0 };
       const active = () => !!st.until || st.endOfTrack;
       const label = () => {
@@ -12250,7 +13296,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
         id: "m.sleep.bar",
         anchor: "m.bar.middleButtons",
         position: "prepend",
-        when: () => s.button,
+        when: () => s2.button,
         create: () => iconButton({ icon: "☾", title: "Sleep-Timer", pressed: false, onClick: (e, b) => menu(b) }),
         update: (node) => {
           node.setAttribute("aria-pressed", String(active()));
@@ -12261,7 +13307,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
       });
       return {
         update(next) {
-          s = next;
+          s2 = next;
           bar.refresh();
         },
         onVideo() {
@@ -12272,7 +13318,7 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
           bar.destroy();
         },
         health() {
-          return s.button && !bar.ok ? { status: "warn", detail: "Playerleiste nicht gefunden" } : { status: "ok", detail: active() ? `läuft: ${label()}` : "bereit" };
+          return s2.button && !bar.ok ? { status: "warn", detail: "Playerleiste nicht gefunden" } : { status: "ok", detail: active() ? `läuft: ${label()}` : "bereit" };
         }
       };
     }
@@ -12326,9 +13372,9 @@ main { flex: 1; overflow: auto; padding: 6px 6px 16px; }
   function stamp(ms, lrc) {
     const total = Math.max(0, Math.floor(ms / 10));
     const cs = total % 100;
-    const s = Math.floor(total / 100) % 60;
+    const s2 = Math.floor(total / 100) % 60;
     const m = Math.floor(total / 6e3);
-    return lrc ? `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}.${String(cs).padStart(2, "0")}` : `${m}:${String(s).padStart(2, "0")}`;
+    return lrc ? `${String(m).padStart(2, "0")}:${String(s2).padStart(2, "0")}.${String(cs).padStart(2, "0")}` : `${m}:${String(s2).padStart(2, "0")}`;
   }
   function formatLyrics(data2, { mode = "plain", meta = {} } = {}) {
     if (!data2?.available || !data2.lines?.length) return "";
@@ -12364,7 +13410,7 @@ ${data2.source}` : ""].join("\n").trim();
       notify: { type: "toggle", label: "Hinweis beim automatischen Überspringen", default: true }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       let profile = null;
       const recentKeys = /* @__PURE__ */ new Map();
       const recentIds2 = /* @__PURE__ */ new Map();
@@ -12416,8 +13462,8 @@ ${data2.source}` : ""].join("\n").trim();
         if (!recentKeys.has(trackKey(t)) || recentKeys.get(trackKey(t)).videoId === t.videoId) recentKeys.set(trackKey(t), { videoId: t.videoId, ts: now });
         if (!d) return;
         stats2.last = { title: t.title, reason: d.label, at: now, skipped: false };
-        const key = SKIP_SETTING[d.kind];
-        const allowed = d.kind === "unknown" ? true : !!prefs.smartQueue[key] || d.kind === "highSkip" && music.effective().skipHighSkip;
+        const key2 = SKIP_SETTING[d.kind];
+        const allowed = d.kind === "unknown" ? true : !!prefs.smartQueue[key2] || d.kind === "highSkip" && music.effective().skipHighSkip;
         if (!prefs.smartQueue.autoSkip || prefs.smartQueue.markOnly || !allowed) return;
         if (userPicked.videoId === t.videoId && now - userPicked.at < 15e3) return;
         if (ytxQueue.state.active && ytxQueue.state.items[ytxQueue.state.index]?.videoId === t.videoId) return;
@@ -12430,11 +13476,11 @@ ${data2.source}` : ""].join("\n").trim();
         autoSkipped.set(t.videoId, now);
         stats2.skipped++;
         stats2.last.skipped = true;
-        if (s.notify) toast(`Übersprungen: ${t.title} – ${d.label}`);
+        if (s2.notify) toast(`Übersprungen: ${t.title} – ${d.label}`);
         nextVideo();
       };
       const marks = () => {
-        if (!s.marks) return;
+        if (!s2.marks) return;
         const items = qsa("ytmusic-player-page ytmusic-player-queue-item, ytmusic-player-queue ytmusic-player-queue-item");
         const seenKeys = /* @__PURE__ */ new Map();
         let n = 0;
@@ -12467,8 +13513,8 @@ ${data2.source}` : ""].join("\n").trim();
       return {
         stats: stats2,
         update(next) {
-          s = next;
-          if (!s.marks) for (const m of qsa(".ytx-m-mark")) m.remove();
+          s2 = next;
+          if (!s2.marks) for (const m of qsa(".ytx-m-mark")) m.remove();
           marks();
         },
         dispose() {
@@ -12501,7 +13547,7 @@ ${data2.source}` : ""].join("\n").trim();
       automix: { type: "toggle", label: "Automix-Titel mitzählen", default: false }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       let text = "";
       const m = ctx.mount({
         id: "m.queueInfo",
@@ -12509,7 +13555,7 @@ ${data2.source}` : ""].join("\n").trim();
         position: "prepend",
         create: () => h("div", { class: "ytx-m-info" }),
         update: (node) => {
-          const all = queueItems().filter((x) => s.automix || !x.automix);
+          const all = queueItems().filter((x) => s2.automix || !x.automix);
           if (!all.length) {
             node.textContent = text = "";
             return;
@@ -12519,7 +13565,7 @@ ${data2.source}` : ""].join("\n").trim();
           const tot = queueTotals(all, sel, t?.pos || 0);
           const rate = t?.rate || 1;
           const parts = [`${tot.count} Titel`, formatDuration(tot.total), `noch ${formatDuration(tot.remaining / rate)}`];
-          if (s.endTime && tot.remaining) parts.push(`endet ${formatTimeOfDay(new Date(Date.now() + tot.remaining / rate * 1e3))}`);
+          if (s2.endTime && tot.remaining) parts.push(`endet ${formatTimeOfDay(new Date(Date.now() + tot.remaining / rate * 1e3))}`);
           if (tot.unknown) parts.push(`${tot.unknown} ohne Dauer`);
           const next = parts.join(" · ");
           if (next !== text) node.textContent = text = next;
@@ -12528,7 +13574,7 @@ ${data2.source}` : ""].join("\n").trim();
       const timer3 = setInterval(() => m.refresh(), 5e3);
       return {
         update(next) {
-          s = next;
+          s2 = next;
           m.refresh();
         },
         dispose() {
@@ -12567,8 +13613,8 @@ ${data2.source}` : ""].join("\n").trim();
       format: { type: "select", label: "Standardformat", options: LYRICS_FORMATS, default: "plain" }
     },
     setup(ctx) {
-      let s = ctx.settings;
-      let last2 = null;
+      let s2 = ctx.settings;
+      let last3 = null;
       const copy = async (mode) => {
         const d = await ensureLyrics();
         if (!d) return toast("Songtext noch nicht geladen");
@@ -12576,7 +13622,7 @@ ${data2.source}` : ""].join("\n").trim();
         const t = currentTrack();
         const useMode = mode === "timestamps" && !d.timed ? "plain" : mode;
         const text = formatLyrics(d, { mode: useMode, meta: t || {} });
-        last2 = { at: Date.now(), mode: useMode, lines: d.lines.length, timed: d.timed };
+        last3 = { at: Date.now(), mode: useMode, lines: d.lines.length, timed: d.timed };
         if (await ctx.copyText(text)) toast(`Songtext kopiert${mode === "timestamps" && !d.timed ? " (ohne Zeitstempel, keine vorhanden)" : ""}`);
         else textDialog("Songtext", text);
       };
@@ -12590,21 +13636,21 @@ ${data2.source}` : ""].join("\n").trim();
           const more = h("button", { type: "button", class: "ytx-m-pill", text: "▾", title: "Format wählen" });
           main.addEventListener("click", (e) => {
             e.stopPropagation();
-            copy(s.format);
+            copy(s2.format);
           });
           more.addEventListener("click", (e) => {
             e.stopPropagation();
             const d = lyricsData();
-            showMenu(more, [{ title: "Kopieren als" }, ...LYRICS_FORMATS.map(([id, label]) => ({ label, checked: id === s.format, disabled: id === "timestamps" && !d?.timed, sub: id === "timestamps" && !d?.timed ? "nicht verfügbar" : "", run: () => copy(id) }))]);
+            showMenu(more, [{ title: "Kopieren als" }, ...LYRICS_FORMATS.map(([id, label]) => ({ label, checked: id === s2.format, disabled: id === "timestamps" && !d?.timed, sub: id === "timestamps" && !d?.timed ? "nicht verfügbar" : "", run: () => copy(id) }))]);
           });
           return h("div", { style: { display: "flex", gap: "6px", margin: "8px 0 12px" } }, main, more);
         }
       });
-      ctx.action("music.lyricsCopy", () => copy(s.format));
+      ctx.action("music.lyricsCopy", () => copy(s2.format));
       const timer3 = setInterval(() => m.refresh(), 1500);
       return {
         update(next) {
-          s = next;
+          s2 = next;
         },
         onVideo() {
           m.refresh();
@@ -12617,7 +13663,7 @@ ${data2.source}` : ""].join("\n").trim();
           const d = lyricsData();
           if (!d) return { status: "skip", detail: "Songtext-Tab noch nicht geöffnet" };
           if (!d.available) return { status: "skip", detail: `kein Songtext für diesen Titel (${d.reason})` };
-          return { status: m.ok ? "ok" : "warn", detail: `${d.lines.length} Zeilen · ${d.timed ? "mit Zeitstempeln" : "ohne Zeitstempel"}${m.ok ? "" : " · Button-Anker fehlt"}${last2 ? ` · zuletzt kopiert ${new Date(last2.at).toLocaleTimeString("de-DE")}` : ""}` };
+          return { status: m.ok ? "ok" : "warn", detail: `${d.lines.length} Zeilen · ${d.timed ? "mit Zeitstempeln" : "ohne Zeitstempel"}${m.ok ? "" : " · Button-Anker fehlt"}${last3 ? ` · zuletzt kopiert ${new Date(last3.at).toLocaleTimeString("de-DE")}` : ""}` };
         }
       };
     }
@@ -12644,12 +13690,12 @@ ${data2.source}` : ""].join("\n").trim();
       preamp: { type: "range", label: "Vorverstärkung (dB)", min: -12, max: 6, step: 1, default: 0 }
     },
     setup(ctx) {
-      let s = ctx.settings;
+      let s2 = ctx.settings;
       const stats2 = { switched: 0, lastSwitch: null, eq: "aus", eqError: null };
       let lastTry = { videoId: null, at: 0 };
       let graph = null;
       const switchAudio = () => {
-        if (!s.preferAudio) return;
+        if (!s2.preferAudio) return;
         const t = currentTrack();
         const toggle2 = document.querySelector("ytmusic-player-page ytmusic-av-toggle");
         if (!toggle2 || !t) return;
@@ -12665,7 +13711,7 @@ ${data2.source}` : ""].join("\n").trim();
         }
       };
       const ensureGraph = () => {
-        if (!s.eq) return applyEq();
+        if (!s2.eq) return applyEq();
         const el = mediaEl();
         if (!el) return;
         try {
@@ -12698,22 +13744,22 @@ ${data2.source}` : ""].join("\n").trim();
       };
       const applyEq = () => {
         if (!graph) return;
-        const gains = EQ_PRESETS[s.eq] || EQ_PRESETS.flat;
-        graph.filters.forEach((f, i) => f.gain.value = s.eq ? gains[i] : 0);
-        graph.pre.gain.value = s.eq ? Math.pow(10, (s.preamp || 0) / 20) : 1;
-        stats2.eq = s.eq || "aus (neutral durchgeleitet)";
+        const gains = EQ_PRESETS[s2.eq] || EQ_PRESETS.flat;
+        graph.filters.forEach((f, i) => f.gain.value = s2.eq ? gains[i] : 0);
+        graph.pre.gain.value = s2.eq ? Math.pow(10, (s2.preamp || 0) / 20) : 1;
+        stats2.eq = s2.eq || "aus (neutral durchgeleitet)";
       };
       const resume = () => graph?.ac.state === "suspended" && graph.ac.resume().catch(() => {
       });
       const offs = [listen(document, "pointerdown", resume, true), listen(document, "keydown", resume, true)];
       const timer3 = setInterval(() => {
         switchAudio();
-        if (s.eq || graph) ensureGraph();
+        if (s2.eq || graph) ensureGraph();
       }, 1500);
       return {
         stats: stats2,
         update(next) {
-          s = next;
+          s2 = next;
           ensureGraph();
         },
         onVideo() {
@@ -12731,7 +13777,7 @@ ${data2.source}` : ""].join("\n").trim();
           const toggle2 = document.querySelector("ytmusic-player-page ytmusic-av-toggle");
           const parts = [`${stats2.switched} Mal auf Audio umgeschaltet`];
           if (!toggle2) parts.push("kein Titel/Video-Umschalter sichtbar");
-          if (s.eq || graph) parts.push(`EQ ${stats2.eq}${graph ? ` · AudioContext ${graph.ac.state}` : ""}`);
+          if (s2.eq || graph) parts.push(`EQ ${stats2.eq}${graph ? ` · AudioContext ${graph.ac.state}` : ""}`);
           if (stats2.eqError) return { status: "warn", detail: `EQ-Fehler: ${stats2.eqError}` };
           return { status: "ok", detail: parts.join(" · ") };
         }
@@ -12771,8 +13817,8 @@ ${data2.source}` : ""].join("\n").trim();
   function startObserver() {
     if (running) return;
     running = true;
-    const mo = new MutationObserver((records) => {
-      for (const r of records) {
+    const mo = new MutationObserver((records2) => {
+      for (const r of records2) {
         const t = r.target;
         if (t.nodeType === 1 && t.closest && t.closest("[data-ytx-own]")) continue;
         let own = true;
@@ -12900,17 +13946,17 @@ ${data2.source}` : ""].join("\n").trim();
     if (Date.now() - info.at < 8e3) return;
     info.at = Date.now();
     const db3 = musicDb();
-    Promise.all([db3.sizes(), db3.latest("plays", "startedAt", 1), music.getMeta("lastReleaseCheck")]).then(([sizes, last2, check]) => {
+    Promise.all([db3.sizes(), db3.latest("plays", "startedAt", 1), music.getMeta("lastReleaseCheck")]).then(([sizes, last3, check]) => {
       info.sizes = sizes;
-      info.lastPlay = last2[0] || null;
+      info.lastPlay = last3[0] || null;
       info.lastCheck = check;
       info.error = null;
     }).catch((e) => info.error = e.message);
   }
   var ago = (ts) => {
     if (!ts) return "nie";
-    const s = Math.round((Date.now() - ts) / 1e3);
-    return s < 90 ? `vor ${s} s` : s < 5400 ? `vor ${Math.round(s / 60)} min` : s < 172800 ? `vor ${Math.round(s / 3600)} h` : `vor ${Math.round(s / 86400)} Tagen`;
+    const s2 = Math.round((Date.now() - ts) / 1e3);
+    return s2 < 90 ? `vor ${s2} s` : s2 < 5400 ? `vor ${Math.round(s2 / 60)} min` : s2 < 172800 ? `vor ${Math.round(s2 / 3600)} h` : `vor ${Math.round(s2 / 86400)} Tagen`;
   };
   function registerMusicChecks() {
     registerCheck("music.page", "Music", "Seite & Konto", () => {
@@ -13000,7 +14046,7 @@ ${data2.source}` : ""].join("\n").trim();
     tagRules: tagRules2,
     tagAttrs: TAG_ATTRS,
     look: { colorControls: colorControls2, controls: controls2, themes: themes2, LOOK_GROUPS: LOOK_GROUPS2, controlById: controlById2, tokenScope: TOKEN_SCOPE2, extraCss: extraCss2 },
-    presets: { layoutPresets: layoutPresets2, presetById: presetById2, LAYOUT_PAGES: LAYOUT_PAGES2, orderGroups: orderGroups2, topbarModes: topbarModes2, topbarCss: topbarCss2 },
+    presets: { layoutPresets: layoutPresets2, presetById: presetById3, LAYOUT_PAGES: LAYOUT_PAGES2, orderGroups: orderGroups2, topbarModes: topbarModes2, topbarCss: topbarCss2 },
     behaviors: behaviors2,
     behaviorById: behaviorById2,
     features: featureManifests2,
@@ -13009,7 +14055,7 @@ ${data2.source}` : ""].join("\n").trim();
     get debug() {
       return { music, catalog, buildMix, checkReleases, ytxQueue };
     },
-    panelTabs: ["display", "look", "layout", "behavior", "features", "music", "musicData", "musicStats", "profiles", "diagnose"],
+    panelTabs: ["display", "look", "layout", "behavior", "features", "music", "musicData", "musicStats", "stats", "profiles", "diagnose"],
     boot() {
       initMusicUiCss();
       registerMusicChecks();
@@ -13499,10 +14545,10 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
   }
   async function innertubePost(path, body) {
     const auth = await authHeader();
-    const key = ytcfg("INNERTUBE_API_KEY");
+    const key2 = ytcfg("INNERTUBE_API_KEY");
     const context = ytcfg("INNERTUBE_CONTEXT");
-    if (!auth || !key || !context) return false;
-    const r = await fetch(`/youtubei/v1/${path}?key=${key}&prettyPrint=false`, {
+    if (!auth || !key2 || !context) return false;
+    const r = await fetch(`/youtubei/v1/${path}?key=${key2}&prettyPrint=false`, {
       method: "POST",
       credentials: "include",
       headers: { "content-type": "application/json", authorization: auth, "x-origin": location.origin, "x-goog-authuser": "0" },
@@ -13675,17 +14721,17 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
   // src/behaviors/notInterested.js
   var KIND = { HIDE: "hide", REMOVE: "channel" };
   var LABEL = { hide: "Kein Interesse", channel: "Kanal nicht empfehlen" };
-  function findKey(o, key, depth = 0) {
+  function findKey(o, key2, depth = 0) {
     if (!o || typeof o !== "object" || depth > 40) return null;
-    if (key in o) return o[key];
+    if (key2 in o) return o[key2];
     for (const k in o) {
-      const r = findKey(o[k], key, depth + 1);
+      const r = findKey(o[k], key2, depth + 1);
       if (r) return r;
     }
     return null;
   }
   var imageName = (o) => JSON.stringify(o).match(/"imageName":"([A-Z_]+)"/)?.[1] || null;
-  var idOfShort = (s) => s.onTap?.innertubeCommand?.reelWatchEndpoint?.videoId || String(s.entityId || "").match(/([\w-]{11})$/)?.[1] || null;
+  var idOfShort = (s2) => s2.onTap?.innertubeCommand?.reelWatchEndpoint?.videoId || String(s2.entityId || "").match(/([\w-]{11})$/)?.[1] || null;
   function extractFeedback(json, out = /* @__PURE__ */ new Map(), id = null, depth = 0) {
     if (!json || typeof json !== "object" || depth > 90) return out;
     if (Array.isArray(json)) {
@@ -13857,11 +14903,11 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
     start() {
       let t0 = null;
       const inPlayer = (el) => !!el?.closest?.("#movie_player, ytm-custom-control, #player-container-id, .player-container");
-      const full = () => !!document.fullscreenElement || document.body?.getAttribute("faux-fullscreen") === "true";
+      const full2 = () => !!document.fullscreenElement || document.body?.getAttribute("faux-fullscreen") === "true";
       const offs = [
         listen(document, "touchstart", (e) => {
           t0 = null;
-          if (e.touches.length !== 1 || pageFromUrl(location.href) !== "watch" || full() || !inPlayer(e.target)) return;
+          if (e.touches.length !== 1 || pageFromUrl(location.href) !== "watch" || full2() || !inPlayer(e.target)) return;
           const box2 = (e.target.closest("#movie_player, ytm-custom-control") || e.target).getBoundingClientRect();
           const y = e.touches[0].clientY;
           if (box2.height && y > box2.bottom - 40) return;
@@ -14220,9 +15266,9 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
           }
         }, { passive: true, capture: true }),
         listen(document, "touchend", () => {
-          const s = t0;
+          const s2 = t0;
           t0 = null;
-          if (!s?.active) return hide();
+          if (!s2?.active) return hide();
           const d = mk();
           const done2 = parseFloat(d.style.opacity) >= 1;
           if (!done2) return hide();
@@ -14255,12 +15301,12 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
           if (bar) t0 = { bar, x: e.touches[0].clientX, y: e.touches[0].clientY, at: Date.now() };
         }, { passive: true, capture: true }),
         listen(document, "touchend", (e) => {
-          const s = t0;
+          const s2 = t0;
           t0 = null;
           const t = e.changedTouches[0];
-          if (!s || !t || Date.now() - s.at > 600 || Math.abs(t.clientX - s.x) > 24 || Math.abs(t.clientY - s.y) > 24) return;
-          const r = s.bar.getBoundingClientRect();
-          const frac = Math.min(1, Math.max(0, (s.x - r.left) / r.width));
+          if (!s2 || !t || Date.now() - s2.at > 600 || Math.abs(t.clientX - s2.x) > 24 || Math.abs(t.clientY - s2.y) > 24) return;
+          const r = s2.bar.getBoundingClientRect();
+          const frac = Math.min(1, Math.max(0, (s2.x - r.left) / r.width));
           const p = document.getElementById("movie_player");
           const dur = p?.getDuration?.() || document.querySelector("#movie_player video")?.duration;
           if (!dur) return;
@@ -14290,20 +15336,20 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       };
       const w = pageWindow;
       const old = {};
-      for (const [key, dim] of [["outerWidth", "width"], ["outerHeight", "height"]]) {
+      for (const [key2, dim] of [["outerWidth", "width"], ["outerHeight", "height"]]) {
         try {
-          old[key] = Object.getOwnPropertyDescriptor(w, key);
-          Object.defineProperty(w, key, { configurable: true, get: () => w.screen[dim] });
+          old[key2] = Object.getOwnPropertyDescriptor(w, key2);
+          Object.defineProperty(w, key2, { configurable: true, get: () => w.screen[dim] });
         } catch {
         }
       }
       const d = w.document;
       const playingNow = () => [...document.querySelectorAll("video")].some((v) => !v.paused && !v.ended);
       const vis = { hidden: false, webkitHidden: false, visibilityState: "visible", webkitVisibilityState: "visible" };
-      for (const key in vis) {
+      for (const key2 in vis) {
         try {
-          const real = Object.getOwnPropertyDescriptor(w.Document.prototype, key)?.get;
-          Object.defineProperty(d, key, { configurable: true, get: () => playingNow() || !real ? vis[key] : real.call(d) });
+          const real = Object.getOwnPropertyDescriptor(w.Document.prototype, key2)?.get;
+          Object.defineProperty(d, key2, { configurable: true, get: () => playingNow() || !real ? vis[key2] : real.call(d) });
         } catch {
         }
       }
@@ -14313,16 +15359,16 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       w.addEventListener("visibilitychange", block, true);
       return () => {
         w.removeEventListener("visibilitychange", block, true);
-        for (const key in vis) {
+        for (const key2 in vis) {
           try {
-            delete d[key];
+            delete d[key2];
           } catch {
           }
         }
-        for (const key in old) {
+        for (const key2 in old) {
           try {
-            if (old[key]) Object.defineProperty(w, key, old[key]);
-            else delete w[key];
+            if (old[key2]) Object.defineProperty(w, key2, old[key2]);
+            else delete w[key2];
           } catch {
           }
         }
@@ -14338,7 +15384,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
     start() {
       if (!window.__ytxNative) return () => {
       };
-      let last2 = false;
+      let last3 = false;
       let wasLand = innerWidth > innerHeight && innerHeight >= 250;
       let autoFor = "";
       let exitedFor = "";
@@ -14561,8 +15607,8 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         else if (fillOn) fillScale();
         const on = isFull() && land;
         document.documentElement.toggleAttribute("data-ytx-fs", on);
-        if (on === last2) return;
-        last2 = on;
+        if (on === last3) return;
+        last3 = on;
         window.__ytxNative({ a: on ? "fsOn" : "fsOff" });
       }, 250);
       return () => {
@@ -14574,11 +15620,11 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         fillBtn?.remove();
         setFill(false);
         if (origRequest) Element.prototype.requestFullscreen = origRequest;
-        if (last2) window.__ytxNative({ a: "fsOff" });
+        if (last3) window.__ytxNative({ a: "fsOff" });
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove, notInterested, typeRadar, appCheck];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap2, relatedDates, playlistRemove, notInterested, typeRadar, statsSync, appCheck];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js
@@ -14642,10 +15688,10 @@ html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #m
     return { items: items.filter((i) => i && /^[\w-]{11}$/.test(i.id)).map((i) => ({ id: i.id, title: String(i.title || i.id), at: Number(i.at) || 0 })).slice(0, 500) };
   };
   var downloadList = () => store.bucket(BUCKET, normalize2).items;
-  function addDownload(id, title) {
+  function addDownload(id, title2) {
     store.updateBucket(BUCKET, (d) => {
       d.items = d.items.filter((i) => i.id !== id);
-      d.items.unshift({ id, title: String(title || id).slice(0, 200), at: Date.now() });
+      d.items.unshift({ id, title: String(title2 || id).slice(0, 200), at: Date.now() });
     }, normalize2);
   }
   function removeDownload(id) {
@@ -14727,14 +15773,14 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   function ensureDownloadIcon(bar) {
     if (!window.__ytxNative || bar.querySelector(".ytx-dl-icon")) return;
     const buttons = [...bar.querySelectorAll("button")].filter((b) => !b.closest("[data-ytx-own]"));
-    const last2 = buttons[buttons.length - 1];
-    if (!last2) return;
-    let slot = last2;
+    const last3 = buttons[buttons.length - 1];
+    if (!last3) return;
+    let slot = last3;
     while (slot.parentElement && slot.parentElement !== bar && slot.parentElement.children.length < 3) slot = slot.parentElement;
-    const NS = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(NS, "svg");
+    const NS2 = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(NS2, "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
-    const path = document.createElementNS(NS, "path");
+    const path = document.createElementNS(NS2, "path");
     path.setAttribute("d", "M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z");
     svg.append(path);
     const icon = h("button", { class: "ytx-dl-icon", type: "button", title: "In der YouTube-App herunterladen", "aria-label": "In der YouTube-App herunterladen", "data-ytx-own": "" }, svg);
@@ -14791,10 +15837,10 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     behaviorById: behaviorById3,
     // buttons spiegeln braucht die aktionsleiste vom rechner
     features: featureManifests.filter((m) => m.id !== "ui.proxyButtons"),
-    filters: { pages: FILTER_PAGES2, CARD_SELECTORS: CARD_SELECTORS2, CARD_PARENT: CARD_PARENT2, readCard: readCard2, activePageRoots: activePageRoots2 },
-    channels: { channelRefOf, channelPageInfo: channelPageInfo2, subscribedChannels: subscribedChannels2 },
+    filters: { pages: FILTER_PAGES2, CARD_SELECTORS: CARD_SELECTORS2, CARD_PARENT: CARD_PARENT2, readCard: readCard3, activePageRoots: activePageRoots2 },
+    channels: { channelRefOf, channelPageInfo: channelPageInfo3, subscribedChannels: subscribedChannels3 },
     playback: { activePlayback: activePlayback2, pauseActive: pauseActive2 },
-    panelTabs: ["display", "look", "behavior", "filters", "features", "subGroups", "watchStats", "downloads", "profiles", "diagnose"],
+    panelTabs: ["display", "look", "behavior", "filters", "features", "subGroups", "watchStats", "stats", "downloads", "profiles", "diagnose"],
     boot() {
       setCss("mobile.baseTokens", BASE_TOKENS + OPEN_YT_CSS);
       initTimedtextCapture();
@@ -14918,8 +15964,8 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     if (e.metaKey) parts.push("Meta");
     const k = e.key;
     if (["Control", "Alt", "Shift", "Meta"].includes(k)) return parts.join("+");
-    const key = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3) : /^Digit\d$/.test(e.code) ? e.code.slice(5) : k.length === 1 ? k.toUpperCase() : k;
-    parts.push(key);
+    const key2 = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3) : /^Digit\d$/.test(e.code) ? e.code.slice(5) : k.length === 1 ? k.toUpperCase() : k;
+    parts.push(key2);
     return parts.join("+");
   }
   function isTyping(e) {
@@ -14941,8 +15987,8 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
         if (!combo.includes("+") && isTyping(e)) return;
         if (isTyping(e) && !e.altKey && !e.ctrlKey) return;
         for (const a of actions.values()) {
-          const key = keyFor(a.id);
-          if (key && key === combo) {
+          const key2 = keyFor(a.id);
+          if (key2 && key2 === combo) {
             e.preventDefault();
             e.stopPropagation();
             try {
@@ -14967,25 +16013,25 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   function buildDisplayCss() {
     const out = [];
     for (const t of site2.targets) {
-      const good = t.sel.filter((s) => {
-        const ok = validSelector(s);
-        if (!ok) invalid.set(`${t.id} ${s}`, true);
+      const good = t.sel.filter((s2) => {
+        const ok = validSelector(s2);
+        if (!ok) invalid.set(`${t.id} ${s2}`, true);
         return ok;
       });
       for (const mode of t.modes) {
         if (mode === "show") continue;
         for (const scope of scopes(t, mode)) {
           for (const sel of good) {
-            const full = `${scope} ${sel}`;
-            if (mode === "hide") out.push(`${full} { display: none !important; }`);
-            else if (mode === "collapse") out.push(`${full}:not([data-ytx-open]):not([data-ytx-open] *) { display: none !important; }`);
+            const full2 = `${scope} ${sel}`;
+            if (mode === "hide") out.push(`${full2} { display: none !important; }`);
+            else if (mode === "collapse") out.push(`${full2}:not([data-ytx-open]):not([data-ytx-open] *) { display: none !important; }`);
             else if (mode === "dim") {
               if (t.dim === "grayscale") {
-                out.push(`${full} { filter: grayscale(1) contrast(.9) !important; opacity: .75 !important; transition: filter .2s ease, opacity .2s ease !important; }`);
-                out.push(`${full}:hover { filter: none !important; opacity: 1 !important; }`);
+                out.push(`${full2} { filter: grayscale(1) contrast(.9) !important; opacity: .75 !important; transition: filter .2s ease, opacity .2s ease !important; }`);
+                out.push(`${full2}:hover { filter: none !important; opacity: 1 !important; }`);
               } else {
-                out.push(`${full} { opacity: var(--ytx-dim-opacity, .3) !important; transition: opacity .15s ease !important; }`);
-                out.push(`${full}:hover, ${full}:focus-within { opacity: 1 !important; }`);
+                out.push(`${full2} { opacity: var(--ytx-dim-opacity, .3) !important; transition: opacity .15s ease !important; }`);
+                out.push(`${full2}:hover, ${full2}:focus-within { opacity: 1 !important; }`);
               }
             }
           }
@@ -15084,7 +16130,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
       if (invalid.size) results.push({ id: "display.invalid", label: "Ungültige Selektoren", status: "fail", detail: Array.from(invalid.keys()).join(" · ") });
       for (const t of site2.targets) {
         if (t.pages && !t.pages.includes(nav.page)) continue;
-        const n = t.sel.filter(validSelector).reduce((sum, s) => sum + qsa(s).length, 0);
+        const n = t.sel.filter(validSelector).reduce((sum, s2) => sum + qsa(s2).length, 0);
         const mode = current2[t.id] || "show";
         const ready = !t.core || nav.page !== "watch" || document.querySelector("ytd-watch-metadata #actions ytd-menu-renderer");
         results.push({
@@ -15100,7 +16146,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   function countMatches(id) {
     const t = site2.targetById[id];
     if (!t) return 0;
-    return t.sel.filter(validSelector).reduce((sum, s) => sum + qsa(s).length, 0);
+    return t.sel.filter(validSelector).reduce((sum, s2) => sum + qsa(s2).length, 0);
   }
 
   // src/appliers/layout.js
@@ -15113,7 +16159,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     }
     return out.join("\n");
   }
-  var last = "";
+  var last2 = "";
   var scrollOff = null;
   function applyLayout(cfg) {
     const root = document.documentElement;
@@ -15142,9 +16188,9 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     const tb = P().topbarCss || {};
     if (cfg.layout.topbar && tb[cfg.layout.topbar]) dyn.push(tb[cfg.layout.topbar]);
     const text = dyn.join("\n");
-    if (text !== last) {
+    if (text !== last2) {
       setCss("layout.dynamic", text);
-      last = text;
+      last2 = text;
     }
     if (cfg.layout.topbar === "autohide" && !scrollOff) {
       let y = window.scrollY;
@@ -15277,7 +16323,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     old: "zu alt",
     watched: "gesehen"
   };
-  var norm2 = (s) => String(s || "").trim().toLowerCase();
+  var norm2 = (s2) => String(s2 || "").trim().toLowerCase();
   function channelMatches(entry, meta) {
     const e = norm2(entry);
     if (!e) return false;
@@ -15307,9 +16353,9 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
       if (!f.channels.allowOnly.some((c) => channelMatches(c, meta))) return REASONS.allowOnly;
     }
     if (f.channels.block.some((c) => channelMatches(c, meta))) return REASONS.channel;
-    const title = f.title.caseSensitive ? meta.title : norm2(meta.title);
-    if (title) {
-      if (rules2.keywords.some((k) => k && title.includes(k))) return REASONS.keyword;
+    const title2 = f.title.caseSensitive ? meta.title : norm2(meta.title);
+    if (title2) {
+      if (rules2.keywords.some((k) => k && title2.includes(k))) return REASONS.keyword;
       if (rules2.regex.some((re) => re.test(meta.title))) return REASONS.regex;
     }
     if (!isVideo) return null;
@@ -15539,130 +16585,6 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     return running3.get(id)?.inst || null;
   }
 
-  // src/panel/styles.js
-  var PANEL_CSS = `
-:host { all: initial; }
-* { box-sizing: border-box; }
-.panel {
-  --bg: var(--yt-sys-color-baseline--menu-background, #212121);
-  --bg2: var(--yt-sys-color-baseline--raised-background, #2a2a2a);
-  --fg: var(--yt-sys-color-baseline--text-primary, #f1f1f1);
-  --fg2: var(--yt-sys-color-baseline--text-secondary, #aaa);
-  --line: var(--yt-sys-color-baseline--outline, rgba(255,255,255,.12));
-  --hover: var(--yt-sys-color-baseline--additive-background, rgba(255,255,255,.08));
-  --accent: var(--yt-sys-color-baseline--call-to-action, #3ea6ff);
-  --ok: #3fb950; --warn: #d29922; --fail: #f85149; --skip: #6e7681;
-  position: fixed; z-index: 2250; top: 64px; right: 12px; bottom: 12px; width: min(440px, calc(100vw - 24px));
-  min-width: min(300px, calc(100vw - 16px)); min-height: min(220px, calc(100vh - 16px)); max-width: calc(100vw - 16px); max-height: calc(100vh - 16px);
-  display: flex; flex-direction: column; overflow: auto; resize: both; border-radius: 14px;
-  font: 400 13px/1.4 Roboto, "Segoe UI", Arial, sans-serif; color: var(--fg); background: var(--bg);
-  box-shadow: 0 8px 40px rgba(0,0,0,.45); border: 1px solid var(--line);
-}
-.panel[hidden] { display: none; }
-header { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); cursor: move; user-select: none; touch-action: none; }
-header select, header button { cursor: pointer; }
-header .logo { font-weight: 700; font-size: 15px; letter-spacing: .02em; }
-header select { flex: 1; min-width: 0; }
-.iconbtn { width: 30px; height: 30px; border: 0; border-radius: 50%; background: none; color: var(--fg2); cursor: pointer; font-size: 16px; }
-.iconbtn:hover { background: var(--hover); color: var(--fg); }
-nav { flex: none; display: flex; flex-wrap: wrap; gap: 2px 2px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
-nav button { flex: none; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--fg2); cursor: pointer; font: 500 12px/1.2 inherit; font-family: inherit; }
-nav button:hover { background: var(--hover); color: var(--fg); }
-nav button[aria-selected="true"] { background: var(--fg); color: var(--bg); }
-@media (pointer: coarse) {
-  .panel { font-size: 14px; }
-  nav button { padding: 9px 12px; font-size: 13px; }
-  .seg button { padding: 8px 10px; font-size: 12px; }
-  .switch { width: 44px; height: 26px; border-radius: 13px; }
-  .switch::after { width: 20px; height: 20px; }
-  .switch[aria-checked="true"]::after { transform: translateX(18px); }
-  .btn { padding: 8px 12px; font-size: 13px; }
-  .btn.tiny { padding: 6px 9px; }
-  .chip { padding: 7px 11px; font-size: 12px; }
-  .iconbtn { width: 38px; height: 38px; }
-  select, input[type="text"], input[type="number"], input[type="search"] { padding: 8px 10px; font-size: 14px; }
-  input[type="range"] { width: 110px; }
-}
-main { flex: 1 1 auto; min-height: 120px; overflow: auto; padding: 10px 12px 20px; }
-footer { flex: none; padding: 6px 12px 6px 12px; padding-right: 22px; border-top: 1px solid var(--line); color: var(--fg2); font-size: 11px; display: flex; justify-content: space-between; gap: 8px; }
-h3 { margin: 16px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--fg2); }
-h3:first-child { margin-top: 4px; }
-details { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: var(--bg2); }
-details > summary { list-style: none; cursor: pointer; padding: 8px 10px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
-details > summary::-webkit-details-marker { display: none; }
-details > summary::before { content: '▸'; color: var(--fg2); transition: transform .15s; }
-details[open] > summary::before { transform: rotate(90deg); }
-details > summary .count { margin-left: auto; color: var(--fg2); font-weight: 400; font-size: 11px; }
-details > .body { padding: 2px 10px 8px; }
-.row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); }
-details .row:first-child, .card .row:first-child { border-top: 0; }
-.row .label { flex: 1; min-width: 0; }
-.row .label small { display: block; color: var(--fg2); font-size: 11px; margin-top: 1px; }
-.row.stack { flex-direction: column; align-items: stretch; gap: 6px; }
-.badge { display: inline-block; padding: 0 6px; border-radius: 6px; font-size: 10px; line-height: 16px; vertical-align: 1px; margin-left: 4px; background: var(--hover); color: var(--fg2); }
-.badge.radical { background: rgba(248,81,73,.15); color: var(--fail); }
-.badge.hits { min-width: 18px; text-align: center; }
-.badge.hits.zero { opacity: .45; }
-.seg { display: inline-flex; flex: none; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.seg button { border: 0; padding: 4px 8px; background: none; color: var(--fg2); cursor: pointer; font: 500 11px/1.2 inherit; font-family: inherit; }
-.seg button + button { border-left: 1px solid var(--line); }
-.seg button:hover { background: var(--hover); color: var(--fg); }
-.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
-.seg button[aria-pressed="true"][data-mode="hide"] { background: var(--fail); }
-.seg button[aria-pressed="true"][data-mode="dim"] { background: var(--warn); color: #111; }
-.seg button[aria-pressed="true"][data-mode="collapse"] { background: #8957e5; }
-.seg button[aria-pressed="true"][data-mode="show"] { background: var(--hover); color: var(--fg); }
-select, input[type="text"], input[type="number"], input[type="search"], textarea {
-  font: inherit; color: var(--fg); background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; min-width: 0; }
-select:focus, input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
-textarea { width: 100%; min-height: 64px; resize: vertical; font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
-input[type="number"] { width: 90px; }
-input[type="search"] { width: 100%; }
-input[type="color"] { width: 34px; height: 26px; padding: 0; border: 1px solid var(--line); border-radius: 6px; background: none; cursor: pointer; }
-input[type="range"] { width: 130px; accent-color: var(--accent); }
-.val { width: 58px; text-align: right; color: var(--fg2); font-variant-numeric: tabular-nums; font-size: 12px; }
-.val.set { color: var(--fg); font-weight: 500; }
-.switch { position: relative; flex: none; width: 34px; height: 20px; border-radius: 10px; border: 0; background: var(--line); cursor: pointer; transition: background .15s; }
-.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform .15s; }
-.switch[aria-checked="true"] { background: var(--accent); }
-.switch[aria-checked="true"]::after { transform: translateX(14px); }
-.btn { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg2); color: var(--fg); cursor: pointer; font: 500 12px/1.2 inherit; font-family: inherit; }
-.btn:hover { background: var(--hover); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.danger { color: var(--fail); }
-.btn.tiny { padding: 2px 6px; font-size: 11px; }
-.btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
-.reset { border: 0; background: none; color: var(--fg2); cursor: pointer; font-size: 13px; padding: 2px 4px; visibility: hidden; }
-.reset.on { visibility: visible; }
-.reset:hover { color: var(--fg); }
-.chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.chip { border: 1px solid var(--line); border-radius: 12px; padding: 3px 9px; background: none; color: var(--fg2); cursor: pointer; font: 500 11px/1.2 inherit; font-family: inherit; }
-.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-.card { border: 1px solid var(--line); border-radius: 10px; margin: 8px 0; background: var(--bg2); }
-.card > .head { display: flex; align-items: center; gap: 8px; padding: 9px 10px; }
-.card > .head .title { flex: 1; font-weight: 500; }
-.card > .desc { padding: 0 10px 6px; color: var(--fg2); font-size: 12px; }
-.card > .settings { padding: 0 10px 8px; }
-.status { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); }
-.status:first-child { border-top: 0; }
-.dot { flex: none; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: var(--skip); }
-.dot.ok { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.fail { background: var(--fail); }
-.status .txt { flex: 1; min-width: 0; }
-.status .txt small { display: block; color: var(--fg2); font-size: 11px; word-break: break-word; }
-.summary { display: flex; gap: 12px; margin: 4px 0 8px; font-size: 12px; }
-.summary span b { font-size: 15px; margin-right: 3px; }
-.muted { color: var(--fg2); font-size: 12px; }
-.hint { color: var(--fg2); font-size: 11px; margin: 4px 0; }
-.err { color: var(--fail); font-size: 11px; }
-.orderlist { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
-.orderlist .item { display: flex; align-items: center; gap: 6px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 8px; }
-.orderlist .item span { flex: 1; }
-.profiles .row .label b { font-weight: 500; }
-.kbd { font-family: ui-monospace, Consolas, monospace; font-size: 11px; padding: 3px 8px; min-width: 90px; text-align: center; }
-.kbd.rec { outline: 2px solid var(--accent); }
-.log { font-family: ui-monospace, Consolas, monospace; font-size: 11px; white-space: pre-wrap; word-break: break-word; color: var(--fg2); max-height: 200px; overflow: auto; }
-`;
-
   // src/core/radarLogic.js
   var BASELINE_MS = 3 * 24 * 3600 * 1e3;
   var MAX3 = 4e3;
@@ -15700,7 +16622,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
 
   // src/core/radar.js
   var KEY6 = `ytx.radar.${location.host}`;
-  var EVERY = 45e3;
+  var EVERY2 = 45e3;
   var state = emptyState();
   var lastScan = 0;
   var load4 = () => {
@@ -15734,7 +16656,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     state = load4();
     return onSweep("radar", () => {
       const now = Date.now();
-      if (now - lastScan < EVERY) return;
+      if (now - lastScan < EVERY2) return;
       lastScan = now;
       scan(getPage?.());
     });
@@ -15747,54 +16669,6 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     return n;
   }
   var radarInfo = () => ({ tags: Object.keys(state.tags).length, flags: Object.keys(state.flags).length, since: state.since });
-
-  // src/core/cloudSync.js
-  var CLOUD_DEFAULT_URL = "http://pi.tail5f332e.ts.net:8181";
-  function cloudConfig() {
-    const c = store.settings.cloud || {};
-    return { url: c.url || CLOUD_DEFAULT_URL, user: c.user || "", pass: c.pass || "" };
-  }
-  function cloudReady() {
-    const c = cloudConfig();
-    return !!(c.url && c.user && c.pass);
-  }
-  function davBase(c) {
-    return `${c.url.replace(/\/+$/, "")}/remote.php/dav/files/${encodeURIComponent(c.user)}/ytx`;
-  }
-  function request(method, url, c, body) {
-    return new Promise((resolve, reject) => {
-      if (typeof GM_xmlhttpRequest !== "function") return reject(new Error("GM_xmlhttpRequest nicht verfügbar"));
-      const headers = { Authorization: `Basic ${btoa(unescape(encodeURIComponent(`${c.user}:${c.pass}`)))}` };
-      if (body != null) headers["Content-Type"] = "application/json";
-      GM_xmlhttpRequest({
-        url,
-        method,
-        headers,
-        data: body ?? null,
-        timeout: 2e4,
-        onload: (r) => resolve({ status: r.status, text: r.responseText }),
-        onerror: () => reject(new Error("Server nicht erreichbar (VPN/Tailscale an?)")),
-        ontimeout: () => reject(new Error("Zeitüberschreitung"))
-      });
-    });
-  }
-  var fail = (r) => new Error(r.status === 401 ? "Anmeldung abgelehnt, App-Passwort prüfen" : `HTTP ${r.status}`);
-  async function cloudPush() {
-    const c = cloudConfig();
-    const base2 = davBase(c);
-    const mk = await request("MKCOL", base2, c);
-    if (![201, 405].includes(mk.status)) throw fail(mk);
-    const put = await request("PUT", `${base2}/profiles.json`, c, store.exportJson(true));
-    if (put.status < 200 || put.status >= 300) throw fail(put);
-    return "Profile hochgeladen";
-  }
-  async function cloudPull() {
-    const c = cloudConfig();
-    const r = await request("GET", `${davBase(c)}/profiles.json`, c);
-    if (r.status === 404) throw new Error("Noch nichts hochgeladen");
-    if (r.status < 200 || r.status >= 300) throw fail(r);
-    return store.importJson(r.text);
-  }
 
   // src/panel/controls.js
   function row(label, control, { note, badges = [], stack = false } = {}) {
@@ -15825,9 +16699,9 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     return b;
   }
   function select(options, value, onChange) {
-    const s = h("select", null, options.map(([v, l]) => h("option", { value: v, text: l, selected: v === value })));
-    s.addEventListener("change", () => onChange(s.value));
-    return s;
+    const s2 = h("select", null, options.map(([v, l]) => h("option", { value: v, text: l, selected: v === value })));
+    s2.addEventListener("change", () => onChange(s2.value));
+    return s2;
   }
   function range({ min, max, step = 1, unit = "", placeholder }, value, onChange) {
     const set = value !== void 0 && value !== null && value !== "";
@@ -15874,7 +16748,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
   function lines(values, onChange, placeholder = "") {
     const ta = h("textarea", { placeholder, spellcheck: "false" });
     ta.value = (values || []).join("\n");
-    const push2 = debounce(() => onChange(ta.value.split("\n").map((s) => s.trim()).filter(Boolean)), 500);
+    const push2 = debounce(() => onChange(ta.value.split("\n").map((s2) => s2.trim()).filter(Boolean)), 500);
     ta.addEventListener("input", push2);
     ta.addEventListener("blur", () => push2.flush());
     return ta;
@@ -16159,7 +17033,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     for (const m of app.features) root.append(featureCard(app, m, results.find((r) => r.id === `feature.${m.id}`)));
     return root;
   }
-  function featureCard(app, m, health = null, { title } = {}) {
+  function featureCard(app, m, health = null, { title: title2 } = {}) {
     if (typeof m === "string") m = app.features.find((x) => x.id === m);
     if (!m) return h("div");
     const st = app.store.config.features[m.id];
@@ -16167,16 +17041,16 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const draw = () => {
       settings.replaceChildren();
       if (!app.store.config.features[m.id].enabled) return;
-      for (const [key, def] of Object.entries(m.settings || {})) {
-        const value = app.store.config.features[m.id][key];
-        settings.append(row(def.label, settingControl(def, value, (v) => app.store.update((c) => c.features[m.id][key] = v, "panel")), { stack: def.type === "multi" }));
+      for (const [key2, def] of Object.entries(m.settings || {})) {
+        const value = app.store.config.features[m.id][key2];
+        settings.append(row(def.label, settingControl(def, value, (v) => app.store.update((c) => c.features[m.id][key2] = v, "panel")), { stack: def.type === "multi" }));
       }
     };
     const head = h(
       "div",
       { class: "head" },
       health ? h("span", { class: `dot ${health.status}`, title: health.detail }) : h("span", { class: "dot" }),
-      h("span", { class: "title", text: title || m.label }),
+      h("span", { class: "title", text: title2 || m.label }),
       badge(m.stability),
       toggle(st.enabled, (v) => {
         app.store.update((c) => c.features[m.id].enabled = v, "panel");
@@ -16239,9 +17113,9 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
           window.removeEventListener("keydown", onKey, true);
           b.classList.remove("rec");
           const value = e.key === "Escape" ? "" : e.key === "Backspace" ? "" : combo;
-          st.updateSettings((s) => {
-            s.hotkeys ||= {};
-            s.hotkeys[a.id] = value;
+          st.updateSettings((s2) => {
+            s2.hotkeys ||= {};
+            s2.hotkeys[a.id] = value;
           });
           app.applyHotkeys();
           b.textContent = value || "—";
@@ -16250,14 +17124,14 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       }, "kbd");
       root.append(row(a.label, b, { note: a.id === "panel.toggle" ? "Esc/Backspace entfernt ein Kürzel" : void 0 }));
     }
-    root.append(row("ytx-Button in der Kopfzeile", toggle(st.settings.panelButton !== false, (v) => st.updateSettings((s) => s.panelButton = v))));
+    root.append(row("ytx-Button in der Kopfzeile", toggle(st.settings.panelButton !== false, (v) => st.updateSettings((s2) => s2.panelButton = v))));
     root.append(h("h3", { text: "Nextcloud-Abgleich" }));
     const cc = cloudConfig();
     const fields = {};
-    const field = (key, ph, type = "text") => {
-      const i = h("input", { type, placeholder: ph, value: cc[key] || "", autocomplete: "off", spellcheck: "false" });
-      i.addEventListener("change", () => st.updateSettings((s) => (s.cloud ||= {})[key] = i.value.trim()));
-      fields[key] = i;
+    const field = (key2, ph, type = "text") => {
+      const i = h("input", { type, placeholder: ph, value: cc[key2] || "", autocomplete: "off", spellcheck: "false" });
+      i.addEventListener("change", () => st.updateSettings((s2) => (s2.cloud ||= {})[key2] = i.value.trim()));
+      fields[key2] = i;
       return i;
     };
     const cloudStatus = h("div", { class: "muted", style: { padding: "6px 0", fontWeight: "500" } });
@@ -16266,9 +17140,9 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
         cloudStatus.textContent = text;
         app.flash(text);
       };
-      st.updateSettings((s) => {
-        s.cloud ||= {};
-        for (const [k, el] of Object.entries(fields)) s.cloud[k] = el.value.trim();
+      st.updateSettings((s2) => {
+        s2.cloud ||= {};
+        for (const [k, el] of Object.entries(fields)) s2.cloud[k] = el.value.trim();
       });
       if (!cloudReady()) return say("Zuerst Adresse, Benutzer und App-Passwort eintragen");
       say(doing);
@@ -16406,7 +17280,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
   }
 
   // src/features/music/logic/stats.js
-  var pad = (n) => String(n).padStart(2, "0");
+  var pad2 = (n) => String(n).padStart(2, "0");
   function weekKey(ts) {
     const d = new Date(ts);
     const day = (d.getDay() + 6) % 7;
@@ -16414,11 +17288,11 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     d.setDate(d.getDate() - day + 3);
     const jan4 = new Date(d.getFullYear(), 0, 4);
     const week = 1 + Math.round(((d - jan4) / 864e5 - 3 + (jan4.getDay() + 6) % 7) / 7);
-    return `${d.getFullYear()}-W${pad(week)}`;
+    return `${d.getFullYear()}-W${pad2(week)}`;
   }
-  var monthKey = (ts) => {
+  var monthKey2 = (ts) => {
     const d = new Date(ts);
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
   };
   function top(map, n) {
     return [...map.values()].sort((a, b) => b.listenedSec - a.listenedSec || b.plays - a.plays).slice(0, n);
@@ -16432,11 +17306,11 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const byHour = Array.from({ length: 24 }, () => ({ plays: 0, listenedSec: 0 }));
     const byWeekday = Array.from({ length: 7 }, () => ({ plays: 0, listenedSec: 0 }));
     const totals = { plays: 0, listenedSec: 0, completes: 0, skips: 0, quickSkips: 0, liked: 0, songs: 0, artists: 0 };
-    const add2 = (map, key, init2, p) => {
-      let v = map.get(key);
+    const add2 = (map, key2, init2, p) => {
+      let v = map.get(key2);
       if (!v) {
         v = { ...init2, plays: 0, listenedSec: 0, skips: 0, completes: 0 };
-        map.set(key, v);
+        map.set(key2, v);
       }
       v.plays++;
       v.listenedSec += p.listenedSec || 0;
@@ -16455,7 +17329,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       const a = p.artists?.[0];
       if (a) add2(artists, artistKey(a), { key: artistKey(a), id: a.id || null, name: a.name }, p);
       if (p.album?.id) add2(albums, p.album.id, { id: p.album.id, name: p.album.name, artists: p.artists || [] }, p);
-      const k = groupBy === "month" ? monthKey(p.startedAt) : weekKey(p.startedAt);
+      const k = groupBy === "month" ? monthKey2(p.startedAt) : weekKey(p.startedAt);
       add2(series, k, { period: k }, p);
       const d = new Date(p.startedAt);
       byHour[d.getHours()].plays++;
@@ -16466,7 +17340,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     totals.songs = songs.size;
     totals.artists = artists.size;
     totals.skipRate = totals.plays ? totals.skips / totals.plays : 0;
-    const seriesList = [...series.values()].sort((a, b) => a.period < b.period ? -1 : 1).map((s) => ({ ...s, skipRate: s.plays ? s.skips / s.plays : 0 }));
+    const seriesList = [...series.values()].sort((a, b) => a.period < b.period ? -1 : 1).map((s2) => ({ ...s2, skipRate: s2.plays ? s2.skips / s2.plays : 0 }));
     return {
       totals,
       topSongs: top(songs, limit),
@@ -16475,7 +17349,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       series: seriesList,
       byHour,
       byWeekday,
-      highSkip: [...songs.values()].filter((s) => s.skips >= 3 && s.skips / s.plays >= 0.6).sort((a, b) => b.skips - a.skips).slice(0, limit)
+      highSkip: [...songs.values()].filter((s2) => s2.skips >= 3 && s2.skips / s2.plays >= 0.6).sort((a, b) => b.skips - a.skips).slice(0, limit)
     };
   }
 
@@ -16509,11 +17383,11 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       row("Begründungen zeigen", toggle(p.explain, (v) => up((x) => x.explain = v)), { note: "„Ähnlich zu …“, „Genre: …“, „Lange nicht gehört“" }),
       row(
         "Session (nur dieser Tab)",
-        select([["", "Keine"], ...SESSION_PRESETS.map((s) => [s.id, s.label])], session?.presetId || "", (v) => {
+        select([["", "Keine"], ...SESSION_PRESETS.map((s2) => [s2.id, s2.label])], session?.presetId || "", (v) => {
           music.setSession(v || null);
           app.rerender();
         }),
-        { note: session ? SESSION_PRESETS.find((s) => s.id === session.presetId)?.description : "Überschreibt Entdecken-Regler und Filter vorübergehend, das Profil bleibt unverändert" }
+        { note: session ? SESSION_PRESETS.find((s2) => s2.id === session.presetId)?.description : "Überschreibt Entdecken-Regler und Filter vorübergehend, das Profil bleibt unverändert" }
       )
     );
     root.append(h("h3", { text: "Blocklisten" }));
@@ -16551,15 +17425,15 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const songs = music.prefs().blocklist.songs;
     if (songs.length) {
       root.append(h("div", { class: "label", style: { marginTop: "8px" } }, "Songs"));
-      for (const s of songs) root.append(listItem(s.title || s.videoId, s.artists?.map((a) => a.name).join(", "), btn("✕", () => {
-        up((x) => x.blocklist.songs = x.blocklist.songs.filter((y) => y.videoId !== s.videoId));
+      for (const s2 of songs) root.append(listItem(s2.title || s2.videoId, s2.artists?.map((a) => a.name).join(", "), btn("✕", () => {
+        up((x) => x.blocklist.songs = x.blocklist.songs.filter((y) => y.videoId !== s2.videoId));
         app.rerender();
       }, "tiny")));
     }
     root.append(row("Fassungen in Empfehlungen ausblenden", chips(VERSION_TAGS.map(([id, , label]) => [id, label]), p.hideVersions, (v) => up((x) => x.hideVersions = v)), { stack: true }));
     root.append(h("h3", { text: "Smart Queue" }));
     const sq = p.smartQueue;
-    const sqRow = (key, label, note) => row(label, toggle(sq[key], (v) => up((x) => x.smartQueue[key] = v)), { note });
+    const sqRow = (key2, label, note) => row(label, toggle(sq[key2], (v) => up((x) => x.smartQueue[key2] = v)), { note });
     root.append(
       sqRow("autoSkip", "Automatisch überspringen", "Feature „Smart Queue“ muss an sein. Titel, die du selbst in der Warteschlange anklickst, werden nie übersprungen"),
       sqRow("markOnly", "Nur markieren, nie springen"),
@@ -16709,8 +17583,8 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       up((x) => x.excluded.artists = x.excluded.artists.filter((y) => artistKey(y) !== artistKey(a)));
       app.rerender();
     }, "tiny")));
-    for (const s of ex.songs) root.append(listItem(`Song: ${s.title || s.videoId}`, s.artists?.map((a) => a.name).join(", "), btn("✕", () => {
-      up((x) => x.excluded.songs = x.excluded.songs.filter((y) => y.videoId !== s.videoId));
+    for (const s2 of ex.songs) root.append(listItem(`Song: ${s2.title || s2.videoId}`, s2.artists?.map((a) => a.name).join(", "), btn("✕", () => {
+      up((x) => x.excluded.songs = x.excluded.songs.filter((y) => y.videoId !== s2.videoId));
       app.rerender();
     }, "tiny")));
     const exName = h("input", { type: "text", placeholder: "Künstlername ausschließen" });
@@ -16768,11 +17642,11 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     async(root, async () => {
       const db3 = music.db();
       const sizes = await db3.sizes();
-      const cache4 = await catalog.cacheInfo();
+      const cache5 = await catalog.cacheInfo();
       return [
         listItem("IndexedDB", `${db3.status.name} v${db3.status.version} · ${db3.status.open ? "offen" : "geschlossen"}${db3.status.upgradedFrom != null ? ` · migriert von v${db3.status.upgradedFrom}` : ""}`),
         listItem("Einträge", Object.entries(sizes).map(([k, v]) => `${k}: ${v}`).join(" · ")),
-        listItem("Seiten-Cache", `${cache4.count} Seiten · neuester ${when(cache4.newest)} · ${catalog.stats.requests} Abrufe in dieser Sitzung`, btn("Cache leeren", async () => {
+        listItem("Seiten-Cache", `${cache5.count} Seiten · neuester ${when(cache5.newest)} · ${catalog.stats.requests} Abrufe in dieser Sitzung`, btn("Cache leeren", async () => {
           await catalog.clearCache();
           app.rerender();
         }, "tiny"))
@@ -16830,8 +17704,8 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
           h("span", null, h("b", { text: `${Math.round(t.skipRate * 100)} %` }), "Skip-Quote")
         )
       );
-      const top2 = (title, list, fmt) => {
-        body.append(h("h3", { text: title }));
+      const top2 = (title2, list, fmt) => {
+        body.append(h("h3", { text: title2 }));
         list.forEach((x, i) => body.append(listItem(`${i + 1}. ${fmt(x)}`, `${x.plays}× · ${formatDuration(x.listenedSec)}${x.skips ? ` · ${x.skips} Skips` : ""}`)));
       };
       top2("Top-Songs", st.topSongs, (x) => `${x.title} – ${(x.artists || []).map((a) => a.name).join(", ")}`);
@@ -16941,7 +17815,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     draw();
     return root;
   }
-  var WD = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+  var WD2 = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
   function bars2(list, limitSec) {
     const top2 = Math.max(60, ...list.map((x) => x.sec));
     const max = limitSec && limitSec <= top2 * 1.25 ? Math.max(top2, limitSec) : top2;
@@ -16955,7 +17829,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
         { title: `${x.day}: ${formatDuration(x.sec)}`, style: { flex: "1", minWidth: "6px", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-end", gap: "2px", height: `${H5 + (few ? 30 : 0)}px` } },
         few && x.sec ? h("span", { text: `${Math.round(x.sec / 60)}m`, style: { fontSize: "10px", opacity: ".7", whiteSpace: "nowrap" } }) : null,
         h("div", { style: { width: "100%", height: `${x.sec ? Math.max(3, x.sec / max * H5) : 2}px`, background: over ? "var(--danger, #e53935)" : "var(--accent)", borderRadius: "3px 3px 0 0", opacity: x.sec ? "1" : ".25" } }),
-        few ? h("span", { text: WD[d.getDay()], style: { fontSize: "10px", opacity: ".7" } }) : null
+        few ? h("span", { text: WD2[d.getDay()], style: { fontSize: "10px", opacity: ".7" } }) : null
       );
     });
     const wrap = h("div", { style: { position: "relative", display: "flex", alignItems: "flex-end", gap: "4px", margin: "6px 0 2px" } }, ...cols);
@@ -16983,7 +17857,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const draw = async () => {
       const days = Number(app.ui.wtRange);
       const now = Date.now();
-      const from = startOfDay(now) - (days - 1) * DAY;
+      const from = startOfDay(now) - (days - 1) * DAY3;
       const views = await ytDb().byIndex("views", "startedAt", IDBKeyRange.lowerBound(from));
       const live = watchTime.instance?.session;
       if (live && live.wallSec >= 1 && !views.some((v) => v.id === live.id)) views.push({ ...live });
@@ -17020,7 +17894,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       btn("Als Text kopieren", async () => {
         const days = Number(app.ui.wtRange);
         const now = Date.now();
-        const from = startOfDay(now) - (days - 1) * DAY;
+        const from = startOfDay(now) - (days - 1) * DAY3;
         const st = watchStats(await ytDb().byIndex("views", "startedAt", IDBKeyRange.lowerBound(from)), { from, to: now + 1, now, days });
         const text = [`Meine YouTube-Zeit · ${days} Tage`, `${formatDuration(st.total)} gesamt · Ø ${formatDuration(st.avgPerDay)} pro Tag`, "", ...st.byDay.map((d) => `${d.day}: ${formatDuration(d.sec)}`), "", "Top-Kanäle", ...st.topChannels.map((c, i) => `${i + 1}. ${c.name} (${formatDuration(c.sec)})`)].join("\n");
         app.flash(await app.copyText(text) ? "Kopiert" : "Kopieren fehlgeschlagen");
@@ -17061,6 +17935,13 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
         del
       ));
     }
+    return root;
+  }
+
+  // src/panel/statsTab.js
+  function statsTab() {
+    const root = h("div");
+    renderStats(root, { onFull: openFull });
     return root;
   }
 
@@ -17144,7 +18025,8 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     downloads: ["Downloads", downloadsTab],
     music: ["Musik", musicTab],
     musicData: ["Verlauf & Daten", musicDataTab],
-    musicStats: ["Statistik", musicStatsTab],
+    musicStats: ["Hörstatistik", musicStatsTab],
+    stats: ["Medienzeit", statsTab],
     profiles: ["Profile", profilesTab],
     diagnose: ["Diagnose", diagnoseTab]
   };
@@ -17167,7 +18049,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     const rectKey = `panelRect.${site2.id}`;
     const geo = makeMovable(panel, head, {
       load: () => app.store.settings[rectKey] || null,
-      save: (r) => app.store.updateSettings((s) => r ? s[rectKey] = r : delete s[rectKey])
+      save: (r) => app.store.updateSettings((s2) => r ? s2[rectKey] = r : delete s2[rectKey])
     });
     let tab = app.store.settings[`panelTab.${site2.id}`] || app.store.settings.panelTab || "display";
     if (!TABS2.some(([id]) => id === tab)) tab = "display";
@@ -17207,7 +18089,7 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
     function select2(id) {
       tab = id;
       for (const [k, b] of tabButtons) b.setAttribute("aria-selected", String(k === id));
-      app.store.updateSettings((s) => s[`panelTab.${site2.id}`] = id);
+      app.store.updateSettings((s2) => s2[`panelTab.${site2.id}`] = id);
       render3();
     }
     function render3() {
@@ -17226,8 +18108,8 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
       updateFooter();
     }
     function updateFooter() {
-      const s = summarize2(runChecks());
-      footInfo.textContent = `v${app.version} · ${s.fail ? `${s.fail} Fehler · ` : ""}${s.warn ? `${s.warn} Warnungen` : "Diagnose ok"}`;
+      const s2 = summarize2(runChecks());
+      footInfo.textContent = `v${app.version} · ${s2.fail ? `${s2.fail} Fehler · ` : ""}${s2.warn ? `${s2.warn} Warnungen` : "Diagnose ok"}`;
     }
     app.rerender = render3;
     app.flash = (text) => {

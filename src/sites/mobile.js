@@ -172,7 +172,7 @@ export const mobileSite = {
   filters: { pages: FILTER_PAGES, CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots },
   channels: { channelRefOf, channelPageInfo, subscribedChannels },
   playback: { activePlayback, pauseActive },
-  panelTabs: ['display', 'look', 'behavior', 'filters', 'features', 'subGroups', 'watchStats', 'downloads', 'profiles', 'diagnose'],
+  panelTabs: ['display', 'look', 'behavior', 'filters', 'features', 'subGroups', 'watchStats', 'stats', 'downloads', 'profiles', 'diagnose'],
   boot() {
     setCss('mobile.baseTokens', BASE_TOKENS + OPEN_YT_CSS)
     initTimedtextCapture()

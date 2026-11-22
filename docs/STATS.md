@@ -69,7 +69,7 @@ Neu in Phase 1:
 
 Empfohlener Weg, weil alle Teile schon da sind:
 
-1. **Transport über die Nextcloud** (wie heute die Profile, `src/core/cloudSync.js`): Jedes Gerät hängt seine neuen Einträge an `ytx/history/<gerät>/<jahr-monat>.json` an. Jedes Gerät liest beim Öffnen der Statistik die Dateien der anderen Geräte. So sieht jedes Gerät alles.
+1. **Transport über die Nextcloud** (wie heute die Profile, `src/core/cloudSync.js`): Jede Seite (YouTube, m.youtube, Music) schreibt ihre Monate nach `ytx/history/<gerät>/<seite>-<jahr-monat>.json` (immer der laufende und der vorige Monat, ganze Datei neu). Beim Öffnen der Statistik werden alle anderen Dateien gelesen, nur geänderte (ETag) neu geladen und in IndexedDB `ytx-stats` zwischengespeichert. So sieht jedes Gerät alles, auch YouTube und Music auf demselben Gerät gegenseitig.
 2. **Mini-PC als Arbeiter**: liest den Ordner, holt Genres von MusicBrainz (gedrosselt, Ergebnis zwischengespeichert), legt die YouTube-Kategorien je Kanal fest und schreibt `ytx/history/enriched.json` (Genres je Künstler, Kategorie je Kanal) zurück. Später zeigt die Zentrale daraus auch eine eigene Seite.
 3. Fällt der Mini-PC aus, gehen keine Daten verloren. Es fehlen nur die Genres, bis er wieder läuft.
 
@@ -91,4 +91,10 @@ Vorteil: Kein neuer Server muss vom Handy erreichbar sein, Anmeldung und Tailsca
 ## Stand
 
 - 22.11.2026: Plan. Phase 1, Schritt 1 gebaut: Geräte-ID (`src/core/device.js`) in neuen YouTube- und Music-Einträgen, YouTube-Kategorie in neuen Sitzungen, Auswertung `src/features/stats/logic.js` mit Tests (`tests/stats.test.mjs`). Am Handy geprüft: Kategorie kommt an (englischer Name, z. B. „Film & Animation“, Übersetzung und Farben in Schritt 2), Skriptspeicher für die Geräte-ID vorhanden. Alte Einträge haben noch keine Kategorie und kein Gerät.
-- Nächster Schritt: Phase 1, Schritt 2 (Grafik-Bausteine) und 3 (Statistik-Seite).
+- 22.11.2026: Phase 1, Schritt 2 und 3 gebaut, Phase 2, Schritt 1 gebaut.
+  - Farben `src/features/stats/colors.js`: YouTube rot, Music lila, feste Farbe je Kategorie (deutsch beschriftet), Music-Genres als Abstufungen ihrer Genre-Gruppe, „Sonstige“ grau, keine doppelten Farben in einer Liste.
+  - Grafiken `src/features/stats/charts.js` (SVG): gestapelte Balken, Heatmap Wochentag × Stunde, Anteilsbalken, Rangliste mit Trend, Überspring-Verteilung, Stunden-Balken.
+  - Seite `src/features/stats/view.js`: Panel-Tab „Medienzeit“ (alter Music-Tab heißt jetzt „Hörstatistik“) und Vollbild „⤢ Groß“. Woche/Monat/Jahr/Gesamt mit ‹ ›, Vergleich zum Zeitraum davor, Filter Alle/YouTube/Music, Rekorde, Neu entdeckt, Detailansicht je YouTuber/Künstler/Kategorie.
+  - Transport `src/features/stats/data.js` und Verhalten „Statistik in Nextcloud teilen“ (`src/behaviors/statsSync.js`, an, höchstens alle 6 h, 60 s nach dem Laden).
+  - Geprüft: Tests (89 grün), Build, APK. Oberfläche nur lokal mit Testdaten im Browser (alle Zeiträume, Vollbild, Detail). Nicht geprüft: am Handy und am PC mit echten Daten, echter Nextcloud-Abgleich.
+- Nächster Schritt: Prüfen am Handy (Phase 1, Schritt 4), echten Nextcloud-Abgleich testen, dann Arbeiter auf dem Mini-PC (Phase 2, Schritt 2).

@@ -178,7 +178,8 @@ function shares(list, limit = 8) {
 function behavior(list) {
   const n = list.length
   const known = list.filter((e) => e.done != null)
-  const skips = list.filter((e) => e.skipped && e.skipAt != null)
+  // youtube: wie weit geschaut bei allen videos, music: stelle beim ueberspringen
+  const skips = list.filter((e) => e.skipAt != null && (e.src === 'yt' || e.skipped))
   const skipBins = Array(10).fill(0)
   for (const e of skips) skipBins[Math.min(9, Math.floor(e.skipAt * 10))]++
   return {

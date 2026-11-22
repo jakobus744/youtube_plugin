@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261122.1451
+// @version      0.4.1.20261122.1507
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -1902,6 +1902,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
         kind: shortsOn ? "short" : "video",
         title: vd.title || details?.title || "",
         channel: { id: details?.channelId || null, name: vd.author || details?.author || "" },
+        category: pr?.videoDetails?.videoId === vd.video_id && pr?.microformat?.playerMicroformatRenderer?.category || null,
         playing: p.getPlayerState() === 1,
         ad: p.classList.contains("ad-showing"),
         pos: p.getCurrentTime?.() || 0,
@@ -3319,6 +3320,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
         kind: page === "shorts" ? "short" : "video",
         title: vd.title || details?.title || "",
         channel: { id: details?.channelId || null, name: vd.author || details?.author || "" },
+        category: pr?.videoDetails?.videoId === vd.video_id && pr?.microformat?.playerMicroformatRenderer?.category || null,
         playing: p.getPlayerState() === 1,
         ad: p.classList.contains("ad-showing"),
         pos: p.getCurrentTime?.() || 0,
@@ -6313,8 +6315,8 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     d.setHours(0, 0, 0, 0);
     return d.getTime();
   }
-  function createSession(p, now) {
-    return { id: `${now}-${p.videoId}`, videoId: p.videoId, kind: p.kind, title: p.title, channel: p.channel, startedAt: now, endedAt: now, day: dayKey(now), wallSec: 0, maxPos: 0, durationSec: Math.round(p.dur || 0) };
+  function createSession(p, now, device = null) {
+    return { id: `${now}-${p.videoId}`, videoId: p.videoId, kind: p.kind, title: p.title, channel: p.channel, category: p.category || null, device, startedAt: now, endedAt: now, day: dayKey(now), wallSec: 0, maxPos: 0, durationSec: Math.round(p.dur || 0) };
   }
   function tickSession(s, p, dtSec, now) {
     if (p.playing && !p.ad) s.wallSec += dtSec;
@@ -6322,6 +6324,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     if (p.dur) s.durationSec = Math.round(p.dur);
     if (!s.title && p.title) s.title = p.title;
     if (!s.channel?.name && p.channel?.name) s.channel = p.channel;
+    if (!s.category && p.category) s.category = p.category;
     s.endedAt = now;
     s.percent = s.durationSec ? Math.min(1, s.maxPos / s.durationSec) : null;
     return s;
@@ -6368,6 +6371,41 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
       topChannels: top2(channels),
       topVideos: top2(videos)
     };
+  }
+
+  // src/core/device.js
+  var KEY3 = "ytx.device";
+  var cached = null;
+  function read() {
+    try {
+      if (typeof GM_getValue === "function") return GM_getValue(KEY3, null);
+    } catch {
+    }
+    try {
+      return localStorage.getItem(KEY3);
+    } catch {
+      return null;
+    }
+  }
+  function write(v) {
+    try {
+      if (typeof GM_setValue === "function") return GM_setValue(KEY3, v);
+    } catch {
+    }
+    try {
+      localStorage.setItem(KEY3, v);
+    } catch {
+    }
+  }
+  function deviceId() {
+    if (cached) return cached;
+    let v = read();
+    if (typeof v !== "string" || !/^d-[a-z0-9]{8,}$/.test(v)) {
+      v = `d-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-4)}`;
+      write(v);
+    }
+    cached = v;
+    return v;
   }
 
   // src/features/youtube/watchtime/index.js
@@ -6484,7 +6522,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           st.session = null;
         }
         if (p) {
-          st.session ||= createSession(p, now);
+          st.session ||= createSession(p, now, deviceId());
           tickSession(st.session, p, dt, now);
           if (now - st.lastSave > 15e3) {
             st.lastSave = now;
@@ -8658,9 +8696,9 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   };
 
   // src/behaviors/appCheck.js
-  var KEY3 = "ytx.appCheck";
+  var KEY4 = "ytx.appCheck";
   try {
-    if (/ytxcheck/.test(location.hash)) sessionStorage.setItem(KEY3, "1");
+    if (/ytxcheck/.test(location.hash)) sessionStorage.setItem(KEY4, "1");
   } catch {
   }
   var round = (n) => Math.round(n * 10) / 10;
@@ -8742,7 +8780,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       pageWindow.__ytxReport = report;
       let on = false;
       try {
-        on = sessionStorage.getItem(KEY3) === "1";
+        on = sessionStorage.getItem(KEY4) === "1";
       } catch {
       }
       if (!window.__ytxNative || !on) return () => {
@@ -9783,6 +9821,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
             continue;
           }
           try {
+            rec.device ||= deviceId();
             if (await music.history.add(rec)) {
               stats2.saved++;
               stats2.lastSaved = { title: rec.title, percent: rec.percent, skipped: rec.skipped, completed: rec.completed, at: rec.endedAt };
@@ -9950,7 +9989,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   };
 
   // src/features/music/ytxQueue.js
-  var KEY4 = "ytx.music.queue";
+  var KEY5 = "ytx.music.queue";
   var listeners2 = /* @__PURE__ */ new Set();
   var q = load3();
   var timer2 = null;
@@ -9958,7 +9997,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   var lastJumpAt = 0;
   function load3() {
     try {
-      const v = JSON.parse(sessionStorage.getItem(KEY4) || "null");
+      const v = JSON.parse(sessionStorage.getItem(KEY5) || "null");
       if (v && Array.isArray(v.items)) return v;
     } catch {
     }
@@ -9966,7 +10005,7 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
   }
   function save() {
     try {
-      sessionStorage.setItem(KEY4, JSON.stringify(q));
+      sessionStorage.setItem(KEY5, JSON.stringify(q));
     } catch {
     }
     for (const fn of listeners2) {
@@ -15650,20 +15689,20 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
   }
 
   // src/core/radar.js
-  var KEY5 = `ytx.radar.${location.host}`;
+  var KEY6 = `ytx.radar.${location.host}`;
   var EVERY = 45e3;
   var state = emptyState();
   var lastScan = 0;
   var load4 = () => {
     try {
-      return { ...emptyState(), ...JSON.parse(localStorage.getItem(KEY5) || "{}") };
+      return { ...emptyState(), ...JSON.parse(localStorage.getItem(KEY6) || "{}") };
     } catch {
       return emptyState();
     }
   };
   var save2 = () => {
     try {
-      localStorage.setItem(KEY5, JSON.stringify(state));
+      localStorage.setItem(KEY6, JSON.stringify(state));
     } catch {
     }
   };

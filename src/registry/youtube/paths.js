@@ -371,6 +371,7 @@ export function activePlayback() {
       kind: shortsOn ? 'short' : 'video',
       title: vd.title || details?.title || '',
       channel: { id: details?.channelId || null, name: vd.author || details?.author || '' },
+      category: (pr?.videoDetails?.videoId === vd.video_id && pr?.microformat?.playerMicroformatRenderer?.category) || null,
       playing: p.getPlayerState() === 1,
       ad: p.classList.contains('ad-showing'),
       pos: p.getCurrentTime?.() || 0,

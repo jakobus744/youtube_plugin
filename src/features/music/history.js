@@ -2,6 +2,7 @@ import { createTracker } from './logic/tracker.js'
 import { currentTrack } from '../../registry/music/player.js'
 import { music, scheduleRetention } from './runtime.js'
 import { listen } from '../../core/lifecycle.js'
+import { deviceId } from '../../core/device.js'
 
 // lokaler hoerverlauf, eine stichprobe pro sekunde aus store und player api
 
@@ -30,6 +31,7 @@ export const historyFeature = {
           continue
         }
         try {
+          rec.device ||= deviceId()
           if (await music.history.add(rec)) {
             stats.saved++
             stats.lastSaved = { title: rec.title, percent: rec.percent, skipped: rec.skipped, completed: rec.completed, at: rec.endedAt }

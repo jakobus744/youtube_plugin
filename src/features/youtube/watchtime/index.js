@@ -5,6 +5,7 @@ import { listen } from '../../../core/lifecycle.js'
 import { ytDb } from './db.js'
 import { DAY, dayKey, createSession, tickSession, reminderDue } from './logic.js'
 import { h, button } from '../../ui.js'
+import { deviceId } from '../../../core/device.js'
 
 // eigene schauzeit, lokal in indexeddb, mit tageslimit und pausen erinnerung
 // erinnert nur, blockiert nichts
@@ -139,7 +140,7 @@ export default {
         st.session = null
       }
       if (p) {
-        st.session ||= createSession(p, now)
+        st.session ||= createSession(p, now, deviceId())
         tickSession(st.session, p, dt, now)
         if (now - st.lastSave > 15000) {
           st.lastSave = now

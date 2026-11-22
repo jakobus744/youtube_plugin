@@ -14,8 +14,8 @@ export function startOfDay(ts) {
 }
 
 // laufende sitzung, zaehlt echte zeit solange ein video spielt
-export function createSession(p, now) {
-  return { id: `${now}-${p.videoId}`, videoId: p.videoId, kind: p.kind, title: p.title, channel: p.channel, startedAt: now, endedAt: now, day: dayKey(now), wallSec: 0, maxPos: 0, durationSec: Math.round(p.dur || 0) }
+export function createSession(p, now, device = null) {
+  return { id: `${now}-${p.videoId}`, videoId: p.videoId, kind: p.kind, title: p.title, channel: p.channel, category: p.category || null, device, startedAt: now, endedAt: now, day: dayKey(now), wallSec: 0, maxPos: 0, durationSec: Math.round(p.dur || 0) }
 }
 
 export function tickSession(s, p, dtSec, now) {
@@ -24,6 +24,7 @@ export function tickSession(s, p, dtSec, now) {
   if (p.dur) s.durationSec = Math.round(p.dur)
   if (!s.title && p.title) s.title = p.title
   if (!s.channel?.name && p.channel?.name) s.channel = p.channel
+  if (!s.category && p.category) s.category = p.category
   s.endedAt = now
   s.percent = s.durationSec ? Math.min(1, s.maxPos / s.durationSec) : null
   return s

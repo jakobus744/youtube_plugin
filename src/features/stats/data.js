@@ -8,6 +8,7 @@ import { music } from '../music/runtime.js'
 import { groupsData } from '../youtube/subGroups/index.js'
 import { groupsOf } from '../youtube/subGroups/logic.js'
 import { fromViews, fromPlays } from './logic.js'
+import { parseDavList } from './dav.js'
 
 // ereignisse fuer die statistik: eigene aus indexeddb, andere geraete und seiten aus der nextcloud
 // nextcloud: ytx/history/<geraet>/<seite>-<jahr-monat>.json, jede seite schreibt nur ihre eigenen dateien
@@ -58,25 +59,13 @@ export async function pushHistory({ months = 2 } = {}) {
   return { pushed, months: byMonth.size }
 }
 
-function parseList(xml) {
-  const doc = new DOMParser().parseFromString(xml, 'application/xml')
-  const out = []
-  for (const r of doc.getElementsByTagNameNS('DAV:', 'response')) {
-    const href = decodeURIComponent(r.getElementsByTagNameNS('DAV:', 'href')[0]?.textContent || '')
-    const etag = r.getElementsByTagNameNS('DAV:', 'getetag')[0]?.textContent || ''
-    const dir = r.getElementsByTagNameNS('DAV:', 'collection').length > 0
-    out.push({ name: href.replace(/\/+$/, '').split('/').pop(), etag, dir })
-  }
-  return out
-}
-
 const LIST_BODY = '<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:getetag/><d:resourcetype/></d:prop></d:propfind>'
 
 async function listDir(path) {
   const r = await cloudRequest('PROPFIND', path, LIST_BODY, { Depth: '1', 'Content-Type': 'application/xml' })
   if (r.status === 404) return []
   if (r.status !== 207) throw new Error(`Nextcloud Liste: HTTP ${r.status}`)
-  return parseList(r.text).slice(1)
+  return parseDavList(r.text).slice(1)
 }
 
 // alles ausser den eigenen dateien dieser seite, geaenderte neu laden

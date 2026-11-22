@@ -62,3 +62,17 @@ test('Sitzungen und Detailansicht', () => {
   assert.equal(d.hours[8], 360)
   assert.equal(d.count, 3)
 })
+
+test('webdav liste ohne DOMParser', async () => {
+  const { parseDavList } = await import('../src/features/stats/dav.js')
+  const xml = `<?xml version="1.0"?><d:multistatus xmlns:d="DAV:" xmlns:oc="http://owncloud.org/ns">
+<d:response><d:href>/remote.php/dav/files/Jakob/ytx/history/</d:href><d:propstat><d:prop><d:getetag>&quot;a1&quot;</d:getetag><d:resourcetype><d:collection/></d:resourcetype></d:prop></d:propstat></d:response>
+<d:response><d:href>/remote.php/dav/files/Jakob/ytx/history/d-abc/</d:href><d:propstat><d:prop><d:getetag>&quot;b2&quot;</d:getetag><d:resourcetype><d:collection/></d:resourcetype></d:prop></d:propstat></d:response>
+<d:response><d:href>/remote.php/dav/files/Jakob/ytx/history/d-abc/music-2026-11.json</d:href><d:propstat><d:prop><d:getetag>&quot;c3&quot;</d:getetag><d:resourcetype/></d:prop></d:propstat></d:response>
+</d:multistatus>`
+  assert.deepEqual(parseDavList(xml), [
+    { name: 'history', etag: '"a1"', dir: true },
+    { name: 'd-abc', etag: '"b2"', dir: true },
+    { name: 'music-2026-11.json', etag: '"c3"', dir: false }
+  ])
+})

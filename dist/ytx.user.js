@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261123.0004
+// @version      0.4.1.20261123.0008
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -701,8 +701,8 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
   };
 
   // src/core/dom.js
-  function h(tag, props, ...children) {
-    const el = document.createElement(tag);
+  function h(tag2, props, ...children) {
+    const el = document.createElement(tag2);
     if (props) {
       for (const [k, v] of Object.entries(props)) {
         if (v === void 0 || v === null || v === false) continue;
@@ -5535,6 +5535,27 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     };
   }
 
+  // src/features/stats/dav.js
+  var unxml = (s2) => s2.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&amp;/g, "&");
+  function tag(block, name) {
+    const m = block.match(new RegExp(`<(?:[\\w-]+:)?${name}\\b[^>]*>([\\s\\S]*?)</(?:[\\w-]+:)?${name}>`, "i"));
+    return m ? unxml(m[1].trim()) : "";
+  }
+  function parseDavList(xml) {
+    const out = [];
+    const re = /<(?:[\w-]+:)?response\b[^>]*>([\s\S]*?)<\/(?:[\w-]+:)?response>/gi;
+    for (const [, block] of String(xml).matchAll(re)) {
+      let href = tag(block, "href");
+      try {
+        href = decodeURIComponent(href);
+      } catch {
+      }
+      const dir = /<(?:[\w-]+:)?collection\b/i.test(block);
+      out.push({ name: href.replace(/\/+$/, "").split("/").pop(), etag: tag(block, "getetag"), dir });
+    }
+    return out;
+  }
+
   // src/features/stats/data.js
   var isMusic = () => site2.id === "music";
   var SRC = () => isMusic() ? "music" : "yt";
@@ -5575,23 +5596,12 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     }
     return { pushed, months: byMonth.size };
   }
-  function parseList(xml) {
-    const doc = new DOMParser().parseFromString(xml, "application/xml");
-    const out = [];
-    for (const r of doc.getElementsByTagNameNS("DAV:", "response")) {
-      const href = decodeURIComponent(r.getElementsByTagNameNS("DAV:", "href")[0]?.textContent || "");
-      const etag = r.getElementsByTagNameNS("DAV:", "getetag")[0]?.textContent || "";
-      const dir = r.getElementsByTagNameNS("DAV:", "collection").length > 0;
-      out.push({ name: href.replace(/\/+$/, "").split("/").pop(), etag, dir });
-    }
-    return out;
-  }
   var LIST_BODY = '<?xml version="1.0"?><d:propfind xmlns:d="DAV:"><d:prop><d:getetag/><d:resourcetype/></d:prop></d:propfind>';
   async function listDir(path) {
     const r = await cloudRequest("PROPFIND", path, LIST_BODY, { Depth: "1", "Content-Type": "application/xml" });
     if (r.status === 404) return [];
     if (r.status !== 207) throw new Error(`Nextcloud Liste: HTTP ${r.status}`);
-    return parseList(r.text).slice(1);
+    return parseDavList(r.text).slice(1);
   }
   async function remoteEvents() {
     if (!cloudReady()) return { events: [], files: 0, note: "Nextcloud nicht eingerichtet, nur Daten dieses Geräts" };
@@ -5828,8 +5838,8 @@ input[type="range"] { width: 130px; accent-color: var(--accent); }
 
   // src/features/stats/charts.js
   var NS = "http://www.w3.org/2000/svg";
-  function s(tag, attrs = {}, ...kids) {
-    const el = document.createElementNS(NS, tag);
+  function s(tag2, attrs = {}, ...kids) {
+    const el = document.createElementNS(NS, tag2);
     for (const [k, v] of Object.entries(attrs)) if (v != null) el.setAttribute(k, String(v));
     for (const c of kids.flat()) if (c) el.append(c);
     return el;
@@ -10380,8 +10390,8 @@ ${s2} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
           box2.setAttribute("data-ytx-own", "");
           const top2 = document.createElement("div");
           const bottom = document.createElement("div");
-          for (const [parent, tag, text] of [[top2, "span", "Werbung geblockt"], [top2, "small", "YouTube hält das Video so lange zurück"], [bottom, "b", ""]]) {
-            const el = document.createElement(tag);
+          for (const [parent, tag2, text] of [[top2, "span", "Werbung geblockt"], [top2, "small", "YouTube hält das Video so lange zurück"], [bottom, "b", ""]]) {
+            const el = document.createElement(tag2);
             el.textContent = text;
             parent.append(el);
           }
@@ -15975,8 +15985,8 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     const path = e.composedPath ? e.composedPath() : [e.target];
     for (const el of path) {
       if (!el || el.nodeType !== 1) continue;
-      const tag = el.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable) return true;
+      const tag2 = el.tagName;
+      if (tag2 === "INPUT" || tag2 === "TEXTAREA" || tag2 === "SELECT" || el.isContentEditable) return true;
     }
     return false;
   }
@@ -16592,8 +16602,8 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   var BASELINE_MS = 3 * 24 * 3600 * 1e3;
   var MAX3 = 4e3;
   var emptyState = () => ({ since: 0, tags: {}, flags: {}, fresh: [] });
-  function isInteresting(tag) {
-    return /^(ytm?d?-|ytmusic-|yt-)/.test(tag) || /-(view-model|renderer)$/.test(tag);
+  function isInteresting(tag2) {
+    return /^(ytm?d?-|ytmusic-|yt-)/.test(tag2) || /-(view-model|renderer)$/.test(tag2);
   }
   function applyScan(state2, { tags, flags, page, now }) {
     if (!state2.since) state2.since = now;

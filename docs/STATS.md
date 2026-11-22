@@ -97,4 +97,5 @@ Vorteil: Kein neuer Server muss vom Handy erreichbar sein, Anmeldung und Tailsca
   - Seite `src/features/stats/view.js`: Panel-Tab „Medienzeit“ (alter Music-Tab heißt jetzt „Hörstatistik“) und Vollbild „⤢ Groß“. Woche/Monat/Jahr/Gesamt mit ‹ ›, Vergleich zum Zeitraum davor, Filter Alle/YouTube/Music, Rekorde, Neu entdeckt, Detailansicht je YouTuber/Künstler/Kategorie.
   - Transport `src/features/stats/data.js` und Verhalten „Statistik in Nextcloud teilen“ (`src/behaviors/statsSync.js`, an, höchstens alle 6 h, 60 s nach dem Laden).
   - Geprüft: Tests (89 grün), Build, APK. Oberfläche nur lokal mit Testdaten im Browser (alle Zeiträume, Vollbild, Detail). Nicht geprüft: am Handy und am PC mit echten Daten, echter Nextcloud-Abgleich.
-- Nächster Schritt: Prüfen am Handy (Phase 1, Schritt 4), echten Nextcloud-Abgleich testen, dann Arbeiter auf dem Mini-PC (Phase 2, Schritt 2).
+- 23.11.2026: Echter Abgleich geprüft. Handy (YouTube und Music) und PC (YouTube) laden hoch, PC zeigt „Daten von 2 Geräten · 4 Dateien“, ytx Music am Handy zeigt YouTube und Music zusammen. Am PC drei Fehler behoben: 401 (Browser schickte Nextcloud-Cookies mit, jetzt `anonymous`), 415 (leerer Inhalt bei MKCOL), Trusted Types sperrt `DOMParser` (Liste jetzt per Textauswertung, `src/features/stats/dav.js`).
+- Nächster Schritt: Arbeiter auf dem Mini-PC für Genres (Phase 2, Schritt 2).

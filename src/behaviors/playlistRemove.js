@@ -1,4 +1,4 @@
-import { pageWindow, ytcfg } from '../core/bridge.js'
+import { innertubePost } from '../core/innertube.js'
 import { onSweep } from '../core/observer.js'
 import { toast } from '../features/ui.js'
 
@@ -9,29 +9,7 @@ const PANEL_ITEM = 'ytm-playlist-panel-video-renderer'
 const PAGE_ITEM = 'ytm-playlist-video-renderer'
 const ITEM = `${PANEL_ITEM}, ${PAGE_ITEM}`
 
-const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('')
-
-async function authHeader() {
-  const sid = document.cookie.match(/(?:^|;\s*)(?:SAPISID|__Secure-3PAPISID)=([^;]+)/)?.[1]
-  if (!sid) return null
-  const ts = Math.floor(Date.now() / 1000)
-  const h = hex(await crypto.subtle.digest('SHA-1', new TextEncoder().encode(`${ts} ${sid} ${location.origin}`)))
-  return `SAPISIDHASH ${ts}_${h}`
-}
-
-async function post(path, body) {
-  const auth = await authHeader()
-  const key = ytcfg('INNERTUBE_API_KEY')
-  const context = ytcfg('INNERTUBE_CONTEXT')
-  if (!auth || !key || !context) return false
-  const r = await fetch(`/youtubei/v1/${path}?key=${key}&prettyPrint=false`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'content-type': 'application/json', authorization: auth, 'x-origin': location.origin, 'x-goog-authuser': '0' },
-    body: JSON.stringify({ context, ...body })
-  })
-  return r.ok ? r.json().catch(() => null) : false
-}
+const post = innertubePost
 
 export async function removeFromPlaylist(listId, videoId) {
   const j = await post('browse/edit_playlist', { playlistId: listId, actions: [{ action: 'ACTION_REMOVE_VIDEO_BY_VIDEO_ID', removedVideoId: videoId }] })

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261122.1104
+// @version      0.4.1.20261122.1316
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -8601,15 +8601,15 @@ ${s} ytmusic-player-page #main-panel { flex: 1 1 45% !important; }`
       }
       if (!window.__ytxNative || !on) return () => {
       };
-      const send = () => {
+      const send2 = () => {
         try {
           window.__ytxAppLog?.("YTXCHECK " + JSON.stringify(report()));
         } catch (e) {
           window.__ytxAppLog?.("YTXCHECK " + JSON.stringify({ t: Date.now(), error: e.message }));
         }
       };
-      send();
-      const timer3 = setInterval(send, 1500);
+      send2();
+      const timer3 = setInterval(send2, 1500);
       return () => clearInterval(timer3);
     }
   };
@@ -13303,10 +13303,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     }
   };
 
-  // src/behaviors/playlistRemove.js
-  var PANEL_ITEM = "ytm-playlist-panel-video-renderer";
-  var PAGE_ITEM = "ytm-playlist-video-renderer";
-  var ITEM = `${PANEL_ITEM}, ${PAGE_ITEM}`;
+  // src/core/innertube.js
   var hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
   async function authHeader() {
     const sid = document.cookie.match(/(?:^|;\s*)(?:SAPISID|__Secure-3PAPISID)=([^;]+)/)?.[1];
@@ -13315,7 +13312,7 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     const h2 = hex(await crypto.subtle.digest("SHA-1", new TextEncoder().encode(`${ts} ${sid} ${location.origin}`)));
     return `SAPISIDHASH ${ts}_${h2}`;
   }
-  async function post(path, body) {
+  async function innertubePost(path, body) {
     const auth = await authHeader();
     const key = ytcfg("INNERTUBE_API_KEY");
     const context = ytcfg("INNERTUBE_CONTEXT");
@@ -13328,6 +13325,12 @@ ytm-video-with-context-renderer .media-channel { display: none !important; }`
     });
     return r.ok ? r.json().catch(() => null) : false;
   }
+
+  // src/behaviors/playlistRemove.js
+  var PANEL_ITEM = "ytm-playlist-panel-video-renderer";
+  var PAGE_ITEM = "ytm-playlist-video-renderer";
+  var ITEM = `${PANEL_ITEM}, ${PAGE_ITEM}`;
+  var post = innertubePost;
   async function removeFromPlaylist(listId2, videoId) {
     const j = await post("browse/edit_playlist", { playlistId: listId2, actions: [{ action: "ACTION_REMOVE_VIDEO_BY_VIDEO_ID", removedVideoId: videoId }] });
     return j?.status === "STATUS_SUCCEEDED";
@@ -13623,6 +13626,180 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         style.remove();
         offs.forEach((o) => o());
       };
+    }
+  };
+
+  // src/behaviors/notInterested.js
+  var KIND = { HIDE: "hide", REMOVE: "channel" };
+  var LABEL = { hide: "Kein Interesse", channel: "Kanal nicht empfehlen" };
+  function findKey(o, key, depth = 0) {
+    if (!o || typeof o !== "object" || depth > 40) return null;
+    if (key in o) return o[key];
+    for (const k in o) {
+      const r = findKey(o[k], key, depth + 1);
+      if (r) return r;
+    }
+    return null;
+  }
+  var imageName = (o) => JSON.stringify(o).match(/"imageName":"([A-Z_]+)"/)?.[1] || null;
+  var idOfShort = (s) => s.onTap?.innertubeCommand?.reelWatchEndpoint?.videoId || String(s.entityId || "").match(/([\w-]{11})$/)?.[1] || null;
+  function extractFeedback(json, out = /* @__PURE__ */ new Map(), id = null, depth = 0) {
+    if (!json || typeof json !== "object" || depth > 90) return out;
+    if (Array.isArray(json)) {
+      for (const x of json) extractFeedback(x, out, id, depth + 1);
+      return out;
+    }
+    if (json.lockupViewModel?.contentId) id = json.lockupViewModel.contentId;
+    else if (json.shortsLockupViewModel) id = idOfShort(json.shortsLockupViewModel) || id;
+    if (json.listItemViewModel && id) {
+      const kind = KIND[imageName(json.listItemViewModel)];
+      const fb = kind && findKey(json.listItemViewModel, "feedbackEndpoint");
+      if (fb?.feedbackToken) {
+        const e = out.get(id) || {};
+        e[kind] ||= { token: fb.feedbackToken, undo: findKey(fb, "undoFeedbackEndpoint")?.undoToken || null };
+        out.set(id, e);
+      }
+      return out;
+    }
+    for (const k in json) extractFeedback(json[k], out, id, depth + 1);
+    return out;
+  }
+  var CARD = "ytm-rich-item-renderer, ytm-video-with-context-renderer, ytm-compact-video-renderer";
+  function idOfCard(el) {
+    const c = el.querySelector('[class*="content-id-"]')?.className.match(/content-id-([\w-]{11})/)?.[1];
+    if (c) return c;
+    const href = el.querySelector('a[href*="/watch?"], a[href^="/shorts/"]')?.getAttribute("href") || "";
+    return href.match(/[?&]v=([\w-]{11})/)?.[1] || href.match(/\/shorts\/([\w-]{11})/)?.[1] || null;
+  }
+  var send = (token) => innertubePost("feedback", { feedbackTokens: [token], isFeedbackTokenUnencrypted: false, shouldMerge: false });
+  var CSS5 = `
+/* eigene ebene je kachel, sonst liegt das kreuz ueber der leiste unten */
+:is(${CARD}) { position: relative; isolation: isolate; }
+.ytx-ni { position: absolute; left: 8px; top: 8px; z-index: 3; width: 30px; height: 30px; border: 0; border-radius: 50%; padding: 0;
+  background: rgba(0,0,0,.55); color: #fff; font: 16px/30px Roboto, Arial, sans-serif; text-align: center; }
+.ytx-nimenu { position: fixed; left: 14px; z-index: 2147483000; display: flex; flex-direction: column; background: var(--ytx-menu, #2a2a2a); border-radius: 12px; box-shadow: 0 4px 18px #0008; }
+.ytx-nimenu button { text-align: left; border: 0; background: none; color: var(--ytx-accent, #fff); font-size: 16px; padding: 14px 18px; }
+[data-ytx-ni] > :not(.ytx-nibar) { display: none !important; }
+.ytx-nibar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 6px 12px; padding: 10px 14px; border-radius: 10px;
+  font: 14px/1.3 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-secondary, #aaa); background: var(--yt-sys-color-baseline--additive-background, rgba(255,255,255,.08)); }
+.ytx-nibar button { border: 0; background: none; color: var(--ytx-accent, #3ea6ff); font: 500 14px Roboto, Arial, sans-serif; padding: 4px 0; }`;
+  var notInterested = {
+    id: "notInterested",
+    label: "Knopf „weg damit“ an Kacheln",
+    description: "Ein ✕ oben links an jedem Video: Kein Interesse oder Kanal nicht empfehlen. Nutzt YouTubes eigene Rückmeldung, damit ändern sich auch die Empfehlungen. Rückgängig direkt an der Stelle",
+    type: "toggle",
+    default: true,
+    start() {
+      const map = /* @__PURE__ */ new Map();
+      let init2 = null;
+      const readInit = () => {
+        const d = pageWindow.ytInitialData;
+        if (d && d !== init2) {
+          init2 = d;
+          extractFeedback(d, map);
+        }
+      };
+      const offResp = onYtResponse((j) => extractFeedback(j, map));
+      const style = document.createElement("style");
+      style.setAttribute("data-ytx-own", "");
+      style.textContent = CSS5;
+      document.head.append(style);
+      const hide = async (el, id, kind) => {
+        const t = map.get(id)?.[kind];
+        if (!t) return;
+        el.setAttribute("data-ytx-ni", kind);
+        const bar = document.createElement("div");
+        bar.className = "ytx-nibar";
+        bar.setAttribute("data-ytx-own", "");
+        bar.textContent = `Ausgeblendet: ${LABEL[kind]}`;
+        el.append(bar);
+        let ok = false;
+        try {
+          ok = await send(t.token);
+        } catch {
+        }
+        if (!ok) {
+          bar.remove();
+          el.removeAttribute("data-ytx-ni");
+          toast("YouTube hat die Rückmeldung nicht angenommen", "warn");
+          return;
+        }
+        if (!t.undo) return;
+        const undo = document.createElement("button");
+        undo.textContent = "Rückgängig";
+        undo.addEventListener("click", async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          let back = false;
+          try {
+            back = await send(t.undo);
+          } catch {
+          }
+          if (!back) return toast("Rückgängig nicht möglich", "warn");
+          bar.remove();
+          el.removeAttribute("data-ytx-ni");
+        });
+        bar.append(undo);
+      };
+      const openMenu3 = (btn2, el, id) => {
+        document.querySelector(".ytx-nimenu")?.remove();
+        const m = document.createElement("div");
+        m.className = "ytx-nimenu";
+        m.setAttribute("data-ytx-own", "");
+        const gone = () => {
+          m.remove();
+          document.removeEventListener("click", close, true);
+          document.removeEventListener("scroll", gone, true);
+        };
+        const close = (e) => !m.contains(e.target) && gone();
+        for (const kind of ["hide", "channel"]) {
+          if (!map.get(id)?.[kind]) continue;
+          const b = document.createElement("button");
+          b.textContent = LABEL[kind];
+          b.addEventListener("click", (e) => {
+            e.stopPropagation();
+            gone();
+            hide(el, id, kind);
+          });
+          m.append(b);
+        }
+        const r = btn2.getBoundingClientRect();
+        m.style.top = `${Math.min(r.bottom + 4, innerHeight - 130)}px`;
+        document.body.append(m);
+        setTimeout(() => {
+          document.addEventListener("click", close, true);
+          document.addEventListener("scroll", gone, { capture: true, passive: true });
+        }, 0);
+      };
+      const off = onSweep("notInterested", () => {
+        readInit();
+        for (const el of document.querySelectorAll(CARD)) {
+          if (el.querySelector(":scope > .ytx-ni") || el.parentElement?.closest(CARD)) continue;
+          const id = idOfCard(el);
+          if (!id || !map.get(id)) continue;
+          const b = document.createElement("button");
+          b.className = "ytx-ni";
+          b.setAttribute("data-ytx-own", "");
+          b.setAttribute("aria-label", "Weg damit");
+          b.textContent = "✕";
+          b.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openMenu3(b, el, id);
+          });
+          el.append(b);
+        }
+      });
+      return () => {
+        off();
+        offResp();
+        style.remove();
+        document.querySelectorAll(".ytx-ni, .ytx-nimenu, .ytx-nibar").forEach((e) => e.remove());
+        document.querySelectorAll("[data-ytx-ni]").forEach((e) => e.removeAttribute("data-ytx-ni"));
+      };
+    },
+    health() {
+      return { status: "ok", detail: `${document.querySelectorAll(".ytx-ni").length} Knöpfe auf dieser Seite` };
     }
   };
 
@@ -14358,11 +14535,11 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove, typeRadar, appCheck];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove, notInterested, typeRadar, appCheck];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js
-  var CSS5 = `html[data-ytx-mini], html[data-ytx-mini] body { overflow: hidden !important; background: #000 !important; }
+  var CSS6 = `html[data-ytx-mini], html[data-ytx-mini] body { overflow: hidden !important; background: #000 !important; }
 html[data-ytx-mini] ytm-mobile-topbar-renderer, html[data-ytx-mini] .mobile-topbar-header-background, html[data-ytx-mini] ytm-pivot-bar-renderer,
 html[data-ytx-mini] .watch-below-the-player, html[data-ytx-mini] ytm-consent-bump-v2-renderer, html[data-ytx-mini] [data-ytx-mount], html[data-ytx-mini] .ytx-watch-row { display: none !important; }
 html[data-ytx-mini] #player-container-id { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 2147483000 !important; }
@@ -14400,7 +14577,7 @@ html[data-ytx-mini] #movie_player .html5-video-container, html[data-ytx-mini] #m
       }
       html.toggleAttribute("data-ytx-mini", on);
       if (on) {
-        setCss("mobile.mini", CSS5);
+        setCss("mobile.mini", CSS6);
         ui = build();
         (document.body || html).append(ui);
       } else {
@@ -15101,7 +15278,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
   var rules = null;
   var version = 0;
   var filterStats = { page: "", checked: 0, hits: 0, reasons: {}, unreadable: 0 };
-  var CSS6 = `
+  var CSS7 = `
 [${ATTR4}="hide"] { display: none !important; }
 [${ATTR4}="dim"]:not([data-ytx-f-open]) { opacity: var(--ytx-dim-opacity, .3) !important; transition: opacity .15s ease !important; }
 [${ATTR4}="dim"]:not([data-ytx-f-open]):hover { opacity: 1 !important; }
@@ -15188,7 +15365,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     sweep2();
   }
   function initFilters() {
-    setCss("filters", CSS6);
+    setCss("filters", CSS7);
     onSweep("filters", sweep2);
     onDispose(() => {
       for (const el of qsa(`[${ATTR4}]`)) clearCard(el);

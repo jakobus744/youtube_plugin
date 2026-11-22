@@ -16,6 +16,7 @@ const tidyDisplay = {
   'home.chips': H,
   'home.shelves': H,
   'home.banner': H,
+  'home.posts': H,
   'watch.sidebar': C,
   'watch.comments': C,
   'watch.shortsShelf': H,

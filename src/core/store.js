@@ -256,6 +256,21 @@ const MIGRATIONS = [
         for (const id of ['mb.ads', 'mb.games', 'mb.premiumPromo']) if (!(id in m.display)) m.display[id] = 'hide'
       }
     }
+  ],
+  [
+    // community beitraege im feed ausblenden, ausser im original profil
+    'home-posts-hidden',
+    (d) => {
+      for (const p of Object.values(d.profiles || {})) {
+        if (p.template === 'youtube') continue
+        for (const [key, id] of [['mobile', 'mb.home.posts'], ['youtube', 'home.posts']]) {
+          const c = p.config?.[key]
+          if (!c) continue
+          c.display ||= {}
+          if (!(id in c.display)) c.display[id] = 'hide'
+        }
+      }
+    }
   ]
 ]
 

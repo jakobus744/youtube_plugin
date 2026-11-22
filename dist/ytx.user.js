@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261119.1702
+// @version      0.4.1.20261122.1104
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -332,6 +332,14 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
       modes: SDCH,
       sel: ["ytd-rich-section-renderer:has(ytd-rich-shelf-renderer:not([is-shorts]))", "ytd-rich-section-renderer:has(ytd-statement-banner-renderer)"],
       note: "Mixe und News lassen sich sprachunabhängig nicht sicher trennen"
+    },
+    {
+      id: "home.posts",
+      label: "Community-Beiträge im Feed",
+      group: "Startseite",
+      pages: ["home", "subscriptions"],
+      modes: SDCH,
+      sel: ["ytd-rich-item-renderer:has(ytd-post-renderer)", "ytd-rich-section-renderer:has(ytd-post-renderer)", "ytd-rich-item-renderer:has(ytd-backstage-post-thread-renderer)", "ytd-rich-section-renderer:has(ytd-backstage-post-thread-renderer)"]
     },
     {
       id: "home.banner",
@@ -5104,6 +5112,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     "home.chips": H,
     "home.shelves": H,
     "home.banner": H,
+    "home.posts": H,
     "watch.sidebar": C,
     "watch.comments": C,
     "watch.shortsShelf": H,
@@ -5253,6 +5262,7 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     "mb.top.openApp": H3,
     "mb.home.shorts": H3,
     "mb.games": H3,
+    "mb.home.posts": H3,
     "mb.home.nudge": H3,
     "mb.watch.shorts": H3,
     "mb.watch.carousel": H3,
@@ -5554,6 +5564,21 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           if (!m || p.template === "youtube") continue;
           m.display ||= {};
           for (const id of ["mb.ads", "mb.games", "mb.premiumPromo"]) if (!(id in m.display)) m.display[id] = "hide";
+        }
+      }
+    ],
+    [
+      // community beitraege im feed ausblenden, ausser im original profil
+      "home-posts-hidden",
+      (d) => {
+        for (const p of Object.values(d.profiles || {})) {
+          if (p.template === "youtube") continue;
+          for (const [key, id] of [["mobile", "mb.home.posts"], ["youtube", "home.posts"]]) {
+            const c = p.config?.[key];
+            if (!c) continue;
+            c.display ||= {};
+            if (!(id in c.display)) c.display[id] = "hide";
+          }
         }
       }
     ]
@@ -12879,6 +12904,14 @@ ${data2.source}` : ""].join("\n").trim();
       pages: ["home"],
       modes: SDCH,
       sel: ["ytm-browse ytm-rich-section-renderer:not(:has(ytm-shorts-lockup-view-model))"]
+    },
+    {
+      id: "mb.home.posts",
+      label: "Community-Beiträge im Feed",
+      group: "Startseite",
+      pages: ["home", "subscriptions"],
+      modes: SDCH,
+      sel: ["ytm-rich-section-renderer:has(ytm-backstage-post-thread-renderer)", "ytm-rich-item-renderer:has(ytm-backstage-post-thread-renderer)", "ytm-rich-section-renderer:has(ytm-post-renderer)"]
     },
     {
       id: "mb.home.nudge",

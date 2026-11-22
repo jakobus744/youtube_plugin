@@ -144,6 +144,14 @@ ${p} ytd-browse[page-subtype="home"] ytd-rich-grid-renderer > #header { display:
     note: 'Mixe und News lassen sich sprachunabhängig nicht sicher trennen'
   },
   {
+    id: 'home.posts',
+    label: 'Community-Beiträge im Feed',
+    group: 'Startseite',
+    pages: ['home', 'subscriptions'],
+    modes: SDCH,
+    sel: ['ytd-rich-item-renderer:has(ytd-post-renderer)', 'ytd-rich-section-renderer:has(ytd-post-renderer)', 'ytd-rich-item-renderer:has(ytd-backstage-post-thread-renderer)', 'ytd-rich-section-renderer:has(ytd-backstage-post-thread-renderer)']
+  },
+  {
     id: 'home.banner',
     label: 'Werbebanner & Promo-Kacheln',
     group: 'Startseite',

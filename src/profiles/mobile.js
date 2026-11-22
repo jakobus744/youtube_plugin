@@ -9,6 +9,7 @@ const tidyDisplay = {
   'mb.top.openApp': H,
   'mb.home.shorts': H,
   'mb.games': H,
+  'mb.home.posts': H,
   'mb.home.nudge': H,
   'mb.watch.shorts': H,
   'mb.watch.carousel': H,

@@ -79,6 +79,14 @@ export const targets = [
     sel: ['ytm-browse ytm-rich-section-renderer:not(:has(ytm-shorts-lockup-view-model))']
   },
   {
+    id: 'mb.home.posts',
+    label: 'Community-Beiträge im Feed',
+    group: 'Startseite',
+    pages: ['home', 'subscriptions'],
+    modes: SDCH,
+    sel: ['ytm-rich-section-renderer:has(ytm-backstage-post-thread-renderer)', 'ytm-rich-item-renderer:has(ytm-backstage-post-thread-renderer)', 'ytm-rich-section-renderer:has(ytm-post-renderer)']
+  },
+  {
     id: 'mb.home.nudge',
     label: 'Hinweis-Boxen (Anmelden, Verlauf …)',
     group: 'Startseite',

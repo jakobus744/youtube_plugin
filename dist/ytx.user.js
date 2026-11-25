@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.1.20261123.0008
+// @version      0.4.2.20261125.1813
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -19,7 +19,7 @@
 // @connect      pi.tail5f332e.ts.net
 // @connect      100.116.11.12
 // @connect      192.168.178.56
-// @connect      jakobpi.duckdns.org
+// @connect      jakob-pi.duckdns.org
 // @grant        unsafeWindow
 // @sandbox      JavaScript
 // @inject-into  page
@@ -40,7 +40,7 @@
   // package.json
   var package_default = {
     name: "ytx",
-    version: "0.4.1",
+    version: "0.4.2",
     description: "YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen",
     private: true,
     type: "module",

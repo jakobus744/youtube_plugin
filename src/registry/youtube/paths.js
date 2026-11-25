@@ -389,3 +389,10 @@ export function pauseActive() {
     p?.pauseVideo?.()
   } catch {}
 }
+
+export function playActive() {
+  try {
+    const p = location.pathname.startsWith('/shorts/') ? qs('#shorts-player') : mainPlayer()
+    p?.playVideo?.()
+  } catch {}
+}

@@ -13,6 +13,23 @@ import { deviceId } from '../../../core/device.js'
 
 const activePlayback = () => site.playback.activePlayback()
 const pauseActive = () => site.playback.pauseActive()
+const playActive = () => site.playback.playActive?.()
+
+// erinnerungsstand pro tag, ueberlebt neu laden der seite
+const REMIND_KEY = 'ytx.wtRemind'
+const freshRemind = () => ({ limitAt: null, breakAt: null, limitNext: null, limitOff: false })
+function loadRemind(day) {
+  try {
+    const r = JSON.parse(localStorage.getItem(REMIND_KEY) || 'null')
+    if (r?.day === day) return { ...freshRemind(), limitAt: r.limitAt ?? null, limitNext: r.limitNext ?? null, limitOff: !!r.limitOff }
+  } catch {}
+  return freshRemind()
+}
+function saveRemind(day, r) {
+  try {
+    localStorage.setItem(REMIND_KEY, JSON.stringify({ day, limitAt: r.limitAt, limitNext: r.limitNext, limitOff: r.limitOff }))
+  } catch {}
+}
 
 let current = null
 
@@ -42,7 +59,8 @@ export default {
   setup(ctx) {
     let s = ctx.settings
     const db = ytDb()
-    const st = { session: null, day: dayKey(Date.now()), todayBase: 0, lastTick: Date.now(), lastSave: 0, streak: 0, lastPlayAt: 0, remind: { limitAt: null, breakAt: null }, error: null, saved: 0 }
+    const st = { session: null, day: dayKey(Date.now()), todayBase: 0, lastTick: Date.now(), lastSave: 0, streak: 0, lastPlayAt: 0, remind: freshRemind(), error: null, saved: 0 }
+    st.remind = loadRemind(st.day)
 
     const loadToday = async () => {
       try {
@@ -107,7 +125,17 @@ export default {
       const text = kind === 'limit' ? `Du hast heute schon ${formatDuration(sec)} geschaut (Limit ${formatDuration(s.limitMinutes * 60)}).${paused ? ' Das Video ist angehalten.' : ''}` : `Du schaust seit ${formatDuration(st.streak)} am Stück.`
       const actions = h('div', { class: 'ytx-row' })
       if (!paused) actions.append(button({ label: 'Video anhalten', small: true, onClick: () => { pauseActive(); closeCard() } }))
-      actions.append(button({ label: kind === 'limit' ? 'Weiter schauen' : 'Weiter', small: true, onClick: closeCard }))
+      if (kind === 'limit') {
+        // verschieben oder fuer heute aus, ein angehaltenes video laeuft weiter
+        const keep = (change) => () => {
+          change(st.remind)
+          saveRemind(st.day, st.remind)
+          if (paused) playActive()
+          closeCard()
+        }
+        actions.append(button({ label: '+1 Stunde', small: true, onClick: keep((r) => (r.limitNext = todaySec() + 3600)) }))
+        actions.append(button({ label: 'Heute ignorieren', small: true, onClick: keep((r) => (r.limitOff = true)) }))
+      } else actions.append(button({ label: 'Weiter', small: true, onClick: closeCard }))
       card = h('div', { class: 'ytx-wt-card', role: 'status', 'data-ytx-own': '' }, h('b', { text: title }), h('div', { text }), actions)
       document.body.append(card)
     }
@@ -129,7 +157,8 @@ export default {
         st.session = null
         st.day = day
         st.todayBase = 0
-        st.remind = { limitAt: null, breakAt: null }
+        st.remind = freshRemind()
+        saveRemind(day, st.remind)
       }
       if (!s.record) return
       let p = activePlayback()
@@ -156,8 +185,11 @@ export default {
       }
       const due = reminderDue({ todaySec: todaySec(), streakSec: st.streak, limitMin: s.limitMinutes, breakMin: s.breakMinutes, remindEveryMin: s.remindEveryMinutes, state: st.remind })
       if (due) {
-        if (due.kind === 'limit') st.remind.limitAt = due.mark
-        else st.remind.breakAt = due.mark
+        if (due.kind === 'limit') {
+          st.remind.limitAt = due.mark
+          st.remind.limitNext = null
+          saveRemind(st.day, st.remind)
+        } else st.remind.breakAt = due.mark
         remind(due.kind)
       }
     }

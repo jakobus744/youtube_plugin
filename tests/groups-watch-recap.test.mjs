@@ -61,6 +61,15 @@ test('schauzeit: limit und pause erinnern sanft und wiederholt', () => {
   assert.equal(reminderDue({ ...base, limitMin: 0, todaySec: 999, streakSec: 90 * 60 }).kind, 'break')
 })
 
+test('tageslimit: +1 stunde und heute ignorieren', () => {
+  const base = { streakSec: 10, limitMin: 60, breakMin: 0, remindEveryMin: 15 }
+  const state = { limitAt: 60 * 60, breakAt: null, limitNext: 61 * 60 + 3600, limitOff: false }
+  assert.equal(reminderDue({ ...base, todaySec: 90 * 60, state }), null)
+  assert.equal(reminderDue({ ...base, todaySec: 121 * 60, state }).kind, 'limit')
+  state.limitOff = true
+  assert.equal(reminderDue({ ...base, todaySec: 300 * 60, state }), null)
+})
+
 test('schauzeit: statistik pro tag, kanal und shorts', () => {
   const now = new Date(2026, 8, 24, 21, 0).getTime()
   const v = (d, sec, ch, kind = 'video', id = `${d}${ch}${sec}`) => ({ id, videoId: id, kind, title: id, channel: { id: ch, name: ch }, startedAt: startOfDay(now) - d * DAY + 3600e3, day: dayKey(startOfDay(now) - d * DAY), wallSec: sec })

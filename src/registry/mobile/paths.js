@@ -117,6 +117,12 @@ export function pauseActive() {
   } catch {}
 }
 
+export function playActive() {
+  try {
+    mainPlayer()?.playVideo?.()
+  } catch {}
+}
+
 // ---------- videoseite ----------
 // derselbe html5 player wie am rechner, daten kommen aus seiner api
 

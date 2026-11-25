@@ -32,8 +32,9 @@ export function tickSession(s, p, dtSec, now) {
 
 // erinnerungen: tageslimit einmal, danach im abstand, pause nach laengerem schauen am stueck
 export function reminderDue({ todaySec, streakSec, limitMin, breakMin, remindEveryMin, state }) {
-  if (limitMin > 0 && todaySec >= limitMin * 60) {
-    const next = state.limitAt == null ? limitMin * 60 : state.limitAt + Math.max(1, remindEveryMin) * 60
+  // limitOff: fuer heute ignoriert, limitNext: verschoben (+1 stunde)
+  if (limitMin > 0 && !state.limitOff && todaySec >= limitMin * 60) {
+    const next = state.limitNext ?? (state.limitAt == null ? limitMin * 60 : state.limitAt + Math.max(1, remindEveryMin) * 60)
     if (todaySec >= next) return { kind: 'limit', mark: todaySec }
   }
   if (breakMin > 0 && streakSec >= breakMin * 60 && (state.breakAt == null || streakSec >= state.breakAt + breakMin * 60)) return { kind: 'break', mark: streakSec }

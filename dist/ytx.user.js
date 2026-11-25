@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.2.20261125.1813
+// @version      0.4.2.20261125.1835
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -1469,6 +1469,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     channelPageInfo: () => channelPageInfo,
     channelRefOf: () => channelRefOf,
     pauseActive: () => pauseActive,
+    playActive: () => playActive,
     playlistPage: () => playlistPage,
     playlistPanel: () => playlistPanel,
     readCard: () => readCard,
@@ -1917,6 +1918,13 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
     try {
       const p = location.pathname.startsWith("/shorts/") ? qs("#shorts-player") : mainPlayer();
       p?.pauseVideo?.();
+    } catch {
+    }
+  }
+  function playActive() {
+    try {
+      const p = location.pathname.startsWith("/shorts/") ? qs("#shorts-player") : mainPlayer();
+      p?.playVideo?.();
     } catch {
     }
   }
@@ -6559,6 +6567,7 @@ ${VIEW_CSS}` });
     activePlayback: () => activePlayback2,
     channelPageInfo: () => channelPageInfo3,
     pauseActive: () => pauseActive2,
+    playActive: () => playActive2,
     playlistPage: () => playlistPage2,
     playlistPanel: () => playlistPanel2,
     readCard: () => readCard3,
@@ -6656,6 +6665,12 @@ ${VIEW_CSS}` });
   function pauseActive2() {
     try {
       mainPlayer2()?.pauseVideo?.();
+    } catch {
+    }
+  }
+  function playActive2() {
+    try {
+      mainPlayer2()?.playVideo?.();
     } catch {
     }
   }
@@ -8105,8 +8120,8 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     return s2;
   }
   function reminderDue({ todaySec, streakSec, limitMin, breakMin, remindEveryMin, state: state2 }) {
-    if (limitMin > 0 && todaySec >= limitMin * 60) {
-      const next = state2.limitAt == null ? limitMin * 60 : state2.limitAt + Math.max(1, remindEveryMin) * 60;
+    if (limitMin > 0 && !state2.limitOff && todaySec >= limitMin * 60) {
+      const next = state2.limitNext ?? (state2.limitAt == null ? limitMin * 60 : state2.limitAt + Math.max(1, remindEveryMin) * 60);
       if (todaySec >= next) return { kind: "limit", mark: todaySec };
     }
     if (breakMin > 0 && streakSec >= breakMin * 60 && (state2.breakAt == null || streakSec >= state2.breakAt + breakMin * 60)) return { kind: "break", mark: streakSec };
@@ -8151,6 +8166,23 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
   // src/features/youtube/watchtime/index.js
   var activePlayback3 = () => site2.playback.activePlayback();
   var pauseActive3 = () => site2.playback.pauseActive();
+  var playActive3 = () => site2.playback.playActive?.();
+  var REMIND_KEY = "ytx.wtRemind";
+  var freshRemind = () => ({ limitAt: null, breakAt: null, limitNext: null, limitOff: false });
+  function loadRemind(day) {
+    try {
+      const r = JSON.parse(localStorage.getItem(REMIND_KEY) || "null");
+      if (r?.day === day) return { ...freshRemind(), limitAt: r.limitAt ?? null, limitNext: r.limitNext ?? null, limitOff: !!r.limitOff };
+    } catch {
+    }
+    return freshRemind();
+  }
+  function saveRemind(day, r) {
+    try {
+      localStorage.setItem(REMIND_KEY, JSON.stringify({ day, limitAt: r.limitAt, limitNext: r.limitNext, limitOff: r.limitOff }));
+    } catch {
+    }
+  }
   var current = null;
   var watchTime = {
     get instance() {
@@ -8177,7 +8209,8 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
     setup(ctx) {
       let s2 = ctx.settings;
       const db3 = ytDb();
-      const st = { session: null, day: dayKey2(Date.now()), todayBase: 0, lastTick: Date.now(), lastSave: 0, streak: 0, lastPlayAt: 0, remind: { limitAt: null, breakAt: null }, error: null, saved: 0 };
+      const st = { session: null, day: dayKey2(Date.now()), todayBase: 0, lastTick: Date.now(), lastSave: 0, streak: 0, lastPlayAt: 0, remind: freshRemind(), error: null, saved: 0 };
+      st.remind = loadRemind(st.day);
       const loadToday = async () => {
         try {
           const list = await db3.byIndex("views", "day", st.day);
@@ -8233,7 +8266,16 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           pauseActive3();
           closeCard();
         } }));
-        actions2.append(button({ label: kind === "limit" ? "Weiter schauen" : "Weiter", small: true, onClick: closeCard }));
+        if (kind === "limit") {
+          const keep = (change2) => () => {
+            change2(st.remind);
+            saveRemind(st.day, st.remind);
+            if (paused) playActive3();
+            closeCard();
+          };
+          actions2.append(button({ label: "+1 Stunde", small: true, onClick: keep((r) => r.limitNext = todaySec() + 3600) }));
+          actions2.append(button({ label: "Heute ignorieren", small: true, onClick: keep((r) => r.limitOff = true) }));
+        } else actions2.append(button({ label: "Weiter", small: true, onClick: closeCard }));
         card2 = h("div", { class: "ytx-wt-card", role: "status", "data-ytx-own": "" }, h("b", { text: title2 }), h("div", { text }), actions2);
         document.body.append(card2);
       };
@@ -8251,7 +8293,8 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
           st.session = null;
           st.day = day;
           st.todayBase = 0;
-          st.remind = { limitAt: null, breakAt: null };
+          st.remind = freshRemind();
+          saveRemind(day, st.remind);
         }
         if (!s2.record) return;
         let p = activePlayback3();
@@ -8278,8 +8321,11 @@ ${playlistPage3.dragHandles} { visibility: hidden !important; }
         }
         const due = reminderDue({ todaySec: todaySec(), streakSec: st.streak, limitMin: s2.limitMinutes, breakMin: s2.breakMinutes, remindEveryMin: s2.remindEveryMinutes, state: st.remind });
         if (due) {
-          if (due.kind === "limit") st.remind.limitAt = due.mark;
-          else st.remind.breakAt = due.mark;
+          if (due.kind === "limit") {
+            st.remind.limitAt = due.mark;
+            st.remind.limitNext = null;
+            saveRemind(st.day, st.remind);
+          } else st.remind.breakAt = due.mark;
           remind(due.kind);
         }
       };
@@ -8692,7 +8738,7 @@ ${chaptersText(true)}
     templates,
     filters: { pages: FILTER_PAGES, CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots },
     channels: { channelRefOf, channelPageInfo, subscribedChannels },
-    playback: { activePlayback, pauseActive },
+    playback: { activePlayback, pauseActive, playActive },
     panelTabs: ["display", "look", "layout", "behavior", "filters", "features", "subGroups", "watchStats", "stats", "profiles", "diagnose"],
     boot() {
       initTimedtextCapture();
@@ -15852,7 +15898,7 @@ ytm-mobile-topbar-renderer:has(yt-searchbox) [data-ytx-mount="top.ytx"] { margin
     features: featureManifests.filter((m) => m.id !== "ui.proxyButtons"),
     filters: { pages: FILTER_PAGES2, CARD_SELECTORS: CARD_SELECTORS2, CARD_PARENT: CARD_PARENT2, readCard: readCard3, activePageRoots: activePageRoots2 },
     channels: { channelRefOf, channelPageInfo: channelPageInfo3, subscribedChannels: subscribedChannels3 },
-    playback: { activePlayback: activePlayback2, pauseActive: pauseActive2 },
+    playback: { activePlayback: activePlayback2, pauseActive: pauseActive2, playActive: playActive2 },
     panelTabs: ["display", "look", "behavior", "filters", "features", "subGroups", "watchStats", "stats", "downloads", "profiles", "diagnose"],
     boot() {
       setCss("mobile.baseTokens", BASE_TOKENS + OPEN_YT_CSS);

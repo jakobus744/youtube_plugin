@@ -4,7 +4,7 @@ import { tagRules, TAG_ATTRS } from '../registry/mobile/tags.js'
 import { colorControls, controls, themes, LOOK_GROUPS, controlById, TOKEN_SCOPE, extraCss } from '../registry/mobile/look.js'
 import { pageFromUrl, videoIdFromUrl, PAGE_LABELS } from '../registry/youtube/pages.js'
 import { channelRefOf } from '../registry/youtube/paths.js'
-import { CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots, channelPageInfo, subscribedChannels, activePlayback, pauseActive } from '../registry/mobile/paths.js'
+import { CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots, channelPageInfo, subscribedChannels, activePlayback, pauseActive, playActive } from '../registry/mobile/paths.js'
 import { behaviors, behaviorById } from '../behaviors/mobile.js'
 import { featureManifests } from '../features/youtube/index.js'
 import { initTimedtextCapture } from '../features/youtube/transcript/source.js'
@@ -171,7 +171,7 @@ export const mobileSite = {
   features: featureManifests.filter((m) => m.id !== 'ui.proxyButtons'),
   filters: { pages: FILTER_PAGES, CARD_SELECTORS, CARD_PARENT, readCard, activePageRoots },
   channels: { channelRefOf, channelPageInfo, subscribedChannels },
-  playback: { activePlayback, pauseActive },
+  playback: { activePlayback, pauseActive, playActive },
   panelTabs: ['display', 'look', 'behavior', 'filters', 'features', 'subGroups', 'watchStats', 'stats', 'downloads', 'profiles', 'diagnose'],
   boot() {
     setCss('mobile.baseTokens', BASE_TOKENS + OPEN_YT_CSS)

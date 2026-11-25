@@ -36,7 +36,7 @@ const meta = (name, extra = []) =>
     '// @connect      pi.tail5f332e.ts.net',
     '// @connect      100.116.11.12',
     '// @connect      192.168.178.56',
-    '// @connect      jakobpi.duckdns.org',
+    '// @connect      jakob-pi.duckdns.org',
     '// @grant        unsafeWindow',
     '// @sandbox      JavaScript',
     '// @inject-into  page',

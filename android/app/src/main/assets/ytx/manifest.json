@@ -21,7 +21,7 @@
     "http://pi.tail5f332e.ts.net/*",
     "http://100.116.11.12/*",
     "http://192.168.178.56/*",
-    "https://jakobpi.duckdns.org/*"
+    "https://jakob-pi.duckdns.org/*"
   ],
   "background": {
     "scripts": ["background.js"]

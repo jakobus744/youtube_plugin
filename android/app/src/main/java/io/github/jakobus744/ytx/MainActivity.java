@@ -323,13 +323,16 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
                 public void onOrientationChanged(int deg) {
                     if (!pageLocked || deg == ORIENTATION_UNKNOWN) return;
                     boolean land = (deg > 60 && deg < 120) || (deg > 240 && deg < 300);
-                    boolean upright = deg < 25 || deg > 335;
+                    boolean upright = deg < 30 || deg > 330;
                     if (land) seenLand = true;
                     else if (upright && seenLand) {
-                        // hochkant gedreht: die seite merkt das und beendet das vollbild
+                        // hochkant gedreht: die app beendet das vollbild selbst, sonst sperrt youtube gleich wieder auf quer
                         pageLocked = false;
                         disable();
+                        if (session != null) session.exitFullScreen();
+                        setFullscreen(false);
                         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+                        view.postDelayed(() -> { if (!fullscreen) setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED); }, 1500);
                     }
                 }
             };
@@ -631,7 +634,9 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     @Override
     public void onApp(String action) {
         runOnUiThread(() -> {
-            if ("minimize".equals(action)) minimize();
+            if ("minimize".equals(action)) minimize(null);
+            // vom video auf eine andere seite (kanal usw.): video klein weiter, die seite oeffnet sich gross
+            else if (action != null && action.startsWith("miniTo:") && isInside(action.substring(7))) minimize(action.substring(7));
             else if ("expand".equals(action)) expand();
             else if ("close".equals(action)) closeMini();
             else if ("fsOn".equals(action) && miniBox == null || "fsOn".equals(action) && miniBox.getVisibility() != View.VISIBLE) setFullscreen(true);
@@ -661,7 +666,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
     }
 
     // das video bleibt in seiner sitzung und spielt weiter, die hauptansicht geht zur vorherigen seite
-    private void minimize() {
+    private void minimize(String target) {
         if (session == null) return;
         if (fullscreen) {
             session.exitFullScreen();
@@ -728,7 +733,7 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
         view.releaseSession();
         session = takeSession();
         view.setSession(session);
-        session.loadUri(lastBrowse != null ? lastBrowse : homeUrl());
+        session.loadUri(target != null ? target : lastBrowse != null ? lastBrowse : homeUrl());
         canGoBack = false;
         mini = video;
         miniView.setSession(mini);

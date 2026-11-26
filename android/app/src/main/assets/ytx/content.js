@@ -74,7 +74,7 @@ function pageShim(CH, VALUES, VERSION) {
   })
   // meldungen fuer das android protokoll (adb logcat -s ytx-page)
   // kurze befehle an die app, etwa den mini player steuern
-  def('__ytxNative', (o) => send({ t: 'app', a: String(o && o.a).slice(0, 20) }))
+  def('__ytxNative', (o) => send({ t: 'app', a: String(o && o.a).slice(0, 600) }))
   def('__ytxAppLog', (...a) => send({ t: 'log', text: a.map((x) => (typeof x === 'string' ? x : JSON.stringify(x))).join(' ') }))
   def('__ytxBrowserCopy', (text) => {
     const s = String(text)

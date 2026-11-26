@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.2.20261126.0823
+// @version      0.4.2.20261126.0844
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -14710,8 +14710,14 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       style.setAttribute("data-ytx-own", "");
       style.textContent = CSS4;
       document.head.append(style);
+      const bound = /* @__PURE__ */ new WeakSet();
       const off = onSweep("playlistRemove", () => {
         if (!listId()) return;
+        for (const el of document.querySelectorAll(ITEM)) {
+          if (bound.has(el)) continue;
+          bound.add(el);
+          el.addEventListener("touchmove", onMove, { passive: false });
+        }
         for (const el of document.querySelectorAll(PANEL_ITEM)) {
           if (el.querySelector(".ytx-plmore")) continue;
           const b = document.createElement("button");
@@ -14760,14 +14766,13 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         if (-moved > w * 0.45) remove(el);
       };
       document.addEventListener("touchstart", onStart, { capture: true, passive: true });
-      document.addEventListener("touchmove", onMove, { capture: true, passive: false });
       document.addEventListener("touchend", onEnd, { capture: true, passive: true });
       document.addEventListener("touchcancel", onEnd, { capture: true, passive: true });
       return () => {
         off();
         style.remove();
         document.removeEventListener("touchstart", onStart, true);
-        document.removeEventListener("touchmove", onMove, true);
+        for (const el of document.querySelectorAll(ITEM)) el.removeEventListener("touchmove", onMove);
         document.removeEventListener("touchend", onEnd, true);
         document.removeEventListener("touchcancel", onEnd, true);
         document.querySelectorAll(".ytx-plmore, .ytx-plmenu").forEach((e) => e.remove());
@@ -14951,6 +14956,34 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
 
   // src/behaviors/mobile.js
   var SHARED = ["shortsRedirect", "homeRedirect", "autoplayOff", "forceQuality", "speedMemory", "pauseOnBlur", "channelTrailerPause", "shareClean", "dislikeCount", "likeCount"];
+  var miniOnLeave = {
+    id: "miniOnLeave",
+    label: "Video klein weiterspielen beim Seitenwechsel (App)",
+    description: "Tippst du auf der Videoseite auf den Kanal oder einen anderen YouTube-Link, läuft das Video wie in der YouTube-App klein unten rechts weiter. Nur solange das Video läuft oder pausiert ist, nicht nach dem Ende",
+    type: "toggle",
+    default: true,
+    start() {
+      if (!window.__ytxNative) return () => {
+      };
+      return listen(document, "click", (e) => {
+        if (pageFromUrl(location.href) !== "watch" || e.defaultPrevented) return;
+        const a = e.target?.closest?.("a[href]");
+        if (!a || a.closest("[data-ytx-own]") || a.target === "_blank") return;
+        let u;
+        try {
+          u = new URL(a.getAttribute("href"), location.href);
+        } catch {
+          return;
+        }
+        if (u.origin !== location.origin || u.pathname === "/watch" || u.pathname.startsWith("/shorts/") || u.pathname.startsWith("/redirect")) return;
+        const st = document.getElementById("movie_player")?.getPlayerState?.();
+        if (![1, 2, 3].includes(st)) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        window.__ytxNative({ a: "miniTo:" + u.href });
+      }, { capture: true });
+    }
+  };
   var swipeDownBack = {
     id: "swipeDownBack",
     label: "Video nach unten wischen, um zu verkleinern",
@@ -15027,9 +15060,13 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         } catch {
         }
       };
+      const blockMove = (e) => {
+        if (live && (live.how === "press" || drag?.moved)) e.preventDefault();
+      };
       const stopLive = () => {
         clearTimeout(timer3);
         if (live) {
+          live.holder?.removeEventListener("touchmove", blockMove);
           clearTimeout(live.hello);
           clearInterval(live.slideTimer);
           live.box.remove();
@@ -15075,7 +15112,8 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         box2.append(slide, frame, track);
         holder.append(box2);
         let n = 1;
-        live = { link, id, how, t0, box: box2, frame, bar, slide, dur: 0, state: -1, cur: 0, vidOk: false, shown: false, target: -1, lastSeek: 0, seeking: false, loadedAt: Date.now() };
+        holder.addEventListener("touchmove", blockMove, { passive: false });
+        live = { link, id, how, t0, box: box2, frame, bar, slide, holder, dur: 0, state: -1, cur: 0, vidOk: false, shown: false, target: -1, lastSeek: 0, seeking: false, loadedAt: Date.now() };
         live.slideTimer = setInterval(() => {
           n = n % 3 + 1;
           slide.src = `https://i.ytimg.com/vi/${id}/hq${n}.jpg`;
@@ -15209,7 +15247,6 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         listen(document, "touchmove", (e) => {
           const t = e.touches[0];
           if (live && live.how === "press") {
-            e.preventDefault();
             if (Math.abs(t.clientX - (press?.x ?? t.clientX)) > 8) live.moved = true;
             seekTo(t.clientX);
           } else if (live && drag) {
@@ -15219,14 +15256,13 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
               drag = null;
             } else if (drag.moved || Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.2) {
               drag.moved = true;
-              e.preventDefault();
               seekTo(t.clientX);
             }
           } else if (press && (Math.abs(t.clientX - press.x) > 12 || Math.abs(t.clientY - press.y) > 12)) {
             clearTimeout(timer3);
             press = null;
           }
-        }, { passive: false, capture: true }),
+        }, { passive: true, capture: true }),
         listen(document, "touchend", () => {
           clearTimeout(timer3);
           if (live && live.how === "press") {
@@ -15632,7 +15668,12 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
         if (land !== wasLand && watching) {
           wasLand = land;
           if (land && !isFull()) enterFs(p);
-          if (!land && isFull()) faux ? setFaux(false) : p.toggleFullscreen?.();
+          if (!land && isFull()) {
+            if (faux) setFaux(false);
+            else if (document.fullscreenElement) document.exitFullscreen?.().catch?.(() => p.toggleFullscreen?.());
+            else p.toggleFullscreen?.();
+            setTimeout(() => window.dispatchEvent(new Event("resize")), 300);
+          }
           autoFor = land ? vid : "";
           exitedFor = "";
         } else if (land && watching && vid && vid !== autoFor && vid !== exitedFor && p.getPlayerState?.() === 1 && !isFull()) {
@@ -15681,7 +15722,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap2, relatedDates, playlistRemove, notInterested, typeRadar, statsSync, appCheck];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, miniOnLeave, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap2, relatedDates, playlistRemove, notInterested, typeRadar, statsSync, appCheck];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js

@@ -19,6 +19,36 @@ import { statsSync } from './statsSync.js'
 
 const SHARED = ['shortsRedirect', 'homeRedirect', 'autoplayOff', 'forceQuality', 'speedMemory', 'pauseOnBlur', 'channelTrailerPause', 'shareClean', 'dislikeCount', 'likeCount']
 
+// vom video auf eine andere seite (kanal, hashtag, playlist): in der app laeuft das video klein weiter, wie in der youtube app
+const miniOnLeave = {
+  id: 'miniOnLeave',
+  label: 'Video klein weiterspielen beim Seitenwechsel (App)',
+  description: 'Tippst du auf der Videoseite auf den Kanal oder einen anderen YouTube-Link, läuft das Video wie in der YouTube-App klein unten rechts weiter. Nur solange das Video läuft oder pausiert ist, nicht nach dem Ende',
+  type: 'toggle',
+  default: true,
+  start() {
+    if (!window.__ytxNative) return () => {}
+    return listen(document, 'click', (e) => {
+      if (pageFromUrl(location.href) !== 'watch' || e.defaultPrevented) return
+      const a = e.target?.closest?.('a[href]')
+      if (!a || a.closest('[data-ytx-own]') || a.target === '_blank') return
+      let u
+      try {
+        u = new URL(a.getAttribute('href'), location.href)
+      } catch {
+        return
+      }
+      if (u.origin !== location.origin || u.pathname === '/watch' || u.pathname.startsWith('/shorts/') || u.pathname.startsWith('/redirect')) return
+      // 1 laeuft, 2 pausiert, 3 laedt
+      const st = document.getElementById('movie_player')?.getPlayerState?.()
+      if (![1, 2, 3].includes(st)) return
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      window.__ytxNative({ a: 'miniTo:' + u.href })
+    }, { capture: true })
+  }
+}
+
 // video nach unten wischen bringt zur vorherigen seite zurueck, wie das herunterziehen in der youtube app
 const swipeDownBack = {
   id: 'swipeDownBack',
@@ -103,9 +133,14 @@ const thumbPreview = {
     const cmd = (func, ...args) => {
       try { live?.frame?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), EMBED) } catch {}
     }
+    // nur die vorschau selbst darf das scrollen anhalten (beim spulen), ein blockierender listener am dokument liess jedes wischen auf die seite warten
+    const blockMove = (e) => {
+      if (live && (live.how === 'press' || drag?.moved)) e.preventDefault()
+    }
     const stopLive = () => {
       clearTimeout(timer)
       if (live) {
+        live.holder?.removeEventListener('touchmove', blockMove)
         clearTimeout(live.hello)
         clearInterval(live.slideTimer)
         live.box.remove()
@@ -154,7 +189,8 @@ const thumbPreview = {
       box.append(slide, frame, track)
       holder.append(box)
       let n = 1
-      live = { link, id, how, t0, box, frame, bar, slide, dur: 0, state: -1, cur: 0, vidOk: false, shown: false, target: -1, lastSeek: 0, seeking: false, loadedAt: Date.now() }
+      holder.addEventListener('touchmove', blockMove, { passive: false })
+      live = { link, id, how, t0, box, frame, bar, slide, holder, dur: 0, state: -1, cur: 0, vidOk: false, shown: false, target: -1, lastSeek: 0, seeking: false, loadedAt: Date.now() }
       live.slideTimer = setInterval(() => {
         n = (n % 3) + 1
         slide.src = `https://i.ytimg.com/vi/${id}/hq${n}.jpg`
@@ -285,7 +321,6 @@ const thumbPreview = {
       listen(document, 'touchmove', (e) => {
         const t = e.touches[0]
         if (live && live.how === 'press') {
-          e.preventDefault()
           if (Math.abs(t.clientX - (press?.x ?? t.clientX)) > 8) live.moved = true
           seekTo(t.clientX)
         } else if (live && drag) {
@@ -295,14 +330,13 @@ const thumbPreview = {
             drag = null
           } else if (drag.moved || (Math.abs(dx) > 14 && Math.abs(dx) > Math.abs(dy) * 1.2)) {
             drag.moved = true
-            e.preventDefault()
             seekTo(t.clientX)
           }
         } else if (press && (Math.abs(t.clientX - press.x) > 12 || Math.abs(t.clientY - press.y) > 12)) {
           clearTimeout(timer)
           press = null
         }
-      }, { passive: false, capture: true }),
+      }, { passive: true, capture: true }),
       listen(document, 'touchend', () => {
         clearTimeout(timer)
         if (live && live.how === 'press') {
@@ -736,7 +770,13 @@ const appFullscreen = {
       if (land !== wasLand && watching) {
         wasLand = land
         if (land && !isFull()) enterFs(p)
-        if (!land && isFull()) faux ? setFaux(false) : p.toggleFullscreen?.()
+        if (!land && isFull()) {
+          // erst der browser selbst, youtubes umschalter kennt das vollbild unseres containers nicht immer
+          if (faux) setFaux(false)
+          else if (document.fullscreenElement) document.exitFullscreen?.().catch?.(() => p.toggleFullscreen?.())
+          else p.toggleFullscreen?.()
+          setTimeout(() => window.dispatchEvent(new Event('resize')), 300)
+        }
         autoFor = land ? vid : ''
         exitedFor = ''
       } else if (land && watching && vid && vid !== autoFor && vid !== exitedFor && p.getPlayerState?.() === 1 && !isFull()) {
@@ -788,6 +828,6 @@ const appFullscreen = {
   }
 }
 
-export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove, notInterested, typeRadar, statsSync, appCheck]
+export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, miniOnLeave, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove, notInterested, typeRadar, statsSync, appCheck]
 
 export const behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]))

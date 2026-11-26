@@ -108,8 +108,15 @@ export const playlistRemove = {
     style.textContent = CSS
     document.head.append(style)
 
+    // blockierender touchmove nur an den eintraegen, auf der ganzen seite wuerde jedes scrollen auf die seite warten
+    const bound = new WeakSet()
     const off = onSweep('playlistRemove', () => {
       if (!listId()) return
+      for (const el of document.querySelectorAll(ITEM)) {
+        if (bound.has(el)) continue
+        bound.add(el)
+        el.addEventListener('touchmove', onMove, { passive: false })
+      }
       for (const el of document.querySelectorAll(PANEL_ITEM)) {
         if (el.querySelector('.ytx-plmore')) continue
         const b = document.createElement('button')
@@ -160,7 +167,6 @@ export const playlistRemove = {
       if (-moved > w * 0.45) remove(el)
     }
     document.addEventListener('touchstart', onStart, { capture: true, passive: true })
-    document.addEventListener('touchmove', onMove, { capture: true, passive: false })
     document.addEventListener('touchend', onEnd, { capture: true, passive: true })
     document.addEventListener('touchcancel', onEnd, { capture: true, passive: true })
 
@@ -168,7 +174,7 @@ export const playlistRemove = {
       off()
       style.remove()
       document.removeEventListener('touchstart', onStart, true)
-      document.removeEventListener('touchmove', onMove, true)
+      for (const el of document.querySelectorAll(ITEM)) el.removeEventListener('touchmove', onMove)
       document.removeEventListener('touchend', onEnd, true)
       document.removeEventListener('touchcancel', onEnd, true)
       document.querySelectorAll('.ytx-plmore, .ytx-plmenu').forEach((e) => e.remove())

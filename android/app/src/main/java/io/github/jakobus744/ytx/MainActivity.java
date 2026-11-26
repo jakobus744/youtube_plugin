@@ -713,6 +713,8 @@ public class MainActivity extends Activity implements YtxRuntime.Listener {
             miniBox.setBackgroundColor(0xFF000000);
             miniBox.setElevation(dp(8));
             miniView = new GeckoView(this);
+            // zwei surface views uebereinander haben keine feste reihenfolge, das kleine fenster lag dann manchmal halb durchsichtig unter der hauptansicht
+            miniView.setViewBackend(GeckoView.BACKEND_TEXTURE_VIEW);
             miniBox.addView(miniView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
             FrameLayout.LayoutParams glp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, dp(26), android.view.Gravity.TOP);
             // rechts bleibt das kreuz der seite frei

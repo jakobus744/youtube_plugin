@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.2.20261125.1835
+// @version      0.4.2.20261126.0823
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -4922,9 +4922,7 @@ ytd-watch-metadata #actions ytd-menu-renderer [data-ytx-btn] + [data-ytx-btn] { 
 .ytx-toast { position: fixed; z-index: 2400; left: 50%; bottom: 32px; transform: translateX(-50%); max-width: 80vw; padding: 10px 16px; border-radius: 8px;
   font: 400 14px/1.3 Roboto, Arial, sans-serif; color: var(--yt-sys-color-baseline--text-primary-inverse, #0f0f0f); background: var(--yt-sys-color-baseline--inverted-background, #f1f1f1); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
 .ytx-toast[data-kind="error"] { background: #c62828; color: #fff; }
-/* eigener stapel, sonst liegt das abzeichen ueber dem festgehaltenen player */
-:has(> .ytx-badge) { isolation: isolate; }
-.ytx-badge { position: absolute; z-index: 3; right: 4px; top: 4px; padding: 1px 5px; border-radius: 4px; pointer-events: none; font: 500 11px/16px Roboto, Arial, sans-serif; color: #fff; background: rgba(0,0,0,.75); }
+.ytx-badge { position: absolute; right: 4px; top: 4px; padding: 1px 5px; border-radius: 4px; pointer-events: none; font: 500 11px/16px Roboto, Arial, sans-serif; color: #fff; background: rgba(0,0,0,.75); }
 `;
   function initUiCss() {
     setCss("ui", CSS);
@@ -14821,9 +14819,9 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
   }
   var send = (token) => innertubePost("feedback", { feedbackTokens: [token], isFeedbackTokenUnencrypted: false, shouldMerge: false });
   var CSS5 = `
-/* eigene ebene je kachel, sonst liegt das kreuz ueber der leiste unten */
-:is(${CARD}) { position: relative; isolation: isolate; }
-.ytx-ni { position: absolute; left: 8px; top: 8px; z-index: 3; width: 30px; height: 30px; border: 0; border-radius: 50%; padding: 0;
+/* ohne z-index und ohne eigene ebene je kachel, isolation machte das scrollen am handy sehr langsam */
+:is(${CARD}) { position: relative; }
+.ytx-ni { position: absolute; left: 8px; top: 8px; width: 30px; height: 30px; border: 0; border-radius: 50%; padding: 0;
   background: rgba(0,0,0,.55); color: #fff; font: 16px/30px Roboto, Arial, sans-serif; text-align: center; }
 .ytx-nimenu { position: fixed; left: 14px; z-index: 2147483000; display: flex; flex-direction: column; background: var(--ytx-menu, #2a2a2a); border-radius: 12px; box-shadow: 0 4px 18px #0008; }
 .ytx-nimenu button { text-align: left; border: 0; background: none; color: var(--ytx-accent, #fff); font-size: 16px; padding: 14px 18px; }

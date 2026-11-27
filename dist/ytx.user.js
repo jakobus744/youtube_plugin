@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.2.20261126.0844
+// @version      0.4.2.20261126.1955
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -14956,6 +14956,21 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
 
   // src/behaviors/mobile.js
   var SHARED = ["shortsRedirect", "homeRedirect", "autoplayOff", "forceQuality", "speedMemory", "pauseOnBlur", "channelTrailerPause", "shareClean", "dislikeCount", "likeCount"];
+  var noGlass = {
+    id: "noGlass",
+    label: "Flüssiges Scrollen ohne Glaseffekt",
+    description: "YouTube zeichnet hinter die untere Leiste und die Player-Knöpfe einen Weichzeichner. Der kostet auf dem Handy so viel Grafikleistung, dass das Scrollen ruckelt. Die Leiste bekommt stattdessen einen festen Hintergrund",
+    type: "toggle",
+    default: true,
+    start() {
+      const style = document.createElement("style");
+      style.setAttribute("data-ytx-own", "");
+      style.textContent = `*, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+ytm-pivot-bar-renderer, .frosted-glass { background-color: var(--yt-spec-base-background, #0f0f0f) !important; }`;
+      document.head.append(style);
+      return () => style.remove();
+    }
+  };
   var miniOnLeave = {
     id: "miniOnLeave",
     label: "Video klein weiterspielen beim Seitenwechsel (App)",
@@ -15722,7 +15737,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       };
     }
   };
-  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, miniOnLeave, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap2, relatedDates, playlistRemove, notInterested, typeRadar, statsSync, appCheck];
+  var behaviors3 = [...behaviors.filter((b) => SHARED.includes(b.id)), swipeDownBack, miniOnLeave, noGlass, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap2, relatedDates, playlistRemove, notInterested, typeRadar, statsSync, appCheck];
   var behaviorById3 = Object.fromEntries(behaviors3.map((b) => [b.id, b]));
 
   // src/sites/miniMode.js

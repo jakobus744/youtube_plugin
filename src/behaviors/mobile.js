@@ -19,6 +19,24 @@ import { statsSync } from './statsSync.js'
 
 const SHARED = ['shortsRedirect', 'homeRedirect', 'autoplayOff', 'forceQuality', 'speedMemory', 'pauseOnBlur', 'channelTrailerPause', 'shareClean', 'dislikeCount', 'likeCount']
 
+// youtube legt hinter die untere leiste und die player knoepfe einen weichzeichner, der wird bei jedem scrollbild neu gerechnet
+// auf dem handy faellt das scrollen dadurch von rund 70 auf unter 20 bilder pro sekunde
+const noGlass = {
+  id: 'noGlass',
+  label: 'Flüssiges Scrollen ohne Glaseffekt',
+  description: 'YouTube zeichnet hinter die untere Leiste und die Player-Knöpfe einen Weichzeichner. Der kostet auf dem Handy so viel Grafikleistung, dass das Scrollen ruckelt. Die Leiste bekommt stattdessen einen festen Hintergrund',
+  type: 'toggle',
+  default: true,
+  start() {
+    const style = document.createElement('style')
+    style.setAttribute('data-ytx-own', '')
+    style.textContent = `*, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+ytm-pivot-bar-renderer, .frosted-glass { background-color: var(--yt-spec-base-background, #0f0f0f) !important; }`
+    document.head.append(style)
+    return () => style.remove()
+  }
+}
+
 // vom video auf eine andere seite (kanal, hashtag, playlist): in der app laeuft das video klein weiter, wie in der youtube app
 const miniOnLeave = {
   id: 'miniOnLeave',
@@ -828,6 +846,6 @@ const appFullscreen = {
   }
 }
 
-export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, miniOnLeave, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove, notInterested, typeRadar, statsSync, appCheck]
+export const behaviors = [...yt.filter((b) => SHARED.includes(b.id)), swipeDownBack, miniOnLeave, noGlass, tapSeek, thumbPreview, pullRefresh, appFullscreen, audioFocus, pipKeepPlaying, adWait, heatmap, relatedDates, playlistRemove, notInterested, typeRadar, statsSync, appCheck]
 
 export const behaviorById = Object.fromEntries(behaviors.map((b) => [b.id, b]))

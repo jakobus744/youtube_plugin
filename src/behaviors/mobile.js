@@ -31,7 +31,7 @@ const noGlass = {
     const style = document.createElement('style')
     style.setAttribute('data-ytx-own', '')
     style.textContent = `*, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-ytm-pivot-bar-renderer, .frosted-glass { background-color: var(--yt-spec-base-background, #0f0f0f) !important; }`
+ytm-pivot-bar-renderer, .frosted-glass { background-color: var(--yt-sys-color-baseline--base-background, var(--yt-spec-base-background, #0f0f0f)) !important; }`
     document.head.append(style)
     return () => style.remove()
   }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.2.20261126.1955
+// @version      0.4.2.20261127.1751
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -14966,7 +14966,7 @@ ${PANEL_ITEM}[data-ytx-swipe], ${PAGE_ITEM}[data-ytx-swipe] { will-change: trans
       const style = document.createElement("style");
       style.setAttribute("data-ytx-own", "");
       style.textContent = `*, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
-ytm-pivot-bar-renderer, .frosted-glass { background-color: var(--yt-spec-base-background, #0f0f0f) !important; }`;
+ytm-pivot-bar-renderer, .frosted-glass { background-color: var(--yt-sys-color-baseline--base-background, var(--yt-spec-base-background, #0f0f0f)) !important; }`;
       document.head.append(style);
       return () => style.remove();
     }

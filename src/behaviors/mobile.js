@@ -117,6 +117,8 @@ const EMBED = 'https://www.youtube.com'
 const HOLD_KEEP_MS = 1500
 // kuerzer gedrueckt ist ein normaler tipp, der das video oeffnet
 const TAP_MS = 350
+// die automatische vorschau startet erst nach so langer scrollpause, ihr player liess sonst die ersten scrollbilder des naechsten wischers ruckeln
+const AUTO_WAIT_MS = 1500
 const thumbPreview = {
   id: 'thumbPreview',
   label: 'Video-Vorschau auf Thumbnails',
@@ -296,7 +298,7 @@ const thumbPreview = {
         if (!live.link.isConnected || mid < innerHeight * 0.1 || mid > innerHeight * 0.92 || overlayOpen()) return stopLive()
       }
       const now = Date.now()
-      if (!auto || now - scrollAt < 300 || overlayOpen()) return
+      if (!auto || now - scrollAt < AUTO_WAIT_MS || overlayOpen()) return
       if (checkedAt < scrollAt) {
         checkedAt = now
         dwell = { link: pickDwell(), since: now }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.2.20261127.1751
+// @version      0.4.2.20261127.1800
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -15039,6 +15039,7 @@ ytm-pivot-bar-renderer, .frosted-glass { background-color: var(--yt-sys-color-ba
   var EMBED = "https://www.youtube.com";
   var HOLD_KEEP_MS = 1500;
   var TAP_MS = 350;
+  var AUTO_WAIT_MS = 1500;
   var thumbPreview = {
     id: "thumbPreview",
     label: "Video-Vorschau auf Thumbnails",
@@ -15220,7 +15221,7 @@ ytm-pivot-bar-renderer, .frosted-glass { background-color: var(--yt-sys-color-ba
           if (!live.link.isConnected || mid < innerHeight * 0.1 || mid > innerHeight * 0.92 || overlayOpen()) return stopLive();
         }
         const now = Date.now();
-        if (!auto || now - scrollAt < 300 || overlayOpen()) return;
+        if (!auto || now - scrollAt < AUTO_WAIT_MS || overlayOpen()) return;
         if (checkedAt < scrollAt) {
           checkedAt = now;
           dwell = { link: pickDwell(), since: now };

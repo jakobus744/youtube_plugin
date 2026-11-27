@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         ytx
 // @namespace    ytx.local
-// @version      0.4.2.20261127.1800
+// @version      0.4.2.20261127.1847
 // @description  YouTube, YouTube mobil und YouTube Music anpassen: Anzeige, Look, Filter, Abo-Gruppen, Schauzeit, lokale Musik-Empfehlungen
 // @match        https://www.youtube.com/*
 // @match        https://music.youtube.com/*
@@ -15039,7 +15039,7 @@ ytm-pivot-bar-renderer, .frosted-glass { background-color: var(--yt-sys-color-ba
   var EMBED = "https://www.youtube.com";
   var HOLD_KEEP_MS = 1500;
   var TAP_MS = 350;
-  var AUTO_WAIT_MS = 1500;
+  var AUTO_WAIT_MS = 1e3;
   var thumbPreview = {
     id: "thumbPreview",
     label: "Video-Vorschau auf Thumbnails",

@@ -118,7 +118,7 @@ const HOLD_KEEP_MS = 1500
 // kuerzer gedrueckt ist ein normaler tipp, der das video oeffnet
 const TAP_MS = 350
 // die automatische vorschau startet erst nach so langer scrollpause, ihr player liess sonst die ersten scrollbilder des naechsten wischers ruckeln
-const AUTO_WAIT_MS = 1500
+const AUTO_WAIT_MS = 1000
 const thumbPreview = {
   id: 'thumbPreview',
   label: 'Video-Vorschau auf Thumbnails',
